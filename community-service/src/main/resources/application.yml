@@ -1,6 +1,6 @@
 spring:
   application:
-    name: community-market-service
+    name: community-service
 
   config:
     import: "optional:configserver:http://localhost:8888"

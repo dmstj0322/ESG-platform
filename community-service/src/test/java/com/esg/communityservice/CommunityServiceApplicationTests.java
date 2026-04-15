@@ -1,10 +1,10 @@
-package com.esg.communitymarketservice;
+package com.esg.communityservice;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class CommunityMarketServiceApplicationTests {
+class CommunityServiceApplicationTests {
 
   @Test
   void contextLoads() {
