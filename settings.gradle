@@ -1,1 +1,9 @@
 rootProject.name = 'esg-platform'
+
+include 'common'
+include 'analysis-service'
+include 'eureka-server'
+include 'gateway-service'
+include 'auth-service'
+include 'config-service'
+include 'community-market-service'
