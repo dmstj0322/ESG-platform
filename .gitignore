@@ -1,3 +1,6 @@
+mysql_data/
+
+# --- Java & Gradle ---
 HELP.md
 .gradle
 build/
@@ -35,3 +38,8 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# --- OS & Log ---
+*.log
+.DS_Store
+Thumbs.db

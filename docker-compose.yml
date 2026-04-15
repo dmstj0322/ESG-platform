@@ -1,0 +1,17 @@
+services:
+  esg-mysql:
+    image: mysql:8.0
+    container_name: esg-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: esg_db
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+
+  esg-redis:
+    image: redis:latest
+    container_name: esg-redis
+    ports:
+      - "6379:6379"

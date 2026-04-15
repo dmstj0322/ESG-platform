@@ -22,6 +22,11 @@ spring:
           predicates:
             - Path=/auth/**
 
+        - id: community-market-service
+          uri: lb://community-market-service
+          predicates:
+            - Path=/market/**
+
 eureka:
   client:
     service-url:
