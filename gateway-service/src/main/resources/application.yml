@@ -13,19 +13,32 @@ spring:
           enabled: true
       routes:
         - id: analysis-service
-          uri: lb://analysis-service
+          uri: lb://ANALYSIS-SERVICE
           predicates:
             - Path=/analysis/**
+          filters:
+            - RewritePath=/analysis/(?<segment>.*), /$\{segment}
 
         - id: auth-service
-          uri: lb://auth-service
+          uri: lb://AUTH-SERVICE
           predicates:
             - Path=/auth/**
+          filters:
+            - RewritePath=/auth/(?<segment>.*), /$\{segment}
 
-        - id: community-market-service
-          uri: lb://community-market-service
+        - id: market-service
+          uri: lb://MARKET-SERVICE
           predicates:
             - Path=/market/**
+          filters:
+            - RewritePath=/market/(?<segment>.*), /$\{segment}
+
+        - id: community-service
+          uri: lb://COMMUNITY-SERVICE
+          predicates:
+            - Path=/community/**
+          filters:
+            - RewritePath=/community/(?<segment>.*), /$\{segment}
 
 eureka:
   client:
