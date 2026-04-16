@@ -1,3 +1,21 @@
+#server:
+#  port: 8083
+#
+#spring:
+#  application:
+#    name: market-service
+#  # Config Server를 사용하지 않고 로컬 설정을 우선적으로 사용하도록 설정
+#  cloud:
+#    config:
+#      enabled: false  # 이 옵션을 false로 주면 지금 발생하는 에러가 사라집니다.
+#  # DB 설정 없이 서버를 띄우기 위한 설정
+#  autoconfigure:
+#    exclude: org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+#
+#eureka:
+#  client:
+#    service-url:
+#      defaultZone: http://localhost:8761/eureka/
 spring:
   application:
     name: market-service
