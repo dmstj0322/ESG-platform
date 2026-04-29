@@ -8,16 +8,31 @@ spring:
     import: "optional:configserver:http://localhost:8888"
   cloud:
     gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "http://localhost:5173"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
       discovery:
         locator:
           enabled: true
+      httpclient:
+        connect-timeout: 10000 # 연결 타임아웃을 넉넉히 설정
+        response-timeout: 5s
       routes:
         - id: analysis-service
           uri: lb://ANALYSIS-SERVICE
           predicates:
             - Path=/analysis/**
           filters:
-            - RewritePath=/analysis/(?<segment>.*), /$\{segment}
+            - RewritePath=/analysis/(?<segment>.*), /${segment}
             - JwtAuthFilter # 인증 추가
 
         - id: auth-service
@@ -25,7 +40,7 @@ spring:
           predicates:
             - Path=/auth/**
           filters:
-            - RewritePath=/auth/(?<segment>.*), /$\{segment}
+            - RewritePath=/auth/(?<segment>.*), /${segment}
             # 로그인은 인증 없이 들어와야 하므로 필터 제외
 
         - id: market-service
@@ -33,18 +48,31 @@ spring:
           predicates:
             - Path=/market/**
           filters:
-            - RewritePath=/market/(?<segment>.*), /$\{segment}
+            - RewritePath=/market/(?<segment>.*), /${segment}
             - JwtAuthFilter # 인증 추가
 
         - id: community-service
           uri: lb://COMMUNITY-SERVICE
           predicates:
-            - Path=/community/**
+            - Path=/community/**, /admin/**
           filters:
-            - RewritePath=/community/(?<segment>.*), /$\{segment}
+            - RewritePath=/community/(?<segment>.*), /${segment}
+            - JwtAuthFilter # 인증 추가
+
+        - id: point-service
+          uri: lb://POINT-SERVICE
+          predicates:
+            - Path=/points/**
+          filters:
             - JwtAuthFilter # 인증 추가
 
 eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+    registry-fetch-interval-seconds: 5
+
+jwt:
+  secret: vms_secret_key_testing_1234567890_vms_secret_key
