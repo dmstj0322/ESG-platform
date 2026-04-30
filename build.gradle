@@ -15,9 +15,6 @@ allprojects {
     group = 'com.esg'
     version = '0.0.1-SNAPSHOT'
 
-    repositories {
-        mavenCentral()
-    }
 }
 
 // 루트 프로젝트 의존성
