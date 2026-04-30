@@ -1,6 +1,3 @@
-server:
-  port: 8081
-
 spring:
   datasource:
     url: jdbc:mysql://localhost:3306/esg_db?serverTimezone=Asia/Seoul&useSSL=false&allowPublicKeyRetrieval=true
@@ -21,3 +18,60 @@ spring:
     redis:
       host: localhost
       port: 6379
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: analysis-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+        spring.json.use.type.headers: false
+        spring.json.value.default.type: "com.esg.analysis.dto.AnalysisRequestDto"
+
+# spring 블록 밖으로
+resilience4j:
+  circuitbreaker:
+    instances:
+      geminiAnalysis:
+        registerHealthMap: true
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 30000
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+
+#langchain4j:
+#  google-ai-gemini:
+#    chat-model:
+#      api-key: "AIzaSyAoTOkwLMkAeJDEsKJ1fkIl0C6kCUiwgoM"
+#      model-name: "models/gemini-2.5-flash" # 403 방지를 위해 일단 1.5로 테스트 권장
+
+# 1. 공통 API 키 설정 (가장 상단이나 변수 구역에 배치)
+google:
+  ai:
+    api-key: "AIzaSyAoTOkwLMkAeJDEsKJ1fkIl0C6kCUiwgoM"
+
+langchain4j:
+  google-ai-gemini:
+    chat-model:
+      api-key: ${google.ai.api-key}
+      model-name: "gemini-2.5-flash"
+    embedding-model:
+      api-key: ${google.ai.api-key}
+      model-name: "text-embedding-004" # Ollama를 쓰더라도 설정값은 남겨둡니다.
+logging:
+  level:
+    dev.langchain4j: DEBUG
+
+upstage:
+  api:
+    key: "up_LmGsRxHL80T7AfMbVcENMpYcbDF7K"
+
+external-api:
+  kepco:
+    key: "6yzpzq1FYc5qHVZU5T09VNx71MHVgY0D7agF2R7s"
+  kogas:
+    key: "WanaPpTXruQhM6PBEHWW5SP/KHWsvFybSv5P7irg0aCTsRpPrGOaNKdu47HuXFxcXT5XusOeOay8LxQz7fmCDQ=="

@@ -1,10 +1,22 @@
+server:
+  port: 8081
+
 spring:
   application:
     name: analysis-service
 
+  # ★ 여기에 추가 ★
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+  cloud:
+    config:
+      fail-fast: true
+      uri: http://localhost:8888
   config:
     import: "optional:configserver:http://localhost:8888"
-
   profiles:
     active: default
 

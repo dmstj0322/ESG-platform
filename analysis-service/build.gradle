@@ -1,8 +1,54 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot'
+    id 'io.spring.dependency-management'
+}
+
+repositories {
+    mavenCentral()
+}
+
 dependencies {
     implementation project(':common')
+
+    // 인프라 설정
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
-    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+    implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap'
     runtimeOnly 'com.mysql:mysql-connector-j'
+
+    // LangChain4j 0.35.0
+    def lcVersion = "0.35.0"
+    implementation "dev.langchain4j:langchain4j:${lcVersion}"
+    implementation "dev.langchain4j:langchain4j-google-ai-gemini:${lcVersion}"
+    implementation "dev.langchain4j:langchain4j-ollama:${lcVersion}"
+
+    // [수정] Apache Tika 문서 파서 의존성
+    // 기존에 에러 나던 명칭 대신 아래 명칭을 사용해 보세요.
+    implementation "dev.langchain4j:langchain4j-document-parser-apache-tika:${lcVersion}"
+    // Redis & Kafka & 기타
+    implementation "org.redisson:redisson-spring-boot-starter:${rootProject.ext.redissonVersion}"
+    implementation 'org.springframework.kafka:spring-kafka'
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    implementation 'io.github.resilience4j:resilience4j-spring-boot3'
+    implementation 'org.springframework.boot:spring-boot-starter-aop'
+    implementation 'com.github.vladimir-bukhtoyarov:bucket4j-core:7.6.0'
+
+    // QueryDSL
+    implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
+    annotationProcessor "com.querydsl:querydsl-apt:5.0.0:jakarta"
+    annotationProcessor "jakarta.annotation:jakarta.annotation-api"
+    annotationProcessor "jakarta.persistence:jakarta.persistence-api"
+
+    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+
+    // 테스트 의존성 (컴파일 에러 방지용)
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
+
+def querydslDir = layout.buildDirectory.dir("generated/querydsl").get().asFile
+sourceSets { main.java.srcDirs += [ querydslDir ] }
+tasks.withType(JavaCompile).configureEach { options.getGeneratedSourceOutputDirectory().set(querydslDir) }
+clean { delete querydslDir }
