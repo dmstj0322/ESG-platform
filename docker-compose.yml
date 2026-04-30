@@ -1,5 +1,5 @@
 services:
-  # 1. 데이터베이스
+  # 1. 데이터베이스 (서희님 볼륨 + 친구의 init.sql 합침)
   esg-mysql:
     image: mysql:8.0
     container_name: esg-mysql
@@ -10,25 +10,29 @@ services:
       MYSQL_DATABASE: esg_db
     volumes:
       - ./mysql_data:/var/lib/mysql
+      # 친구의 초기 스키마 설정이 있다면 추가 (없으면 이 줄은 삭제해도 됨)
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
-  # 2. 캐시 및 분산 락
+  # 2. 캐시 및 분산 락 (공통)
   esg-redis:
     image: redis:latest
     container_name: esg-redis
     ports:
       - "6379:6379"
 
-  # 3. Zookeeper (Confluent 공식 이미지)
+  # 3. Zookeeper (서희님 설정 베이스)
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     container_name: esg-zookeeper
+    ports:
+      - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
 
-  # 4. Kafka (Confluent 공식 이미지 - 가장 안정적)
+  # 4. Kafka (서희님의 안정화 설정 베이스)
   kafka:
-    image: confluentinc/cp-kafka:7.5.0 # 최신 Kraft 전용 버전 대신 안정 버전 사용
+    image: confluentinc/cp-kafka:7.5.0
     container_name: esg-kafka
     depends_on:
       - zookeeper
@@ -41,6 +45,6 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      # 추가된 안정화 설정
+      # 서희님의 훌륭한 안정화 설정들 유지
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_HEAP_OPTS: "-Xmx512M -Xms512M"

@@ -1,10 +1,10 @@
-package com.esg.esgplatform;
+package com.esg.pointservice;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class EsgPlatformApplicationTests {
+class PointServiceApplicationTests {
 
   @Test
   void contextLoads() {
