@@ -2,9 +2,12 @@ package com.esg.analysis.service.repository;
 
 import com.esg.analysis.service.domain.AnalysisReport;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import java.util.Optional;
 
-@Repository
 public interface AnalysisReportRepository extends JpaRepository<AnalysisReport, Long>, AnalysisReportRepositoryCustom {
-    // 이제 JpaRepository의 기본 기능과 QueryDSL의 커스텀 기능을 한 번에 사용합니다.
+
+    // ✅ createdDate → id 기준으로 변경 (동일 시각 저장 시 순서 보장)
+    Optional<AnalysisReport> findFirstByCompanyIdAndStatusOrderByIdDesc(Long companyId, String status);
+
+    long countByCompanyAndStatus(Long companyId, String status);
 }

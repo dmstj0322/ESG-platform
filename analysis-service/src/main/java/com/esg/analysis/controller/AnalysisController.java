@@ -10,8 +10,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -21,18 +22,32 @@ import java.util.List;
 public class AnalysisController {
 
     private final AnalysisApiService analysisApiService;
-    // private final AnalysisService analysisService; // 사용하지 않아 삭제 (경고 해결)
     private final AnalysisReportRepository analysisReportRepository;
     private final EsgGuidelineService esgGuidelineService;
 
     /**
-     * [POST] K-ESG 가이드라인 학습 API
+     * [GET] 최신 완료 리포트 조회
      */
-    @PostMapping("/admin/ingest")
-    public ResponseEntity<String> ingestGuideline(@RequestParam String fileName) {
-        // 경로 조립을 서비스 내부로 옮겼으므로 파일 이름만 전달합니다.
-        esgGuidelineService.ingestGuideline(fileName);
-        return ResponseEntity.ok("가이드라인 학습 성공: " + fileName);
+    @GetMapping("/latest/{companyId}")
+    public ResponseEntity<?> getLatestReport(@PathVariable Long companyId) {
+        log.info(">>>> [API 호출] 기업 ID {}의 최신 COMPLETED 리포트 조회", companyId);
+
+        return analysisReportRepository
+                // ✅ id DESC 기준으로 변경
+                .findFirstByCompanyIdAndStatusOrderByIdDesc(companyId, "COMPLETED")
+                .map(report -> {
+                    log.info(">>>> [조회 성공] 리포트 ID: {}, 등급: {}", report.getId(), report.getGrade());
+
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("finalGrade", report.getGrade());
+                    response.put("analysisResult", report.getReportContent());
+
+                    return ResponseEntity.ok(response);
+                })
+                .orElseGet(() -> {
+                    log.warn(">>>> [조회 결과 없음] 완료된 리포트 없음 (기업 ID: {})", companyId);
+                    return ResponseEntity.noContent().build();
+                });
     }
 
     /**
@@ -44,15 +59,32 @@ public class AnalysisController {
             @RequestHeader("X-CompanyId") Long companyId,
             @RequestParam("file") MultipartFile file) {
 
-        log.info("★파일 수신 성공★ 이름: {}, 크기: {} bytes", file.getOriginalFilename(), file.getSize());
+        log.info("★파일 수신★ 이름: {}, 크기: {} bytes", file.getOriginalFilename(), file.getSize());
 
         Object result = analysisApiService.initiateAnalysis(userId, companyId, file);
 
         if (result instanceof Long) {
             return ResponseEntity.accepted().body(result);
         }
-
         return ResponseEntity.ok(result);
+    }
+
+    /**
+     * [GET] 등급 분포 통계
+     */
+    @GetMapping("/stats/{companyId}")
+    public ResponseEntity<List<GradeStatDto>> getGradeStats(@PathVariable Long companyId) {
+        List<GradeStatDto> stats = analysisReportRepository.getGradeDistribution(companyId);
+        return ResponseEntity.ok(stats);
+    }
+
+    /**
+     * [POST] K-ESG 가이드라인 학습 (Admin)
+     */
+    @PostMapping("/admin/ingest")
+    public ResponseEntity<String> ingestGuideline(@RequestParam String fileName) {
+        esgGuidelineService.ingestGuideline(fileName);
+        return ResponseEntity.ok("가이드라인 학습 성공: " + fileName);
     }
 
     /**
@@ -61,15 +93,6 @@ public class AnalysisController {
     @GetMapping("/test/querydsl/{companyId}")
     public String testQueryDsl(@PathVariable Long companyId) {
         long count = analysisReportRepository.countByCompanyAndStatus(companyId, "COMPLETED");
-        return "기업 ID [" + companyId + "]의 완료된 분석 리포트 개수는: " + count + "개 입니다.";
-    }
-
-    /**
-     * [GET] 기업별 등급 분포 통계 조회
-     */
-    @GetMapping("/stats/{companyId}")
-    public ResponseEntity<List<GradeStatDto>> getGradeStats(@PathVariable Long companyId) {
-        List<GradeStatDto> stats = analysisReportRepository.getGradeDistribution(companyId);
-        return ResponseEntity.ok(stats);
+        return "기업 ID [" + companyId + "]의 완료된 분석 리포트: " + count + "개";
     }
 }

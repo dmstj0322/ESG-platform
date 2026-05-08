@@ -217,7 +217,6 @@ public class AnalysisService {
     private final AnalysisReportRepository analysisReportRepository;
     private final RedisTemplate<String, Object> redisTemplate;
 
-    // F-202: 자체 가중치 설정 (E: 40%, S: 30%, G: 30%)
     private static final double W_ENV = 0.4;
     private static final double W_SOC = 0.3;
     private static final double W_GOV = 0.3;
@@ -225,22 +224,20 @@ public class AnalysisService {
     @Transactional
     public AnalysisResultDto analyzeAndSave(Long userId, Long companyId, MultipartFile file) {
         try {
-            // 1. [F-301] 파일 해시 기반 중복 방어
+            // 1. [F-301] 파일 해시 생성
             String fileHash = DigestUtils.md5DigestAsHex(file.getBytes());
             String cacheKey = "analysis:cache:" + fileHash;
 
-            AnalysisResultDto cached = (AnalysisResultDto) redisTemplate.opsForValue().get(cacheKey);
-            if (cached != null) {
-                log.info("#### [F-301] 중복 리포트 감지! Redis 캐시 반환 (Hash: {})", fileHash);
-                return cached;
-            }
+            // ⚠️ 테스트 기간에는 캐시를 잠시 무시하거나, 아래 코드를 주석 처리하세요!
+            // AnalysisResultDto cached = (AnalysisResultDto) redisTemplate.opsForValue().get(cacheKey);
+            // if (cached != null) { ... return cached; }
 
-            // 2. [RAG] 텍스트 추출 및 AI 분석
+            // 2. AI 분석
             log.info("#### [RAG] Gemini 분석 시작...");
             String reportText = new ApacheTikaDocumentParser().parse(file.getInputStream()).text();
             AiRawScoreDto rawData = esgAnalyst.analyze(reportText);
 
-            // 3. [F-202] 자체 가중치 등급 산출 알고리즘
+            // 3. 등급 산출
             double totalScore = (rawData.getEnvironmentScore() * W_ENV) +
                     (rawData.getSocialScore() * W_SOC) +
                     (rawData.getGovernanceScore() * W_GOV);
@@ -256,7 +253,7 @@ public class AnalysisService {
                     .build();
             AnalysisReport saved = analysisReportRepository.save(report);
 
-            // 5. 결과 DTO 조립 (Evidence 매핑 추가)
+            // 5. 결과 DTO 조립 (핵심: sections 필드가 JSON에 포함되도록 확실히 매핑)
             AnalysisResultDto result = AnalysisResultDto.builder()
                     .analysisId(saved.getId())
                     .totalGrade(finalGrade)
@@ -264,21 +261,22 @@ public class AnalysisService {
                     .summary(rawData.getSummary())
                     .fullReport(rawData.getSummary())
                     .finalGrade(finalGrade)
+                    // 🔥 이 부분이 프론트엔드 차트의 핵심 데이터입니다!
                     .sections(List.of(
                             createSection("Environment", rawData.getEnvironmentScore(), rawData.getEnvironmentReason()),
                             createSection("Social", rawData.getSocialScore(), rawData.getSocialReason()),
                             createSection("Governance", rawData.getGovernanceScore(), rawData.getGovernanceReason())
                     ))
-                    // PDF 표 출력을 위한 데이터 구성
                     .evidence(List.of(
                             new AnalysisResultDto.Evidence("환경(Environment) 부문", rawData.getEnvironmentReason(), "본문 참조"),
                             new AnalysisResultDto.Evidence("사회(Social) 부문", rawData.getSocialReason(), "본문 참조"),
-                            new AnalysisResultDto.Evidence("지배구조(Governance) 부문", rawData.getGovernanceReason(), "본문 참조")
+                            new AnalysisResultDto.Evidence("지배구조(Governance) 부문", rawData.getGovernanceScore() > 0 ? rawData.getGovernanceReason() : "지배구조 데이터 부족", "본문 참조")
                     ))
                     .build();
 
-            // 6. 캐시 저장 (30일 유지)
+            // 6. 캐시 갱신 (이미 데이터가 있다면 덮어쓰기 됨)
             redisTemplate.opsForValue().set(cacheKey, result, 30, TimeUnit.DAYS);
+            log.info("#### [SUCCESS] 새로운 분석 결과가 캐시에 저장되었습니다.");
 
             return result;
 
@@ -289,7 +287,9 @@ public class AnalysisService {
     }
 
     private AnalysisResultDto.SectionResult createSection(String category, int score, String comment) {
-        return new AnalysisResultDto.SectionResult(category, determineGrade(score), score, comment);
+        // 점수가 0이면 최소 10점이라도 주거나 처리 (차트가 아예 안 보일 수 있음)
+        int displayScore = Math.max(score, 5);
+        return new AnalysisResultDto.SectionResult(category, determineGrade(displayScore), displayScore, comment);
     }
 
     private String determineGrade(double score) {

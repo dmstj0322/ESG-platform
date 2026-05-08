@@ -8,6 +8,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 @FeignClient(name = "point-service")
 public interface PointServiceClient {
 
-    @GetMapping("/api/v1/points/{memberId}/balance")
+    @GetMapping("/points/{memberId}/balance")
     Long getMemberPointBalance(@PathVariable("memberId") Long memberId);
+
+    @GetMapping("/points/company/{companyId}/total")
+    Long getCompanyTotalPoints(@PathVariable("companyId") Long companyId);
 }

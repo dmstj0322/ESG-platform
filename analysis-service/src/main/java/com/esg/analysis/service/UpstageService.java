@@ -32,6 +32,8 @@ public class UpstageService {
         builder.part("document", new ByteArrayResource(file.getBytes()))
                 .filename(file.getOriginalFilename())
                 .contentType(MediaType.valueOf(file.getContentType())); // application/pdf 등 주입
+        // 스캔 PDF·이미지 임베딩 표 인식률 향상을 위해 OCR 강제 실행
+        builder.part("ocr", "force");
 
         try {
             // 2. RAW String으로 응답 받기
@@ -47,13 +49,17 @@ public class UpstageService {
                 return "";
             }
 
-            // 3. 재귀적으로 모든 텍스트 노드 수집
-            StringBuilder combinedText = new StringBuilder();
+            // 3. elements 배열에서 페이지 마커 보존 추출 → fallback: 재귀 텍스트 수집
             JsonNode root = objectMapper.readTree(rawResponse);
-            findAndCollectText(root, combinedText);
-
-            String result = combinedText.toString().trim();
-            log.info(">>>> [Upstage] 추출 성공 - 데이터 길이: {}", result.length());
+            String result = extractWithPageMarkers(root);
+            if (result.isBlank()) {
+                StringBuilder fallback = new StringBuilder();
+                findAndCollectText(root, fallback);
+                result = fallback.toString().trim();
+                log.info(">>>> [Upstage] fallback 추출 완료 - 길이: {}", result.length());
+            } else {
+                log.info(">>>> [Upstage] 페이지 마커 추출 완료 - 길이: {}", result.length());
+            }
             return result;
 
         } catch (Exception e) {
@@ -64,7 +70,45 @@ public class UpstageService {
     }
 
     /**
+     * Upstage elements 배열에서 페이지별 텍스트를 추출하고 [PAGE:X] 마커를 삽입합니다.
+     * elements 배열이 없거나 비어있으면 빈 문자열을 반환하고 fallback이 처리합니다.
+     *
+     * Upstage Document Parse 응답 구조:
+     *   { "elements": [ { "page": 1, "content": { "text": "...", "markdown": "..." } }, ... ] }
+     */
+    private String extractWithPageMarkers(JsonNode root) {
+        JsonNode elements = root.path("elements");
+        if (!elements.isArray() || elements.isEmpty()) return "";
+
+        StringBuilder sb = new StringBuilder();
+        int currentPage = -1;
+
+        for (JsonNode elem : elements) {
+            int page = elem.path("page").asInt(-1);
+
+            // content.text → content.markdown 순서로 텍스트 추출
+            JsonNode content = elem.path("content");
+            String text = "";
+            if (content.has("text") && content.get("text").isTextual()) {
+                text = content.get("text").asText().trim();
+            } else if (content.has("markdown") && content.get("markdown").isTextual()) {
+                text = content.get("markdown").asText().trim();
+            }
+            if (text.isBlank()) continue;
+
+            // 페이지가 바뀔 때만 마커 삽입 (FILE_PAGE = 업로드 파일 내 물리적 순서, 인쇄 페이지 번호와 다를 수 있음)
+            if (page > 0 && page != currentPage) {
+                sb.append("\n[FILE_PAGE:").append(page).append("]\n");
+                currentPage = page;
+            }
+            sb.append(text).append("\n");
+        }
+        return sb.toString().trim();
+    }
+
+    /**
      * JSON 트리를 타면서 markdown, text, html 필드가 보이면 모두 수집합니다.
+     * elements 배열이 없는 구형 Upstage 응답 또는 fallback 용도로 사용됩니다.
      */
     private void findAndCollectText(JsonNode node, StringBuilder sb) {
         if (node.isObject()) {

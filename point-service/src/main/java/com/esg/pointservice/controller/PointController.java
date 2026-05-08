@@ -40,4 +40,9 @@ public class PointController {
   public ResponseEntity<Page<PointHistory>> getPointHistory(@PathVariable Long memberId, @PageableDefault(size = 10) Pageable pageable) {
     return ResponseEntity.ok(pointService.getPointHistory(memberId, pageable));
   }
+
+  @GetMapping("/company/{companyId}/total")
+  public ResponseEntity<Long> getCompanyTotalPoints(@PathVariable Long companyId) {
+    return ResponseEntity.ok(pointService.getCompanyTotalPoints(companyId));
+  }
 }

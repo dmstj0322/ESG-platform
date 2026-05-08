@@ -58,6 +58,11 @@ public class PointService {
       .orElse(0L);
   }
 
+  public Long getCompanyTotalPoints(Long companyId) {
+    Long total = pointBalanceRepository.sumBalanceByCompanyId(companyId);
+    return (total != null) ? total : 0L;
+  }
+
   @Transactional(readOnly = true)
   public Page<PointHistory> getPointHistory(Long memberId, Pageable pageable) {
     return pointHistoryRepository.findByMemberIdOrderByCreatedDateDesc(memberId, pageable);

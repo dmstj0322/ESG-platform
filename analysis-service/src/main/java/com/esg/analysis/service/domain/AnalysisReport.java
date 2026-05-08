@@ -28,13 +28,22 @@ public class AnalysisReport extends BaseTimeEntity {
 
   private String grade;
 
+  // 에코 포인트 성과 확정 필드
+  private Long ecoPoints;
+  private Double carbonReductionKg;
+  private Double equivalentTrees;
+
   @Builder
-  public AnalysisReport(Long memberId, Long companyId, String status, String reportContent, String grade) {
+  public AnalysisReport(Long memberId, Long companyId, String status, String reportContent, String grade,
+                        Long ecoPoints, Double carbonReductionKg, Double equivalentTrees) {
     this.memberId = memberId;
     this.companyId = companyId;
     this.status = status;
     this.reportContent = reportContent;
     this.grade = grade;
+    this.ecoPoints = ecoPoints;
+    this.carbonReductionKg = carbonReductionKg;
+    this.equivalentTrees = equivalentTrees;
   }
 
   // --- 비즈니스 편의 메서드 ---
@@ -42,11 +51,20 @@ public class AnalysisReport extends BaseTimeEntity {
     this.status = status;
   }
 
-  // Consumer에서 이 메서드를 호출할 것입니다.
   public void completeAnalysis(String content, String grade) {
     this.reportContent = content;
     this.grade = grade;
     this.status = "COMPLETED";
+  }
+
+  public void completeWithEco(String content, String grade,
+                              Long ecoPoints, Double carbonReductionKg, Double equivalentTrees) {
+    this.reportContent = content;
+    this.grade = grade;
+    this.status = "COMPLETED";
+    this.ecoPoints = ecoPoints;
+    this.carbonReductionKg = carbonReductionKg;
+    this.equivalentTrees = equivalentTrees;
   }
 
   public void failAnalysis() {

@@ -1,0 +1,18 @@
+# analysis-service.yml에 필요한 환경변수 목록
+# 실제 값은 팀원 간 별도 공유 (Slack DM, 노션 보안 페이지 등)
+# 사용법: 아래 변수들을 OS 환경변수 또는 IDE Run Configuration에 설정
+
+# Groq LLM API (https://console.groq.com)
+GROQ_API_KEY=gsk_...
+
+# Upstage Document Parse API (https://console.upstage.ai)
+UPSTAGE_API_KEY=up_...
+
+# 한국전력공사 OpenAPI (https://openapi.kepco.co.kr)
+KEPCO_API_KEY=...
+
+# 한국가스공사 OpenAPI (https://www.kogas.or.kr/openapi)
+KOGAS_API_KEY=...
+
+# OpenAI API (https://platform.openai.com)
+OPENAI_API_KEY=sk-proj-...

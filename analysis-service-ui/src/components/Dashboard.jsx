@@ -157,123 +157,535 @@
 //
 // export default Dashboard;
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+// src/components/Dashboard.jsx
+
+// import React, { useEffect, useState, useCallback } from 'react';
+// import axios from 'axios';
+// import { Card, Statistic, Spin, Typography, Input, Tag, Button, Upload, message, Divider } from 'antd';
+// import { UploadOutlined, DownloadOutlined, CheckCircleFilled } from '@ant-design/icons';
+// import { exportToPdf } from '../utils/analysisExporter';
+// import ESGAnalysisCharts from './analysis/ESGAnalysisCharts';
+//
+// const { Title, Text } = Typography;
+// const { Search } = Input;
+//
+// const Dashboard = () => {
+//     const [companyId, setCompanyId] = useState(6);
+//     const [stats, setStats] = useState([]);
+//     const [loading, setLoading] = useState(true);
+//     const [recentReport, setRecentReport] = useState(null);
+//     const [isAnalyzing, setIsAnalyzing] = useState(false);
+//
+//     const fetchData = useCallback(async (id) => {
+//         try {
+//             setLoading(true);
+//             const res = await axios.get(`http://localhost:8081/api/v1/analysis/stats/${id}`);
+//             setStats(res.data || []);
+//         } catch (e) { console.error(e); }
+//         finally { setLoading(false); }
+//     }, []);
+//
+//     useEffect(() => { fetchData(companyId); }, [companyId, fetchData]);
+//
+//     const uploadProps = {
+//         name: 'file',
+//         action: 'http://localhost:8081/api/v1/analysis/report',
+//         headers: { 'X-UserId': '1', 'X-CompanyId': companyId.toString() },
+//         onChange(info) {
+//             if (info.file.status === 'uploading') setIsAnalyzing(true);
+//             if (info.file.status === 'done') {
+//                 setTimeout(async () => {
+//                     try {
+//                         const res = await axios.get(`http://localhost:8081/api/v1/analysis/latest/${companyId}`);
+//                         if (res.data) {
+//                             setRecentReport(res.data); // 이미 객체이므로 바로 저장
+//                             fetchData(companyId);
+//                             message.success("분석 완료!");
+//                         }
+//                     } catch (e) { message.error("데이터 로드 실패"); }
+//                     finally { setIsAnalyzing(false); }
+//                 }, 4000);
+//             }
+//         },
+//         showUploadList: false,
+//     };
+//
+//     return (
+//         <div className="min-h-screen bg-slate-50 p-12">
+//             <header className="flex justify-between items-center mb-10">
+//                 <Title level={2}>ESG 경영 분석 대시보드</Title>
+//                 <div className="flex gap-4">
+//                     <Search placeholder="기업 ID" onSearch={(v) => setCompanyId(v)} className="w-48" />
+//                     <Upload {...uploadProps}><Button type="primary" danger icon={<UploadOutlined />}>신규 분석</Button></Upload>
+//                 </div>
+//             </header>
+//
+//             <Spin spinning={loading || isAnalyzing}>
+//                 <div className="grid grid-cols-4 gap-6 mb-12">
+//                     {stats.map((item, index) => (
+//                         <Card key={index}><Statistic title={`${item.grade} 등급`} value={item.count} suffix="건" /></Card>
+//                     ))}
+//                 </div>
+//
+//                 {recentReport && (
+//                     <div className="space-y-12">
+//                         {recentReport.sections && (
+//                             <div className="bg-white p-10 rounded-[32px] shadow-sm">
+//                                 <ESGAnalysisCharts sections={recentReport.sections} />
+//                             </div>
+//                         )}
+//                         <Card className="rounded-[32px] shadow-xl overflow-hidden">
+//                             <div className="p-10 bg-white">
+//                                 <div className="flex justify-between items-center mb-8">
+//                                     <Title level={3}>상세 분석 결과 요약</Title>
+//                                     <Button type="primary" icon={<DownloadOutlined />} onClick={() => exportToPdf(recentReport)}>PDF 저장</Button>
+//                                 </div>
+//                                 <Divider />
+//                                 <div className="grid grid-cols-3 gap-10">
+//                                     <div className="col-span-2">
+//                                         <div className="p-8 bg-slate-50 rounded-2xl whitespace-pre-wrap">{recentReport.fullReport}</div>
+//                                     </div>
+//                                     <div className="bg-indigo-600 p-10 rounded-[40px] text-center flex flex-col justify-center shadow-lg">
+//                                         <Text className="text-white text-xl">종합 ESG 등급</Text>
+//                                         <Title level={1} className="!text-white !text-8xl">{recentReport.finalGrade}</Title>
+//                                     </div>
+//                                 </div>
+//                             </div>
+//                         </Card>
+//                     </div>
+//                 )}
+//             </Spin>
+//         </div>
+//     );
+// };
+//
+// export default Dashboard;
+
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import axios from 'axios';
-import { Card, Statistic, Spin, Typography, Input, Tag, Button, Upload, message, Divider } from 'antd';
-import { UploadOutlined, DownloadOutlined, CheckCircleFilled } from '@ant-design/icons';
-import { exportToPdf } from '../utils/analysisExporter';
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
+import { Card, Spin, Typography, Input, Button, Upload, message, Empty, Row, Col, Statistic, Divider } from 'antd';
+import { RocketFilled, FilePdfOutlined, ThunderboltFilled } from '@ant-design/icons';
+import { marked } from 'marked';
+import { exportESGReport } from './exportESGReport';
+import ESGAnalysisCharts from './analysis/ESGAnalysisCharts';
+import AnalysisStepProgress from './analysis/AnalysisStepProgress';
+import CarbonBenchmarkChart from './analysis/CarbonBenchmarkChart';
+import EvidenceTable from './analysis/EvidenceTable';
 
 const { Title, Text } = Typography;
 const { Search } = Input;
 
 const Dashboard = () => {
-    const [companyId, setCompanyId] = useState(6);
-    const [stats, setStats] = useState([]);
-    const [loading, setLoading] = useState(true);
+    // companyId: localStorage에서 복원, 없으면 기본값 9
+    const [companyId, setCompanyId] = useState(() => {
+        const saved = localStorage.getItem('esg_companyId');
+        return saved ? Number(saved) : 9;
+    });
+    const [loading, setLoading]           = useState(false);
     const [recentReport, setRecentReport] = useState(null);
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [isAnalyzing, setIsAnalyzing]   = useState(false);
+    const [wsStatus, setWsStatus]         = useState(null);
+    const [isExporting, setIsExporting]   = useState(false);
+    const [ecoPreview, setEcoPreview]     = useState(null);
+    const [benchmarkData, setBenchmarkData] = useState(null);
+    const pollingTimer = useRef(null);
+    const stompClient  = useRef(null);
+    const [carbonStats, setCarbonStats] = useState([]);
 
-    const fetchData = useCallback(async (id) => {
-        try {
-            setLoading(true);
-            const res = await axios.get(`http://localhost:8081/api/v1/analysis/stats/${id}`);
-            setStats(res.data || []);
-        } catch (e) { console.error(e); } finally { setLoading(false); }
+    const fetchEcoPreview = useCallback(async (id) => {
+      if (!id) return;
+      try {
+        const res = await axios.get(`http://localhost:8081/api/v1/analysis/eco/preview/${id}`);
+        setEcoPreview(res.data);
+      } catch (e) {
+        console.error('에코 포인트 미리보기 조회 실패:', e);
+        setEcoPreview(null);
+      }
     }, []);
 
-    useEffect(() => { fetchData(companyId); }, [companyId, fetchData]);
+    // Company 테이블 기반 자동 벤치마크 조회 (regionCode/ksicCode 하드코딩 제거)
+    const fetchBenchmarkData = useCallback(async (id) => {
+      if (!id) return;
+      try {
+        const res = await axios.get(
+          `http://localhost:8081/api/analysis/benchmark/company/${id}`,
+          { params: { year: new Date().getFullYear() } }
+        );
+        setBenchmarkData(res.data);
+      } catch (e) {
+        console.error('벤치마크 데이터 로드 실패:', e);
+      }
+    }, []);
 
-    const uploadProps = {
-        name: 'file',
-        action: 'http://localhost:8081/api/v1/analysis/report',
-        headers: { 'X-UserId': '1', 'X-CompanyId': companyId.toString() },
-        onChange(info) {
-            if (info.file.status === 'uploading') setIsAnalyzing(true);
-            if (info.file.status === 'done') {
+    useEffect(() => {
+      fetchEcoPreview(companyId);
+      fetchBenchmarkData(companyId);
+    }, [companyId, fetchEcoPreview, fetchBenchmarkData]);
+
+    const fetchLatestData = useCallback(async (id) => {
+      if (!id) return;
+      try {
+        setLoading(true);
+        const noCache = { headers: { 'Cache-Control': 'no-store, no-cache' }, params: { _t: Date.now() } };
+        const [analysisRes, carbonRes] = await Promise.all([
+          axios.get(`http://localhost:8081/api/v1/analysis/latest/${id}`, noCache),
+          axios.get(`http://localhost:8081/api/analysis/carbon/stats`, {
+            params: { companyId: id, year: new Date().getFullYear(), _t: Date.now() }
+          }).catch(() => ({ data: [] })),
+        ]);
+
+        if (analysisRes.status === 200 && analysisRes.data) {
+          const raw = analysisRes.data;
+          let parsed = {};
+          if (typeof raw.analysisResult === 'string') {
+            try { parsed = JSON.parse(raw.analysisResult); }
+            catch (e) { parsed = { fullReport: raw.analysisResult }; }
+          } else {
+            parsed = raw.analysisResult || {};
+          }
+          setRecentReport({
+            finalGrade:        raw.finalGrade || parsed?.finalGrade,
+            fullReport:        marked(parsed?.fullReport || '리포트 내용이 없습니다.'),
+            sections:          Array.isArray(parsed?.sections) ? parsed.sections : [],
+            evidenceMapping:   Array.isArray(parsed?.evidenceMapping) ? parsed.evidenceMapping : [],
+            ecoPoints:         parsed?.ecoPoints        ?? null,
+            carbonReductionKg: parsed?.carbonReductionKg ?? null,
+            equivalentTrees:   parsed?.equivalentTrees  ?? null,
+          });
+          setCarbonStats(Array.isArray(carbonRes.data) ? carbonRes.data : []);
+        }
+        setIsAnalyzing(false);
+        if (pollingTimer.current) clearTimeout(pollingTimer.current);
+        // 분석 완료 후 에코 미리보기도 갱신
+        fetchEcoPreview(id);
+      } catch (e) {
+        console.error('데이터 로드 에러:', e);
+      } finally {
+        setLoading(false);
+      }
+    }, [fetchEcoPreview]);
+
+    const connectWebSocket = useCallback((id) => {
+        if (stompClient.current) stompClient.current.deactivate();
+        const client = new Client({
+            webSocketFactory: () => new SockJS('http://localhost:8081/ws-esg'),
+            reconnectDelay: 3000,
+            onConnect: () => {
+                client.subscribe(`/topic/analysis/${id}`, (msg) => {
+                    const status = msg.body;
+                    setWsStatus(status);
+                    if (status === 'COMPLETE') {
+                        setIsAnalyzing(false);
+                        fetchLatestData(id);
+                        if (pollingTimer.current) clearTimeout(pollingTimer.current);
+                    }
+                    if (status === 'FAILED') {
+                        setIsAnalyzing(false);
+                        if (pollingTimer.current) clearTimeout(pollingTimer.current);
+                        message.error('분석 중 오류가 발생했습니다. 다시 시도해주세요.');
+                    }
+                });
+                client.subscribe(`/topic/admin/alert`, (msg) => {
+                    const alert = JSON.parse(msg.body);
+                    message.warning({
+                        content: `⚠️ 기업 ID ${alert.companyId} — ${alert.message} (포인트: ${alert.userPoints})`,
+                        duration: 10,
+                    });
+                });
+            },
+            onStompError: (frame) => console.error('WebSocket 연결 오류:', frame),
+        });
+        client.activate();
+        stompClient.current = client;
+    }, [fetchLatestData]);
+
+    // [F-304] PDF 익스포트
+    const handleExportPDF = async () => {
+      if (!recentReport) return;
+      setIsExporting(true);
+      try {
+        await exportESGReport(
+          recentReport,
+          companyId,
+          {},                          // metrics (미사용)
+          {                            // companyInfo
+            name: benchmarkData?.companyName || `기업 ID ${companyId}`,
+            analysisYear: new Date().getFullYear(),
+            industry: benchmarkData?.industryName || '제조업',
+            region:   benchmarkData?.regionName   || '',
+            analysisRange: `${new Date().getFullYear()}년 1월 ~ 12월`,
+          },
+          carbonStats,
+          benchmarkData              // ← RegionalBenchmarkDto 전체 전달
+        );
+        message.success('PDF 다운로드가 완료되었습니다.');
+      } catch (e) {
+        console.error('PDF 생성 에러:', e);
+        message.error('PDF 생성 중 오류가 발생했습니다.');
+      } finally {
+        setIsExporting(false);
+      }
+    };
+
+    const handleEcoCommit = async () => {
+        if (isAnalyzing) return;
+        setIsAnalyzing(true);
+        setWsStatus(null);
+        setRecentReport(null);
+
+        connectWebSocket(companyId);
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        try {
+            await axios.post('http://localhost:8081/api/v1/analysis/eco/commit', {}, {
+                headers: {
+                    'X-UserId':    '1',
+                    'X-CompanyId': companyId.toString(),
+                },
+            });
+            message.success('성과 확정 처리가 시작됩니다. AI가 재분석을 수행합니다...');
+            pollingTimer.current = setTimeout(() => {
+                fetchLatestData(companyId);
                 setIsAnalyzing(false);
-                setRecentReport(info.file.response);
-                fetchData(companyId);
-                message.success("분석이 완료되었습니다!");
-            }
-            if (info.file.status === 'error') {
+            }, 30000);
+        } catch (e) {
+            message.error('성과 확정 실패: ' + (e.response?.data?.message || e.message));
+            setIsAnalyzing(false);
+            setWsStatus(null);
+        }
+    };
+
+    const handleUpload = async (options) => {
+        const { file, onSuccess, onError } = options;
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('companyId', companyId);
+
+        setIsAnalyzing(true);
+        setWsStatus(null);
+        setRecentReport(null);
+
+        connectWebSocket(companyId);
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        try {
+            await axios.post('http://localhost:8081/api/v1/analysis/report', formData, {
+                headers: { 'X-UserId': '1', 'X-CompanyId': companyId.toString() }
+            });
+            message.success('PDF 업로드 성공! 분석을 시작합니다.');
+            onSuccess("ok");
+            pollingTimer.current = setTimeout(() => {
+                fetchLatestData(companyId);
                 setIsAnalyzing(false);
-                message.error("분석 중 오류가 발생했습니다.");
-            }
-        },
-        showUploadList: false,
+            }, 20000);
+        } catch (e) {
+            message.error('업로드 실패: ' + (e.response?.data?.message || e.message));
+            setIsAnalyzing(false);
+            setWsStatus(null);
+            onError(e);
+        }
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 p-6 md:p-12 font-sans">
-            <header className="flex justify-between items-center mb-10">
-                <div>
-                    <Title level={2} className="!m-0">ESG 경영 분석 대시보드</Title>
-                    <Text className="text-slate-500">실시간 등급 통계 및 심층 분석 리포트</Text>
-                </div>
-                <div className="flex gap-3">
-                    <Search placeholder="기업 ID" onSearch={(v) => setCompanyId(parseInt(v))} className="w-40" />
-                    <Upload {...uploadProps}>
-                        <Button type="primary" danger icon={<UploadOutlined />} size="large" loading={isAnalyzing}>
-                            {isAnalyzing ? 'AI 분석 중...' : '신규 리포트 분석'}
+        <div style={{ padding: '40px', background: '#f8fafc', minHeight: '100vh' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
+                <Title level={2}>ESG 실시간 분석 대시보드</Title>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                    <Search
+                        placeholder="기업 ID"
+                        onSearch={(v) => {
+                            const id = Number(v);
+                            localStorage.setItem('esg_companyId', String(id));
+                            setCompanyId(id);
+                        }}
+                        style={{ width: 180 }}
+                        defaultValue={companyId}
+                    />
+                    <Upload customRequest={handleUpload} showUploadList={false}>
+                        <Button type="primary" size="large" icon={<RocketFilled />} loading={isAnalyzing}>
+                            {isAnalyzing ? "AI 분석 진행 중..." : "새 보고서 분석"}
                         </Button>
                     </Upload>
+                    {recentReport && (
+                        <Button
+                            size="large"
+                            icon={<FilePdfOutlined />}
+                            loading={isExporting}
+                            onClick={handleExportPDF}
+                            style={{ borderColor: '#6366f1', color: '#6366f1' }}
+                        >
+                            {isExporting ? "PDF 생성 중..." : "리포트 PDF 저장"}
+                        </Button>
+                    )}
                 </div>
-            </header>
+            </div>
 
-            <Spin spinning={loading || isAnalyzing} tip="데이터를 불러오는 중...">
-                {/* 통계 카드 섹션 */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-                    {stats.map((item, index) => (
-                        <Card key={index} className="rounded-2xl border-none shadow-sm">
-                            <Statistic title={`${item.grade} 등급`} value={item.count} suffix="건" />
-                        </Card>
-                    ))}
-                </div>
-
-                {/* 상세 분석 결과 요약 섹션 (줄글 형식) */}
-                {recentReport && (
-                    <Card className="rounded-2xl border-none shadow-md overflow-hidden animate-fade-in">
-                        <div className="bg-white p-8">
-                            <div className="flex justify-between items-center mb-6">
-                                <Title level={4} className="!m-0">
-                                    <Tag color="blue" icon={<CheckCircleFilled />} className="py-1 px-3 text-sm">Latest</Tag>
-                                    상세 분석 결과 요약
-                                </Title>
-                                <Button
-                                    type="primary"
-                                    icon={<DownloadOutlined />}
-                                    onClick={() => exportToPdf(recentReport)}
-                                    className="bg-green-600 hover:bg-green-700 border-none"
-                                >
-                                    리포트 PDF 저장
-                                </Button>
-                            </div>
-                            <Divider className="my-0 mb-8" />
-
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                                {/* 전문가 총평 (줄글) */}
-                                <div className="lg:col-span-2">
-                                    <Text strong className="text-lg block mb-4">전문가 총평</Text>
-                                    <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 text-slate-700 text-lg leading-relaxed whitespace-pre-wrap">
-                                        {recentReport.fullReport}
-                                    </div>
-                                </div>
-
-                                {/* 등급 표시 카드 */}
-                                <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-3xl text-center flex flex-col justify-center shadow-lg">
-                                    <Text className="text-blue-100 text-lg mb-2">종합 ESG 등급</Text>
-                                    <Title level={1} className="!m-0 !text-white !text-8xl font-black">
-                                        {recentReport.finalGrade}
-                                    </Title>
-                                    <div className="mt-6 py-2 px-4 bg-white/20 rounded-full text-white text-sm inline-block mx-auto">
-                                        실시간 AI 평가 완료
-                                    </div>
-                                </div>
+            {/* 에코 포인트 성과 확정 위젯 */}
+            {ecoPreview && (
+                <Card
+                    style={{
+                        marginBottom: '24px',
+                        background: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)',
+                        border: '1px solid #6ee7b7',
+                        borderRadius: '20px',
+                    }}
+                    bodyStyle={{ padding: '20px 28px' }}
+                >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <Text strong style={{ fontSize: '16px', color: '#065f46', display: 'block', marginBottom: '16px' }}>
+                                🌿 반영 예정 에코 포인트 성과
+                            </Text>
+                            <div style={{ display: 'flex', gap: '40px' }}>
+                                <Statistic
+                                    title={<span style={{ color: '#047857' }}>에코 포인트</span>}
+                                    value={ecoPreview.ecoPoints}
+                                    suffix="EP"
+                                    valueStyle={{ color: '#065f46', fontWeight: 700 }}
+                                />
+                                <Statistic
+                                    title={<span style={{ color: '#047857' }}>탄소 절감량</span>}
+                                    value={ecoPreview.carbonReductionKg}
+                                    suffix="kg CO₂"
+                                    precision={1}
+                                    valueStyle={{ color: '#065f46', fontWeight: 700 }}
+                                />
+                                <Statistic
+                                    title={<span style={{ color: '#047857' }}>소나무 환산</span>}
+                                    value={ecoPreview.equivalentTrees}
+                                    suffix="그루"
+                                    precision={1}
+                                    valueStyle={{ color: '#065f46', fontWeight: 700 }}
+                                />
+                                <Statistic
+                                    title={<span style={{ color: '#047857' }}>E 점수 보정</span>}
+                                    value={`+${ecoPreview.eBonus}`}
+                                    suffix="점"
+                                    valueStyle={{ color: '#059669', fontWeight: 700 }}
+                                />
+                                <Statistic
+                                    title={<span style={{ color: '#047857' }}>S 점수 보정</span>}
+                                    value={`+${ecoPreview.sBonus}`}
+                                    suffix="점"
+                                    valueStyle={{ color: '#059669', fontWeight: 700 }}
+                                />
                             </div>
                         </div>
-                    </Card>
+                        <Button
+                            size="large"
+                            icon={<ThunderboltFilled />}
+                            loading={isAnalyzing}
+                            disabled={isAnalyzing || (ecoPreview.ecoPoints === 0)}
+                            onClick={handleEcoCommit}
+                            style={{
+                                background: '#059669',
+                                borderColor: '#059669',
+                                color: '#fff',
+                                borderRadius: '14px',
+                                height: '52px',
+                                padding: '0 28px',
+                                fontSize: '15px',
+                                fontWeight: 700,
+                            }}
+                        >
+                            {isAnalyzing ? 'AI 재분석 중...' : '성과 확정 및 반영'}
+                        </Button>
+                    </div>
+                </Card>
+            )}
+
+            <AnalysisStepProgress wsStatus={wsStatus} />
+
+            <Spin spinning={loading} description="데이터를 불러오는 중...">
+                {recentReport ? (
+                    <div>
+                        <Row gutter={[32, 32]}>
+                            <Col span={10}>
+                                <Card style={{ borderRadius: '24px', minHeight: '500px', display: 'flex', alignItems: 'center' }}>
+                                    {recentReport.sections?.length > 0 ? (
+                                        <ESGAnalysisCharts sections={recentReport.sections} />
+                                    ) : (
+                                        <Empty description="차트 데이터를 파싱 중입니다..." />
+                                    )}
+                                </Card>
+                            </Col>
+                            <Col span={14}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                    <Card style={{
+                                        background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+                                        borderRadius: '24px',
+                                        border: 'none',
+                                    }}>
+                                        <Text style={{ color: '#e0e7ff', fontSize: '18px' }}>최종 ESG 평가 등급</Text>
+                                        <Title level={1} style={{ color: '#fff', fontSize: '80px', margin: '10px 0' }}>
+                                            {recentReport.finalGrade}
+                                        </Title>
+                                        {recentReport.equivalentTrees != null && (
+                                            <>
+                                                <Divider style={{ borderColor: 'rgba(255,255,255,0.3)', margin: '8px 0' }} />
+                                                <Text style={{ color: '#d1fae5', fontSize: '15px', display: 'block' }}>
+                                                    🌲 소나무 {recentReport.equivalentTrees}그루 식재 효과
+                                                </Text>
+                                                <Text style={{ color: '#a7f3d0', fontSize: '13px', display: 'block', marginTop: '4px' }}>
+                                                    탄소 {recentReport.carbonReductionKg} kg 절감 ({Number(recentReport.ecoPoints).toLocaleString()} EP)
+                                                </Text>
+                                            </>
+                                        )}
+                                    </Card>
+                                    <Card title="🔍 AI 상세 분석 요약" style={{ borderRadius: '24px' }}>
+                                        <div
+                                            style={{ maxHeight: '500px', overflowY: 'auto', lineHeight: '1.8' }}
+                                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(recentReport.fullReport) }}
+                                        />
+                                    </Card>
+                                </div>
+                            </Col>
+                        </Row>
+                    </div>
+                ) : (
+                    !isAnalyzing && (
+                        <div style={{ textAlign: 'center', marginTop: '100px' }}>
+                            <Empty description="데이터가 없습니다. 상단 버튼을 눌러 PDF를 업로드해 주세요." />
+                        </div>
+                    )
                 )}
             </Spin>
+
+            {/* F-303 데이터 출처 정밀 매핑 (Evidence Mapping) */}
+            {recentReport?.evidenceMapping?.length > 0 && (
+                <Card
+                    title="📋 데이터 출처 정밀 매핑 — F-303 Source Attribution"
+                    style={{ borderRadius: '24px', marginTop: '32px' }}
+                    headStyle={{ fontSize: '15px', fontWeight: 700 }}
+                    extra={
+                        <span style={{ color: '#6b7280', fontSize: '13px' }}>
+                            React Table • {recentReport.evidenceMapping.length}개 지표 · 클릭 정렬 · 키워드 검색 지원
+                        </span>
+                    }
+                >
+                    <EvidenceTable data={recentReport.evidenceMapping} />
+                </Card>
+            )}
+
+            {/* 탄소 배출 지역 벤치마크 섹션 */}
+            {benchmarkData && (
+                <Card
+                    title="📊 탄소 배출 지역 벤치마크 — 우리 기업 vs 지역 평균"
+                    style={{ borderRadius: '24px', marginTop: '32px' }}
+                    headStyle={{ fontSize: '16px', fontWeight: 700 }}
+                >
+                    <CarbonBenchmarkChart data={benchmarkData} />
+                </Card>
+            )}
+
+            <style>{`
+                table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: center; }
+                th { background: #f8fafc; font-weight: 600; }
+            `}</style>
         </div>
     );
 };

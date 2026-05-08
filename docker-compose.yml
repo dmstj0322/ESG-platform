@@ -19,6 +19,17 @@ services:
     container_name: esg-redis
     ports:
       - "6379:6379"
+  chroma:
+    image: chromadb/chroma:0.4.24
+    container_name: esg-chroma
+    ports:
+      - "8000:8000"
+    environment:
+      - ANONYMIZED_TELEMETRY=false
+      - ALLOW_RESET=true
+    volumes:
+      - ./chroma-data:/chroma/chroma
+    restart: always
 
   # 3. Zookeeper (서희님 설정 베이스)
   zookeeper:
