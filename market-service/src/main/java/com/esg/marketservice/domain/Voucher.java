@@ -19,6 +19,8 @@ public class Voucher extends BaseTimeEntity {
 
   @Column(nullable = false)
   private String serialNumber;
+
+  @Builder.Default
   private boolean isUsed = false;
 
   private Long productId;
