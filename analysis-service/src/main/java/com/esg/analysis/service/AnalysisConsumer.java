@@ -275,6 +275,11 @@ public class AnalysisConsumer {
                 + "'지표 관리 상태 양호', '전략적 보완 필요', '정량적 공시 수준 미흡' 등 전문 진단 용어를 사용하세요.\n"
                 + "모든 분석 코멘트에는 PDF에서 추출한 수치(tCO2-eq, %, 명, 원, kWh, m³, 톤 등)를 포함해야 합니다. "
                 + "수치가 없는 분석은 '(추론)' 표기를 의무화합니다.\n\n"
+                + "[수치 비교 오류 방지 — 필수]\n"
+                + "두 수치를 비교할 때 반드시 두 값을 나란히 놓고 대소를 확인한 뒤 서술하세요.\n"
+                + "예) A=4,443명, B=3,815명 → A>B이므로 여성이 더 많음.\n"
+                + "'~에 비해 낮음/높음/적음/많음' 표현은 실제 숫자 계산을 먼저 수행한 후에만 사용하세요.\n"
+                + "부정적 평가(미흡·낮음·부족·불균형 등)는 해당 수치가 비교 기준값보다 실제로 작을 때만 허용합니다.\n\n"
                 + "[분석 대상 지표]\n"
                 + "K-ESG 문항코드: " + kesgCode + "\n"
                 + "지표명: " + indicatorName + "\n\n"
@@ -291,10 +296,9 @@ public class AnalysisConsumer {
                 + "각 항목에 구체적 수치와 단위를 반드시 포함하세요.\n"
                 + "4. 등급: 90+ A, 70~89 B, 50~69 C, 50미만 D\n"
                 + "5. evidence_text: 이 지표를 가장 잘 뒷받침하는 원문 문구를 그대로 인용(최대 100자). 없으면 빈 문자열.\n"
-                + "6. page_number: 보고서 원문에서 실제 인쇄된 페이지 번호를 찾아 정수로 반환. "
-                + "[FILE_PAGE:X] 마커는 업로드 파일의 물리적 순서 번호이므로 절대 사용하지 마십시오. "
-                + "대신 evidence_text 주변 텍스트에서 'p.X', 'P.X', 'X쪽', 'X페이지', 또는 페이지 상단·하단에 단독으로 등장하는 숫자 패턴을 찾아 반환하세요. "
-                + "확인된 인쇄 페이지 번호가 없으면 반드시 -1을 반환.\n"
+                + "6. page_number: 보고서 발췌문에서 evidence_text 위치 직전에 등장하는 [FILE_PAGE:X] 마커의 X 값을 정수로 반환하세요. "
+                + "예: 발췌문에 '[FILE_PAGE:23]'이 있으면 23을 반환. "
+                + "[FILE_PAGE:X] 마커가 발췌문에 없으면 -1을 반환.\n"
                 + "7. confidence_score: 원문 수치 기반이면 80~100, 부분 추론이면 50~79, 완전 추론이면 0~49.\n\n"
                 + "[출력 규칙]\n"
                 + "마크다운 없이 순수 JSON만 반환하세요:\n"
@@ -432,7 +436,12 @@ public class AnalysisConsumer {
                 .limit(2)
                 .collect(Collectors.joining(" "));
         if (topComment.isBlank() && !indicators.isEmpty()) topComment = indicators.get(0).comment;
-        String snippet = topComment.length() > 120 ? topComment.substring(0, 120) + "..." : topComment;
+        // 지표 comment 안의 마커 태그([현황 분석] 등)를 제거해야 카테고리 comment 파싱이 깨지지 않음
+        String cleanedComment = topComment
+                .replaceAll("\\[(현황[^\\]]*|가이드라인\\s*준수\\s*여부|준수\\s*여부|성과\\s*평가|성과|개선\\s*제언|개선)\\]\\s*", "")
+                .replaceAll("\\s+", " ")
+                .trim();
+        String snippet = cleanedComment.length() > 200 ? cleanedComment.substring(0, 200) + "..." : cleanedComment;
 
         String diagnosisStatus = score >= 90 ? "지표 관리 상태 최우수"
                 : score >= 70 ? "지표 관리 상태 양호"
