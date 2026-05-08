@@ -23,3 +23,6 @@ spring:
     redis:
       host: localhost
       port: 6379
+
+jwt:
+  secret: vms_secret_key_testing_1234567890_vms_secret_key

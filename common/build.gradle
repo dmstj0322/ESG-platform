@@ -6,6 +6,7 @@ dependencies {
     // Lombok (공통)
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
+    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
 
     // [서희님 코드] QueryDSL 설정
     implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'

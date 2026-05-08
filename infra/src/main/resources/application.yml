@@ -1,0 +1,10 @@
+spring:
+  cloud:
+    aws:
+      credentials:
+        access-key: ${CLOUD_AWS_CREDENTIALS_ACCESS_KEY}
+        secret-key: ${CLOUD_AWS_CREDENTIALS_SECRET_KEY}
+      region:
+        static: ${CLOUD_AWS_REGION_STATIC:ap-northeast-2}
+      s3:
+        bucket: esg-flatform-918172958484-ap-northeast-2-an

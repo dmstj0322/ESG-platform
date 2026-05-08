@@ -16,3 +16,7 @@ eureka:
     fetch-registry: true
   instance:
     prefer-ip-address: true
+
+logging:
+  level:
+    org.springframework.security: DEBUG

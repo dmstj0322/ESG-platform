@@ -16,3 +16,24 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+  cloud:
+    aws:
+      credentials:
+        access-key: ${CLOUD_AWS_CREDENTIALS_ACCESS_KEY}
+        secret-key: ${CLOUD_AWS_CREDENTIALS_SECRET_KEY}
+      region:
+        static: ${CLOUD_AWS_REGION_STATIC:ap-northeast-2}
+      s3:
+        bucket: esg-flatform-918172958484-ap-northeast-2-an
+
+jwt:
+  secret: vms_secret_key_testing_1234567890_vms_secret_key
