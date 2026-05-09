@@ -15,6 +15,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
     implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
     runtimeOnly 'com.mysql:mysql-connector-j'
 
     // [수정] LangChain4j 설정
@@ -58,7 +59,9 @@ dependencies {
     // OpenAI 연동을 위한 LangChain4j 라이브러리 추가
     implementation "dev.langchain4j:langchain4j-open-ai:${lcVersion}"
 
-
+    implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
 }
 
 def querydslDir = layout.buildDirectory.dir("generated/querydsl").get().asFile

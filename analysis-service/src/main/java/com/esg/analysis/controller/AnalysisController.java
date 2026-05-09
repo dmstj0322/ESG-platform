@@ -4,9 +4,11 @@ import com.esg.analysis.dto.GradeStatDto;
 import com.esg.analysis.service.AnalysisApiService;
 import com.esg.analysis.service.EsgGuidelineService;
 import com.esg.analysis.service.repository.AnalysisReportRepository;
+import com.esg.common.security.AuthUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -16,8 +18,8 @@ import java.util.Map;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/analysis")
-@CrossOrigin(origins = "http://localhost:5173")
+@RequestMapping
+//@CrossOrigin(origins = "http://localhost:5173")
 @RequiredArgsConstructor
 public class AnalysisController {
 
@@ -28,8 +30,8 @@ public class AnalysisController {
     /**
      * [GET] 최신 완료 리포트 조회
      */
-    @GetMapping("/latest/{companyId}")
-    public ResponseEntity<?> getLatestReport(@PathVariable Long companyId) {
+    @GetMapping("/latest")
+    public ResponseEntity<?> getLatestReport(@RequestHeader("X-Company-Id") Long companyId) {
         log.info(">>>> [API 호출] 기업 ID {}의 최신 COMPLETED 리포트 조회", companyId);
 
         return analysisReportRepository
@@ -55,13 +57,12 @@ public class AnalysisController {
      */
     @PostMapping("/report")
     public ResponseEntity<?> requestReport(
-            @RequestHeader("X-UserId") Long userId,
-            @RequestHeader("X-CompanyId") Long companyId,
+            @AuthenticationPrincipal AuthUser authUser,
             @RequestParam("file") MultipartFile file) {
 
         log.info("★파일 수신★ 이름: {}, 크기: {} bytes", file.getOriginalFilename(), file.getSize());
 
-        Object result = analysisApiService.initiateAnalysis(userId, companyId, file);
+        Object result = analysisApiService.initiateAnalysis(authUser.memberId(), authUser.companyId(), file);
 
         if (result instanceof Long) {
             return ResponseEntity.accepted().body(result);
@@ -72,8 +73,8 @@ public class AnalysisController {
     /**
      * [GET] 등급 분포 통계
      */
-    @GetMapping("/stats/{companyId}")
-    public ResponseEntity<List<GradeStatDto>> getGradeStats(@PathVariable Long companyId) {
+    @GetMapping("/stats")
+    public ResponseEntity<List<GradeStatDto>> getGradeStats(@RequestHeader("X-Company-Id") Long companyId) {
         List<GradeStatDto> stats = analysisReportRepository.getGradeDistribution(companyId);
         return ResponseEntity.ok(stats);
     }
@@ -90,8 +91,8 @@ public class AnalysisController {
     /**
      * [GET] QueryDSL 동작 테스트
      */
-    @GetMapping("/test/querydsl/{companyId}")
-    public String testQueryDsl(@PathVariable Long companyId) {
+    @GetMapping("/test/querydsl")
+    public String testQueryDsl(@RequestHeader("X-Company-Id") Long companyId) {
         long count = analysisReportRepository.countByCompanyAndStatus(companyId, "COMPLETED");
         return "기업 ID [" + companyId + "]의 완료된 분석 리포트: " + count + "개";
     }

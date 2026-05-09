@@ -48,3 +48,7 @@ Thumbs.db
 *.env
 .env*
 keys.env
+application_default_credentials.json
+
+# --- Ollama ---
+ollama-data/

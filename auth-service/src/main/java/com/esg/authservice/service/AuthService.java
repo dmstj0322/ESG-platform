@@ -25,20 +25,17 @@ public class AuthService {
   private final JwtUtil jwtUtil;
 
   @Transactional
-  public void signup(SignupRequest signupRequest) {
+  public void signupAdmin(SignupRequest signupRequest) {
     if (memberRepository.findByEmail(signupRequest.email()).isPresent()) {
       throw new IllegalArgumentException("이미 존재하는 이메일입니다.");
     }
 
     String emailDomain = signupRequest.email().split("@")[1];
 
-    Company company = companyRepository.findByEmailDomain(emailDomain)
-      .orElseGet(() -> {
-        Company newCompany = new Company(null, emailDomain.split("\\.")[0], emailDomain);
-        return companyRepository.save(newCompany);
-      });
-
-    boolean isFirstMember = !memberRepository.existsByCompanyId(company.getId());
+    if (companyRepository.findByEmailDomain(emailDomain).isPresent()) {
+      throw new IllegalArgumentException("이미 등록된 회사 도메인입니다.");
+    }
+    Company company = companyRepository.save(new Company(null, emailDomain.split("\\.")[0], emailDomain));
 
     String encodedPassword = passwordEncoder.encode(signupRequest.password());
 
@@ -47,7 +44,31 @@ public class AuthService {
       .email(signupRequest.email())
       .password(encodedPassword)
       .nickname(signupRequest.nickname())
-      .role(isFirstMember ? Role.ADMIN : Role.USER)
+      .role(Role.COMPANY_ADMIN)
+      .build();
+
+    memberRepository.save(member);
+  }
+
+  @Transactional
+  public void signupUser(SignupRequest signupRequest) {
+    if (memberRepository.findByEmail(signupRequest.email()).isPresent()) {
+      throw new IllegalArgumentException("이미 존재하는 이메일입니다.");
+    }
+
+    String emailDomain = signupRequest.email().split("@")[1];
+
+    Company company = companyRepository.findByEmailDomain(emailDomain)
+      .orElseThrow(() -> new IllegalArgumentException("등록되지 않은 회사입니다. 회사 관리자에게 문의하세요."));
+
+    String encodedPassword = passwordEncoder.encode(signupRequest.password());
+
+    Member member = Member.builder()
+      .companyId(company.getId())
+      .email(signupRequest.email())
+      .password(encodedPassword)
+      .nickname(signupRequest.nickname())
+      .role(Role.USER)
       .build();
 
     memberRepository.save(member);
@@ -106,7 +127,7 @@ public class AuthService {
 
   @Transactional(readOnly = true)
   public String getAdminEmailByCompanyId(Long companyId) {
-    return memberRepository.findByCompanyIdAndRole(companyId, Role.ADMIN)
+    return memberRepository.findByCompanyIdAndRole(companyId, Role.COMPANY_ADMIN)
       .map(Member::getEmail)
       .orElseThrow(() -> new IllegalArgumentException("관리자를 찾을 수 없습니다."));
   }

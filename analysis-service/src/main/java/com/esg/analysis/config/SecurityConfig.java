@@ -1,4 +1,4 @@
-package com.esg.marketservice.config;
+package com.esg.analysis.config;
 
 import com.esg.common.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -26,10 +26,8 @@ public class SecurityConfig {
       .authorizeHttpRequests(auth -> auth
         .requestMatchers("/error").permitAll()
         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-        .requestMatchers(HttpMethod.GET, "/products/**").permitAll()
-        .requestMatchers("/admin/**").hasRole("COMPANY_ADMIN")
-        .requestMatchers("/admin/**").hasRole("SYSTEM_ADMIN")
-        .anyRequest().authenticated())
+        .requestMatchers("/admin/**").hasRole("ADMIN") // 관리자 전용
+        .anyRequest().authenticated()) // 그 외 모든 분석 API는 인증 필요
       .addFilterBefore(new JwtAuthenticationFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class);
 
     return http.build();

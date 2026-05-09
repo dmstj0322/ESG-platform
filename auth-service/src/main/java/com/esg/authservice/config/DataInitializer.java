@@ -1,9 +1,7 @@
 package com.esg.authservice.config;
 
-import com.esg.authservice.domain.Company;
 import com.esg.authservice.domain.Member;
 import com.esg.authservice.domain.Role;
-import com.esg.authservice.repository.CompanyRepository;
 import com.esg.authservice.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
@@ -18,13 +16,14 @@ public class DataInitializer implements CommandLineRunner {
 
   @Override
   public void run(String... args) throws Exception {
-    if (memberRepository.findByEmail("admin@esg.com").isEmpty()) {
+    String adminEmail = "Kesg.official@gmail.com";
+    if (memberRepository.findByEmail(adminEmail).isEmpty()) {
       Member admin = Member.builder()
         .companyId(0L)
-        .email("admin@esg.com")
+        .email(adminEmail)
         .password(passwordEncoder.encode("admin1234!"))
         .nickname("SystemAdmin")
-        .role(Role.ADMIN)
+        .role(Role.SYSTEM_ADMIN)
         .build();
       memberRepository.save(admin);
     }
