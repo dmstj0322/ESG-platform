@@ -48,3 +48,13 @@ Thumbs.db
 *.env
 .env*
 keys.env
+application_default_credentials.json
+
+# --- Ollama ---
+ollama-data/
+
+# --- Claude Code local settings ---
+.claude/settings.local.json
+
+# --- Node lock files ---
+package-lock.json

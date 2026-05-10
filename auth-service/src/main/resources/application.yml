@@ -16,3 +16,6 @@ eureka:
     fetch-registry: true
   instance:
     prefer-ip-address: true
+
+jwt:
+  secret: vms_secret_key_testing_1234567890_vms_secret_key

@@ -5,7 +5,6 @@ import com.esg.authservice.dto.LoginResponse;
 import com.esg.authservice.dto.SignupRequest;
 import com.esg.authservice.service.AuthService;
 import com.esg.common.dto.MemberResponse;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,9 +18,15 @@ import java.util.Map;
 public class AuthController {
   private final AuthService authService;
 
-  @PostMapping("/signup")
-  public ResponseEntity<String> signup(@Valid @RequestBody SignupRequest signupRequest, HttpServletRequest servletRequest) {
-    authService.signup(signupRequest);
+  @PostMapping("/signup/company-admin")
+  public ResponseEntity<String> signupCompanyAdmin(@Valid @RequestBody SignupRequest signupRequest) {
+    authService.signupAdmin(signupRequest);
+    return ResponseEntity.ok("회사 관리자 등록 및 회사 생성이 완료되었습니다.");
+  }
+
+  @PostMapping("/signup/user")
+  public ResponseEntity<String> signupUser(@Valid @RequestBody SignupRequest signupRequest) {
+    authService.signupUser(signupRequest);
     return ResponseEntity.ok("회원가입이 완료되었습니다.");
   }
 

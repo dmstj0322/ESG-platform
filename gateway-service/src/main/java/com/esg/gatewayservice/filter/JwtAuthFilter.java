@@ -27,8 +27,6 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     private static final List<String> EXCLUDE_URLS = List.of(
-      "/posts",
-      "/posts/**",
       "/auth/signup",
       "/auth/login",
       "/auth/refresh"
