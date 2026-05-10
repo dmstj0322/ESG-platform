@@ -13,17 +13,18 @@ public class SettlementService {
 
     private final PointServiceClient pointServiceClient;
     private final EsgScoreRepository esgScoreRepository;
+    private final EcoPointConverter converter;
 
     @Transactional
     public void finalizePerformance(Long companyId, Long memberId) {
-        // 친구의 API를 통해 현재 잔액을 긁어옵니다.
         Long totalPoints = pointServiceClient.getMemberPointBalance(memberId);
 
         EsgScore score = esgScoreRepository.findByCompanyId(companyId)
                 .orElse(new EsgScore(companyId));
 
-        // 총 포인트를 기반으로 점수 최종 확정
-        score.updateSocialScore(totalPoints / 100.0); // 1,000점 만점에 10점식 환산 예시
+        // EcoPointConverter 기준: toSBonus 최대 5점, toEBonus 최대 10점
+        double sScore = converter.toSBonus(totalPoints);
+        score.updateSocialScore(sScore);
         esgScoreRepository.save(score);
     }
 }

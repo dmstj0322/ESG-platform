@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:8000',
+  baseURL: 'http://localhost:9000',
 });
 
 api.interceptors.request.use((config) => {
@@ -28,7 +28,7 @@ api.interceptors.response.use(
       if (refreshToken) {
         try {
           // 새 Access Token 요청
-          const res = await axios.post('http://localhost:8000/auth/refresh', { refreshToken });
+          const res = await axios.post('http://localhost:9000/auth/refresh', { refreshToken });
           const newAccessToken = res.data;
           
           localStorage.setItem('accessToken', newAccessToken);

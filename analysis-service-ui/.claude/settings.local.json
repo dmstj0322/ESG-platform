@@ -41,7 +41,20 @@
       "Bash(node -e ' *)",
       "Bash(Get-Item \"C:\\\\SW_Academy\\\\final project\\\\ESG-platform\\\\analysis-service-ui\\\\public\\\\fonts\\\\NanumGothic-Regular.ttf\")",
       "Bash(Select-Object Name, Length)",
-      "Bash(node -e \"const pkg = require\\('C:/SW_Academy/final project/ESG-platform/analysis-service-ui/node_modules/jspdf/package.json'\\); console.log\\(JSON.stringify\\({main: pkg.main, module: pkg.module, exports: pkg.exports}, null, 2\\)\\)\")"
+      "Bash(node -e \"const pkg = require\\('C:/SW_Academy/final project/ESG-platform/analysis-service-ui/node_modules/jspdf/package.json'\\); console.log\\(JSON.stringify\\({main: pkg.main, module: pkg.module, exports: pkg.exports}, null, 2\\)\\)\")",
+      "PowerShell(docker compose *)",
+      "PowerShell(docker version *)",
+      "PowerShell(wsl --status 2>&1)",
+      "PowerShell(wsl -l -v 2>&1)",
+      "PowerShell(wsl --shutdown; Write-Host \"WSL shutdown complete\")",
+      "PowerShell(Start-Process \"C:\\\\Program Files\\\\Docker\\\\Docker\\\\Docker Desktop.exe\"; Write-Host \"Docker Desktop launched\")",
+      "PowerShell(docker context ls *)",
+      "PowerShell(docker context use default; docker version 2>&1 | Select-Object -First 10)",
+      "Bash(xargs grep -l \"comment\\\\|truncat\\\\|준수\\\\|subIndicator\")",
+      "Bash(xargs grep -l \"comment\\\\|subIndicator\\\\|SubIndicator\")",
+      "Bash(Sort-Object)",
+      "Bash(Find \"C:\\\\SW_Academy\\\\final project\\\\ESG-platform\\\\analysis-service\\\\src\\\\main\\\\java\" -name \"*.java\")",
+      "Bash(Select-Object -ExpandProperty Name)"
     ]
   }
 }

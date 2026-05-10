@@ -28,21 +28,19 @@ public class EsgScore {
         this.companyId = companyId;
     }
 
-    // 실시간 포인트 수신 시 점수 업데이트 로직 (가중치 적용)
-    public void addSocialPoints(Long points) {
-        // 예: 100포인트당 0.1점 부여
-        double converted = points * 0.001;
-        this.socialScore = Math.min(100.0, this.socialScore + converted);
+    // 실시간 포인트 이벤트 수신 시 S 점수 증분 (EcoPointConverter.toSocialScoreIncrement 기준)
+    public void addSocialPoints(double increment) {
+        this.socialScore = Math.min(100.0, this.socialScore + increment);
         calculateTotal();
     }
 
-    // 최종 성과 확정 시 점수 셋팅 로직
     public void updateSocialScore(Double finalScore) {
-        this.socialScore = finalScore;
+        this.socialScore = Math.min(100.0, finalScore);
         calculateTotal();
     }
 
+    // E×40% + S×30% + G×30% — AnalysisConsumer 리포트 산정식과 동일
     private void calculateTotal() {
-        this.totalScore = (environmentScore + socialScore + governanceScore) / 3.0;
+        this.totalScore = environmentScore * 0.4 + socialScore * 0.3 + governanceScore * 0.3;
     }
 }
