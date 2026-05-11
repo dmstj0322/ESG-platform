@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 @EnableJpaAuditing
 @EnableDiscoveryClient
-@SpringBootApplication(exclude = {DataSourceAutoConfiguration.class})
+@SpringBootApplication(scanBasePackages = {"com.esg.authservice", "com.esg.common"})
 public class AuthServiceApplication {
   public static void main(String[] args) {
     SpringApplication.run(AuthServiceApplication.class, args);

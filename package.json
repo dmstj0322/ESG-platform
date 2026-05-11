@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "@ant-design/icons": "^6.1.1",
+    "antd": "^6.3.6",
+    "apparel": "^0.0.2",
+    "axios": "^1.15.1",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
+    "marked": "^18.0.2",
+    "recharts": "^3.8.1"
+  }
+}

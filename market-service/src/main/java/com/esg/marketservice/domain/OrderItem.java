@@ -1,12 +1,13 @@
 package com.esg.marketservice.domain;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @Getter
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Builder
 public class OrderItem {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -20,6 +21,30 @@ public class OrderItem {
   @JoinColumn(name = "product_id")
   private Product product;
 
-  private Integer orderPrice;
+  private Long orderPrice;
   private Integer count;
+
+  public void setOrder(Order order) {
+    this.order = order;
+  }
+
+  public static OrderItem createOrderItem(Product product, int count) {
+    // 주문 수량만큼 재고 차감
+    product.removeStock(count);
+
+    return OrderItem.builder()
+      .product(product)
+      .orderPrice(product.getPrice())
+      .count(count)
+      .build();
+  }
+
+  public void cancel() {
+    // 취소 시 재고 원복
+    this.product.addStock(count);
+  }
+
+  public Long getTotalPrice() {
+    return getOrderPrice() * getCount();
+  }
 }

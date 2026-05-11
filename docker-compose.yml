@@ -1,4 +1,5 @@
 services:
+  # 1. 데이터베이스 (안정적인 설정 유지)
   esg-mysql:
     image: mysql:8.0
     container_name: esg-mysql
@@ -9,9 +10,82 @@ services:
       MYSQL_DATABASE: esg_db
     volumes:
       - ./mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
+  # 2. 임베딩 모델 서버 (RAG 전용 — nomic-embed-text)
+  esg-ollama:
+    image: ollama/ollama:latest
+    container_name: esg-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama-data:/root/.ollama
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+
+  # nomic-embed-text 최초 1회 다운로드 (완료 후 자동 종료)
+  esg-ollama-init:
+    image: ollama/ollama:latest
+    container_name: esg-ollama-init
+    depends_on:
+      esg-ollama:
+        condition: service_healthy
+    environment:
+      - OLLAMA_HOST=http://esg-ollama:11434
+    entrypoint: ["ollama", "pull", "nomic-embed-text"]
+    restart: "no"
+
+  # 캐시 및 벡터 DB (공통)
   esg-redis:
     image: redis:latest
     container_name: esg-redis
     ports:
       - "6379:6379"
+
+  chroma:
+    image: chromadb/chroma:0.4.24
+    container_name: esg-chroma
+    ports:
+      - "8000:8000"
+    environment:
+      - ANONYMIZED_TELEMETRY=false
+      - ALLOW_RESET=true
+    volumes:
+      - ./chroma-data:/chroma/chroma
+    restart: always
+
+  # 3. Zookeeper (버전 통일: 7.5.0)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: esg-zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  # 4. Kafka (성능 안정화 설정 포함)
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: esg-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      # 안정성을 위한 추가 설정
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_HEAP_OPTS: "-Xmx512M -Xms512M"
+      KAFKA_ZOOKEEPER_SddESSION_TIMEOUT_MS: 6000
+      KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS: 6000
