@@ -615,7 +615,7 @@ const GradeBadge = ({ report, navigate }) => {
       background: `linear-gradient(135deg, ${C.navy} 0%, #2d5a8f 100%)`,
       display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
       minHeight: '180px', cursor: 'pointer',
-    }} onClick={() => navigate('/report')}>
+    }} onClick={() => navigate('/analysis/report')}>
       <div style={{ color: '#93c5fd', fontSize: '13px', fontWeight: 600, marginBottom: '12px' }}>
         최종 ESG 종합 등급
       </div>

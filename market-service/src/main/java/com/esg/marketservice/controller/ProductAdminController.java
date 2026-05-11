@@ -56,11 +56,11 @@ public class ProductAdminController {
     return ResponseEntity.ok().build();
   }
 
-  @PostMapping("/{productId}/status")
+  @PatchMapping("/{productId}/status")
   public ResponseEntity<Void> updateProduct(
     @RequestHeader("X-Company-Id") Long companyId,
     @PathVariable Long productId,
-    @RequestParam ProductStatus status) {
+    @RequestBody ProductStatus status) {
     productService.updateStatus(companyId, productId, status);
     return ResponseEntity.ok().build();
   }

@@ -25,7 +25,7 @@ public class CommentService {
     Post post = postRepository.findById(postId)
       .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
 
-    if (!post.getCompanyId().equals(companyId)) {
+    if (companyId != 0L && !post.getCompanyId().equals(companyId)) {
       throw new IllegalArgumentException("다른 회사의 게시글에는 댓글을 작성할 수 없습니다.");
     }
 
@@ -33,6 +33,7 @@ public class CommentService {
       .post(post)
       .memberId(memberId)
       .companyId(companyId)
+      .nickname(requestDto.nickname())
       .content(requestDto.content())
       .build();
 
@@ -40,7 +41,14 @@ public class CommentService {
   }
 
   public Page<CommentResponseDto> getComments(Long postId, Long companyId, Pageable pageable) {
-    Page<Comment> parentComments = commentRepository.findByCompanyIdAndPostIdAndParentIsNullOrderByCreatedDateAsc(companyId, postId, pageable);
+    Page<Comment> parentComments;
+
+    if (companyId == 0L) {
+      parentComments = commentRepository.findByPostIdAndParentIsNullOrderByCreatedDateAsc(postId, pageable);
+    } else {
+      parentComments = commentRepository.findByCompanyIdAndPostIdAndParentIsNullOrderByCreatedDateAsc(companyId, postId, pageable);
+    }
+
     List<Comment> parentList = parentComments.getContent();
     List<Comment> allReplies = commentRepository.findByParentInOrderByCreatedDateAsc(parentList);
 
@@ -60,7 +68,7 @@ public class CommentService {
     Comment comment = commentRepository.findById(commentId)
       .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다."));
 
-    if (!comment.getCompanyId().equals(companyId)) {
+    if (companyId != 0L && !comment.getCompanyId().equals(companyId)) {
       throw new IllegalArgumentException("접근 권한이 없습니다.");
     }
 
@@ -77,7 +85,7 @@ public class CommentService {
     Comment comment = commentRepository.findById(commentId)
       .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다."));
 
-    if (!comment.getCompanyId().equals(companyId)) {
+    if (companyId != 0L && !comment.getCompanyId().equals(companyId)) {
       throw new IllegalArgumentException("접근 권한이 없습니다.");
     }
 
@@ -96,8 +104,12 @@ public class CommentService {
     Comment parentComment = commentRepository.findById(parentId)
       .orElseThrow(() -> new IllegalArgumentException("부모 댓글을 찾을 수 없습니다."));
 
-    if (!parentComment.getPost().getId().equals(postId) || !parentComment.getCompanyId().equals(companyId)) {
+    if (!parentComment.getPost().getId().equals(postId)) {
       throw new IllegalArgumentException("잘못된 요청입니다.");
+    }
+
+    if (companyId != 0L && !parentComment.getCompanyId().equals(companyId)) {
+      throw new IllegalArgumentException("접근 권한이 없습니다.");
     }
 
     Comment reply = Comment.builder()
@@ -105,6 +117,7 @@ public class CommentService {
       .parent(parentComment)
       .memberId(memberId)
       .companyId(companyId)
+      .nickname(requestDto.nickname())
       .content(requestDto.content())
       .build();
 

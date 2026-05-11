@@ -71,7 +71,7 @@ public class Product extends BaseTimeEntity {
   public void update(String name, Long price, Integer stock, Category category, String content, String voucherUrl) {
     this.name = name;
     this.price = price;
-    this.stock = stock;
+    this.stock = (stock == null) ? this.stock : stock;
     this.category = category;
     this.content = content;
     this.voucherUrl = voucherUrl;

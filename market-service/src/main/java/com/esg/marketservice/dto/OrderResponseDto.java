@@ -1,5 +1,6 @@
 package com.esg.marketservice.dto;
 
+import com.esg.marketservice.domain.Category;
 import com.esg.marketservice.domain.Order;
 import com.esg.marketservice.domain.OrderItem;
 import com.esg.marketservice.domain.OrderStatus;
@@ -14,8 +15,9 @@ public record OrderResponseDto(
   String productName,
   Long totalPrice,
   OrderStatus status,
-  LocalDateTime createdAt,
-  LocalDateTime modifiedAt,
+  Category category,
+  LocalDateTime createdDate,
+  LocalDateTime modifiedDate,
   List<OrderItemDto> items,
   String voucherUrl
 ) {
@@ -27,6 +29,7 @@ public record OrderResponseDto(
       order.getOrderItems().get(0).getProduct().getName(),
       order.getTotalPrice(),
       order.getStatus(),
+      order.getOrderItems().get(0).getProduct().getCategory(),
       order.getCreatedDate(),
       order.getModifiedDate(),
       order.getOrderItems().stream().map(OrderItemDto::new).toList(),

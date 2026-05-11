@@ -7,6 +7,7 @@ public record PostRequestDto(
   String content,
   Long memberId,
   Long companyId,
+  String nickname,
   ActivityType activityType,
   Double aiScore,
   String aiResult) {

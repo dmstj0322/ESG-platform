@@ -56,7 +56,7 @@ public class EmailService {
   }
 
   public void sendVoucherEmail(String from, String to, String productName, String link) {
-    String subject = String.format("[Green-Trace] %s 기프티콘이 도착했습니다.", productName);
+    String subject = String.format("[Green-Trace] 구매하신 %s 기프티콘이 도착했습니다.", productName);
     // EmailTemplates의 템플릿에 변수 주입
     String htmlContent = String.format(EmailTemplates.VOUCHER_TEMPLATE, productName, from, link);
 
@@ -64,7 +64,7 @@ public class EmailService {
   }
 
   public void sendDonationCertEmail(String from, String to, String productName, String link) {
-    String subject = String.format("[Green-Trace] %s 기부 참여 감사 인증서", productName);
+    String subject = String.format("[Green-Trace] %s 기부 참여에 감사드립니다.", productName);
     // EmailTemplates의 템플릿에 변수 주입
     String htmlContent = String.format(EmailTemplates.DONATION_TEMPLATE, productName, link);
 

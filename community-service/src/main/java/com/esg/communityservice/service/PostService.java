@@ -51,6 +51,7 @@ public class PostService {
     Post post = Post.builder()
       .memberId(memberId)
       .companyId(companyId)
+      .nickname(requestDto.nickname())
       .title(requestDto.title())
       .content(requestDto.content())
       .aiScore(0.0)
@@ -101,7 +102,7 @@ public class PostService {
   @Transactional(readOnly = true)
   public Page<PostResponseDto> getPosts(Long memberId, Long companyId, String role, Pageable pageable) {
     Page<Post> posts;
-    if ("ADMIN".equals(role) && companyId == 0L) {
+    if (companyId == 0L) {
       // 관리자는 전체 조회
       posts =  postRepository.findAllByOrderByCreatedDateDesc(pageable);
     } else {
@@ -118,7 +119,7 @@ public class PostService {
     Post post = postRepository.findById(postId)
       .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
 
-    if (!post.getCompanyId().equals(companyId)) {
+    if (companyId != 0 && !post.getCompanyId().equals(companyId)) {
       throw new IllegalArgumentException("접근 권한이 없습니다.");
     }
 
@@ -137,7 +138,7 @@ public class PostService {
     Post post = postRepository.findById(postId)
       .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
 
-    if (!post.getCompanyId().equals(companyId)) {
+    if (companyId != 0 && !post.getCompanyId().equals(companyId)) {
       throw new IllegalArgumentException("접근 권한이 없습니다.");
     }
 

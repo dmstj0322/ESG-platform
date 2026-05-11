@@ -1,253 +1,257 @@
-// import React, { useEffect, useState } from 'react';
-// import { useParams } from 'react-router-dom';
-// import Barcode from 'react-barcode'; 
-// import api from '../api';
-// import { useAuth } from '../context/AuthContext';
-
-// const VoucherDetail = () => {
-//   const { orderId } = useParams();
-//   const { user } = useAuth();
-//   const [data, setData] = useState(null);
-//   const [loading, setLoading] = useState(true);
-
-//   useEffect(() => {
-//     const fetchVoucher = async () => {
-//       try {
-//         // OrderController의 getOrderDetailsForView 호출
-//         const res = await api.get(`/market/orders/${orderId}/view`);
-//         setData(res.data);
-//         console.log(res.data);
-//       } catch (err) {
-//         alert("바우처 정보를 불러올 수 없거나 권한이 없습니다.");
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-//     fetchVoucher();
-//   }, [orderId]);
-
-//   if (loading) return <div style={{ textAlign: 'center', padding: '100px' }}>Loading...</div>;
-//   if (!data) return <div style={{ textAlign: 'center', padding: '100px' }}>정보를 찾을 수 없습니다.</div>;
-
-//   const isDonation = data.category === 'DONATION';
-
-//   return (
-//     <div style={containerStyle}>
-//       <div style={ticketCardStyle}>
-//         {isDonation ? (
-//           /* --- 기부 인증서 UI --- */
-//           <div style={certDecorStyle}>
-//             <h1 style={{ fontFamily: 'serif', color: '#b8860b' }}>Donation Certificate</h1>
-//             <p style={{ fontSize: '18px', margin: '30px 0', lineHeight: '1.6' }}>
-//               따뜻한 마음을 나누어 주셔서 감사합니다. <br />
-//               <strong>{data.productName}</strong> 캠페인에 소중한 기부가 전달되었습니다.
-//             </p>
-//             <div style={{ borderTop: '1px solid #d4af37', width: '60%', margin: '0 auto 20px' }} />
-//             <p style={{ color: '#888' }}>{data.orderDate.split('T')[0]}</p>
-//             <p style={{ fontWeight: 'bold', fontSize: '18px', marginTop: '10px' }}>Green Trace ESG Market</p>
-//           </div>
-//         ) : (
-//           /* --- 기프티콘 바코드 UI --- */
-//           <div>
-//             <h2 style={{ color: '#20c997', margin: 0 }}>Mobile Voucher</h2>
-//             <hr style={{ border: '0.5px solid #eee', margin: '20px 0' }} />
-//             <img src={data.voucherUrl} alt="상품" style={{ width: '100%', borderRadius: '8px', marginBottom: '20px' }} />
-//             <p style={{ fontSize: '18px', fontWeight: 'bold' }}>{data.productName}</p>
-            
-//             <div style={{ margin: '30px 0', display: 'flex', justifyContent: 'center' }}>
-//               <Barcode value={data.serialNumber} width={2} height={80} />
-//             </div>
-            
-//             <div style={infoBoxStyle}>
-//               <p>📍 사용처: {data.productName} 제휴 매장</p>
-//               <p>🎫 핀번호: {data.serialNumber}</p>
-//             </div>
-//           </div>
-//         )}
-        
-//         <button onClick={() => window.print()} style={printBtnStyle}>
-//           {isDonation ? "인증서 PDF 저장" : "바코드 이미지 저장"}
-//         </button>
-//       </div>
-//     </div>
-//   );
-// };
-
-// // --- 스타일 ---
-// const containerStyle = { display: 'flex', justifyContent: 'center', padding: '50px 20px', backgroundColor: '#f4f4f4', minHeight: '80vh' };
-// const ticketCardStyle = { backgroundColor: '#fff', width: '100%', maxWidth: '450px', padding: '40px', borderRadius: '15px', textAlign: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' };
-// const certDecorStyle = { border: '5px double #d4af37', padding: '30px 20px', backgroundColor: '#fffcf5' };
-// const infoBoxStyle = { textAlign: 'left', fontSize: '14px', color: '#666', backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '8px', lineHeight: '1.6' };
-// const printBtnStyle = { marginTop: '30px', width: '100%', padding: '15px', backgroundColor: '#339af0', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' };
-
-// export default VoucherDetail;
-
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom'; // useNavigate 추가
-import Barcode from 'react-barcode'; 
+import { useParams, useNavigate } from 'react-router-dom';
+import Barcode from 'react-barcode';
 import api from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
+import html2canvas from 'html2canvas';
 
 const VoucherDetail = () => {
   const { orderId } = useParams();
   const { user } = useAuth();
-  const navigate = useNavigate(); // 페이지 이동을 위해 추가
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [base64Image, setBase64Image] = useState("");
+
+  const convertToBase64 = async (url) => {
+    try {
+      const cacheBusterUrl = `${url}?t=${new Date().getTime()}`;
+      const response = await fetch(cacheBusterUrl, { mode: 'cors' });
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (e) {
+      console.error("이미지 변환 실패:", e);
+      return url; 
+    }
+  };
 
   useEffect(() => {
     const fetchVoucher = async () => {
-      // 1. 방어 로직: 유저 정보가 없으면(로그인 안 됨) 백엔드에 요청하기 전에 로그인 페이지로 보냅니다.
-      const token = localStorage.getItem('accessToken'); // 또는 프로젝트의 토큰 저장 방식
+      const token = localStorage.getItem('accessToken');
       if (!user && !token) {
-        alert("로그인이 필요한 서비스입니다. 로그인 후 다시 링크를 클릭해 주세요.");
+        alert("로그인이 필요한 서비스입니다.");
         navigate('/login');
         return;
       }
-
       try {
-        // 2. 혹시 MSA 환경에서 헤더를 요구할 수 있으므로, 내 정보를 같이 실어서 보냅니다.
         const res = await api.get(`/market/orders/${orderId}/view`, {
-          headers: { 
+          headers: {
             'X-Member-Id': user?.memberId || localStorage.getItem('memberId'),
             'X-Company-Id': user?.companyId || localStorage.getItem('companyId')
           }
         });
         setData(res.data);
+        if (res.data.voucherUrl) {
+          const b64 = await convertToBase64(res.data.voucherUrl);
+          setBase64Image(b64);
+        }
       } catch (err) {
-        // 3. 401 에러(인증 실패)를 명시적으로 잡아서 처리합니다.
         if (err.response?.status === 401) {
-          alert("로그인이 만료되었습니다. 다시 로그인해 주세요.");
           navigate('/login');
         } else {
-          alert("바우처 정보를 불러올 수 없거나 내 주문 내역이 아닙니다.");
+          alert("접근 권한이 없거나 존재하지 않는 바우처입니다.");
+          navigate(-1);
         }
       } finally {
         setLoading(false);
       }
     };
-    
     fetchVoucher();
   }, [orderId, user, navigate]);
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '100px' }}>Loading...</div>;
-  if (!data) return <div style={{ textAlign: 'center', padding: '100px' }}>정보를 찾을 수 없습니다.</div>;
+  // 📸 이미지 저장 로직
+  const handleDownloadImage = async () => {
+    const element = document.querySelector(".ticket-card");
+    if (!element) return;
+
+    try {
+      const canvas = await html2canvas(element, {
+        scale: 3, 
+        useCORS: true,
+        backgroundColor: "#f1f3f5", 
+        onclone: (clonedDoc) => {
+          const clonedCard = clonedDoc.querySelector(".ticket-card");
+          // 캡처 시 강제 고정 수치 (찌그러짐 방지 핵심)
+          clonedCard.style.width = "400px";
+          clonedCard.style.boxShadow = "none";
+          
+          const imgContainer = clonedDoc.querySelector(".img-container");
+          if (imgContainer) {
+            imgContainer.style.height = "250px"; // 👈 저장 시 사진 높이 고정
+          }
+        }
+      });
+
+      const image = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = image;
+      link.download = `GreenTrace_${data.productName}.png`;
+      link.click();
+    } catch (error) {
+      alert("이미지 저장에 실패했습니다.");
+    }
+  };
+
+  if (loading) return <div style={centerStyle}>바우처를 로딩 중입니다...</div>;
+  if (!data) return <div style={centerStyle}>정보를 찾을 수 없습니다.</div>;
 
   const isDonation = data.category === 'DONATION';
-
-  console.log(data);
 
   return (
     <div style={containerStyle}>
       <style>{printStyles}</style>
-      <div>
+
+      <div className="no-print" style={topNavStyle}>
+        <button onClick={() => navigate(-1)} style={backBtnStyle}>〈 뒤로가기</button>
+      </div>
+
+      <div className="ticket-card" style={isDonation ? certCardStyle : voucherCardStyle}>
         {isDonation ? (
-          /* --- 기부 인증서 UI --- */
-          <div style={certDecorStyle}>
-            <h1 style={{ fontFamily: 'serif', color: '#b8860b' }}>Donation Certificate</h1>
-            <p style={{ fontSize: '18px', margin: '30px 0', lineHeight: '1.6' }}>
-              따뜻한 마음을 나누어 주셔서 감사합니다. <br />
-              <strong>{data.productName}</strong> 캠페인에 소중한 기부가 전달되었습니다.
+          <div className="cert-inner" style={certInnerStyle}>
+            <div style={certBadgeStyle}>CERTIFICATE OF DONATION</div>
+            <h1 style={certTitleStyle}>기부 인증서</h1>
+            <div style={dividerStyle} />
+            <p style={certDescStyle}>
+              위 사람은 <strong>Green-Trace</strong>를 통해<br />
+              나누어 주신 따뜻한 마음,<br />
+              <span style={{ color: '#b8860b', fontWeight: 'bold' }}>[{data.productName}]</span>에 참여하였기에<br />
+              이 인증서를 수여합니다.
             </p>
-            <div style={{ borderTop: '1px solid #d4af37', width: '60%', margin: '0 auto 20px' }} />
-            <p style={{ color: '#888' }}>{new Date(data.orderDate).toLocaleDateString()}</p>
-            <p style={{ fontWeight: 'bold', fontSize: '18px', marginTop: '10px' }}>Green Trace ESG Market</p>
+            <p style={certDateStyle}>{new Date(data.orderDate).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            <h3 style={brandNameStyle}>Green-Trace ESG Platform</h3>
           </div>
         ) : (
-          /* --- 기프티콘 바코드 UI --- */
-          <div style={ticketCardStyle}>
-            <h2 style={{ color: '#20c997', margin: 0 }}>Mobile Voucher</h2>
-            <hr style={{ border: '0.5px solid #eee', margin: '20px 0' }} />
-            {/* 이미지가 없을 경우를 대비한 안전장치 추가 */}
-            <img 
-              src={data.voucherUrl || 'https://via.placeholder.com/300x200?text=No+Image'} 
-              alt="상품" 
-              style={{ width: '100%', borderRadius: '8px', marginBottom: '20px' }} 
-            />
-            <p style={{ fontSize: '18px', fontWeight: 'bold' }}>{data.productName}</p>
-            
-            <div style={{ margin: '30px 0', display: 'flex', justifyContent: 'center' }}>
-              <Barcode value={data.serialNumber} width={2} height={80} />
+          <div style={{ textAlign: 'left' }}>
+            <div style={voucherHeaderStyle}>
+              <h2 style={{ margin: 0, color: '#333', fontSize: '20px' }}>Mobile Voucher</h2>
+              <span style={categoryBadgeStyle}>GIFTICON</span>
             </div>
-            
-            <div style={infoBoxStyle}>
-              <p>📍 사용처: {data.productName} 제휴 매장</p>
-              <p>🎫 핀번호: {data.serialNumber}</p>
+
+            {/* 📸 이미지 컨테이너 (고정 높이 부여) */}
+            <div className="img-container" style={imageContainerStyle}>
+              <img
+                src={base64Image || 'https://via.placeholder.com/400x300?text=Green-Trace'}
+                alt="product"
+                style={productImgStyle}
+              />
+            </div>
+
+            <div style={productInfoBox}>
+              <div style={productLabelStyle}>상품명</div>
+              <div style={productNameStyle}>{data.productName}</div>
+            </div>
+
+            <div style={barcodeAreaStyle}>
+              <div style={{ display: 'inline-block', width: '100%', maxWidth: '280px' }}>
+                <Barcode
+                  value={data.serialNumber}
+                  width={1.2}
+                  height={60}
+                  fontSize={14}
+                  margin={0}
+                  displayValue={false}
+                />
+              </div>
+              <div style={serialNumberText}>{data.serialNumber}</div>
+            </div>
+
+            <div style={guideBoxStyle}>
+              <p>• 사용처: {data.productName} 전국 제휴 매장</p>
+              <p>• 유효기간: 발행일로부터 90일 이내</p>
+              <p style={{ color: '#fa5252' }}>• 결제 시 바코드를 보여주세요.</p>
             </div>
           </div>
         )}
-        
-        <button onClick={() => window.print()} style={printBtnStyle}>
-          {isDonation ? "인증서 PDF 저장" : "기프티콘 PDF 저장"}
-        </button>
+      </div>
+
+      <div className="no-print" style={buttonGroupStyle}>
+        <button onClick={handleDownloadImage} style={primaryBtnStyle}>📸 이미지로 저장</button>
+        <button onClick={() => window.print()} style={secondaryBtnStyle}>🖨️ PDF / 인쇄</button>
       </div>
     </div>
   );
 };
 
-// --- 스타일 ---
-// const containerStyle = { display: 'flex', justifyContent: 'center', padding: '50px 20px', backgroundColor: '#f4f4f4', minHeight: '80vh' };
-// const ticketCardStyle = { backgroundColor: '#fff', width: '100%', maxWidth: '500px', padding: '40px', borderRadius: '15px', textAlign: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' };
-// const certDecorStyle = { border: '5px double #d4af37', padding: '20px', backgroundColor: '#fffcf5' };
-const infoBoxStyle = { textAlign: 'left', fontSize: '14px', color: '#666', backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '8px', lineHeight: '1.6' };
-// const printBtnStyle = { marginTop: '30px', width: '100%', padding: '15px', backgroundColor: '#339af0', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' };
+// --- 스타일링 (고정 수치 적용) ---
+const centerStyle = { textAlign: 'center', padding: '100px', color: '#888' };
+const containerStyle = { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px', backgroundColor: '#f1f3f5', minHeight: '100vh' };
+const topNavStyle = { width: '100%', maxWidth: '400px', marginBottom: '20px' };
+const backBtnStyle = { background: 'none', border: 'none', color: '#868e96', cursor: 'pointer', fontSize: '14px' };
 
-const containerStyle = { 
-  display: 'flex', 
-  flexDirection: 'column',
-  alignItems: 'center', 
-  padding: '40px 20px', // 좌우 여백 확보
-  backgroundColor: '#f8f9fa', 
-  minHeight: '100vh' 
-};
-
-const ticketCardStyle = { 
+const voucherCardStyle = { 
   backgroundColor: '#fff', 
   width: '100%', 
-  maxWidth: '450px', // 가로 폭을 살짝 줄이거나 반응형으로 설정
+  maxWidth: '400px', // 👈 웹 화면에서도 너무 크지 않게 제한
   padding: '30px', 
   borderRadius: '24px', 
+  boxShadow: '0 15px 35px rgba(0,0,0,0.08)', 
+  boxSizing: 'border-box' 
+};
+
+const certCardStyle = { ...voucherCardStyle, border: '10px double #d4af37', backgroundColor: '#fffcf5', padding: '10px' };
+const certInnerStyle = { border: '1px solid #d4af37', padding: '40px 20px', textAlign: 'center' };
+const certBadgeStyle = { color: '#b8860b', fontSize: '11px', fontWeight: 'bold', letterSpacing: '2px', marginBottom: '20px' };
+const certTitleStyle = { fontFamily: 'serif', fontSize: '30px', color: '#5c4033', marginBottom: '20px' };
+const dividerStyle = { borderTop: '2px solid #d4af37', width: '50px', margin: '0 auto 25px' };
+const certDescStyle = { fontSize: '16px', lineHeight: '1.8', color: '#444', marginBottom: '30px' };
+const certDateStyle = { color: '#999', fontSize: '14px' };
+const brandNameStyle = { marginTop: '20px', fontWeight: '900', color: '#1a1a1a' };
+
+const voucherHeaderStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' };
+const categoryBadgeStyle = { backgroundColor: '#e7f5ff', color: '#339af0', padding: '4px 10px', borderRadius: '5px', fontSize: '11px', fontWeight: 'bold' };
+
+const imageContainerStyle = { 
+  width: '100%', 
+  height: '250px', // 👈 웹페이지 이미지 크기 고정
+  borderRadius: '16px', 
+  overflow: 'hidden', 
+  marginBottom: '20px',
+  backgroundColor: '#f8f9fa'
+};
+
+const productImgStyle = { 
+  width: '100%', 
+  height: '100%', 
+  objectFit: 'cover' // 👈 찌그러짐 방지
+};
+
+const productInfoBox = { marginBottom: '25px' };
+const productLabelStyle = { fontSize: '12px', color: '#adb5bd', marginBottom: '4px' };
+const productNameStyle = { fontSize: '20px', fontWeight: '800', color: '#212529' };
+
+const barcodeAreaStyle = { 
   textAlign: 'center', 
-  boxShadow: '0 20px 40px rgba(0,0,0,0.08)',
-  boxSizing: 'border-box' // 패딩이 너비를 넘지 않게 함
+  backgroundColor: '#fff', 
+  padding: '20px 10px', 
+  border: '1px solid #e9ecef', 
+  borderRadius: '16px', 
+  marginBottom: '20px', 
+  overflow: 'hidden' 
 };
 
-// 기부 인증서용 클래식 스타일 (금색 테두리)
-const certDecorStyle = { 
-  border: '10px double #d4af37', 
-  padding: '40px', 
-  backgroundColor: '#fffcf5',
-  backgroundImage: 'radial-gradient(#f1f5f9 1px, transparent 1px)', // 배경에 미세한 도트 패턴
-  backgroundSize: '20px 20px'
-};
+const serialNumberText = { marginTop: '10px', fontSize: '17px', fontWeight: 'bold', letterSpacing: '3px', color: '#495057' };
+const guideBoxStyle = { backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '12px', fontSize: '13px', color: '#868e96', lineHeight: '1.6' };
 
-const printBtnStyle = { 
-  marginTop: '30px',
-  backgroundColor: '#1a1a1a', 
-  color: '#fff', 
-  border: 'none', 
-  padding: '14px 28px', 
-  borderRadius: '12px', 
-  cursor: 'pointer', 
-  fontWeight: 'bold',
-  width: '100%',
-  maxWidth: '600px'
-};
+const buttonGroupStyle = { display: 'flex', gap: '10px', width: '100%', maxWidth: '400px', marginTop: '25px' };
+const primaryBtnStyle = { flex: 1, padding: '14px', backgroundColor: '#339af0', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '15px', cursor: 'pointer' };
+const secondaryBtnStyle = { ...primaryBtnStyle, backgroundColor: '#495057' };
 
 const printStyles = `
   @media print {
-    body { background: none !important; padding: 0 !important; }
+    @page { margin: 10mm; } /* 인쇄 시 최소 여백 */
+    body { background: white !important; margin: 0 !important; }
     .no-print { display: none !important; }
-    
-    /* 인쇄 시 카드를 페이지 중앙에 배치 */
-    .ticket-card {
-      margin: 20mm auto !important;
-      box-shadow: none !important;
+    .ticket-card { 
+      width: 400px !important; /* 👈 PDF에서 잘리지 않도록 너비 고정 */
+      margin: 0 auto !important; 
+      box-shadow: none !important; 
       border: 1px solid #eee !important;
-      width: 100% !important;
-      max-width: 450px !important;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
+      position: static !important; /* absolute 해제 */
     }
   }
 `;

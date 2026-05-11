@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public record CommentResponseDto(
-  Long id, Long postId, Long memberId, String content,
+  Long id, Long postId, Long memberId, String nickname, String content,
   LocalDateTime createdDate, LocalDateTime lastModifiedDate,
   List<CommentResponseDto> replies
 ) {
@@ -16,6 +16,7 @@ public record CommentResponseDto(
       comment.getId(),
       comment.getPost().getId(),
       comment.getMemberId(),
+      comment.getNickname(),
       comment.getContent(),
       comment.getCreatedDate(),
       comment.getModifiedDate(),

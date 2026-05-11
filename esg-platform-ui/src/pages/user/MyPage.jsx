@@ -21,6 +21,7 @@ const MyPage = () => {
   const fetchMyOrders = async () => {
     try {
       const res = await api.get('/market/orders/my', { headers: { 'X-Member-Id': user.memberId } });
+      console.log("주문 데이터 확인:", res.data.content[0]);
       setOrders(res.data.content);
     } catch (err) {
       console.error("주문 내역 조회 실패");
@@ -70,7 +71,11 @@ const MyPage = () => {
 
       {/* 1. 주문 내역 섹션 */}
       <section style={sectionCardStyle}>
-        <h3 style={sectionTitleStyle}>🛍️ 나의 주문 내역</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h3 style={{ ...sectionTitleStyle, marginBottom: 0 }}>🛍️ 나의 주문 내역</h3>
+          {/* 🔗 주문 내역 전체보기 링크 연결 */}
+          <Link to="/my-activity/orders" style={moreLinkStyle}>전체보기 〉</Link>
+        </div>
         {orders.length === 0 ? <p style={{ color: '#999' }}>주문 내역이 없습니다.</p> : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
             {orders.map(o => (
@@ -85,11 +90,8 @@ const MyPage = () => {
 
                   {/* 핵심 추가: 바우처 확인 버튼 (주문 취소 상태가 아닐 때만 노출) */}
                   {o.status !== 'CANCELLED' && (
-                    <button
-                      onClick={() => navigate(`/my-page/${o.orderId}`)}
-                      style={viewVoucherBtnStyle}
-                    >
-                      바우처 확인
+                    <button onClick={() => navigate(`/my-page/${o.orderId}`)} style={viewVoucherBtnStyle}>
+                      {o.category === 'DONATION' ? '인증서 확인' : '바우처 확인'}
                     </button>
                   )}
 
@@ -103,43 +105,61 @@ const MyPage = () => {
         )}
       </section>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-        {/* 2. 내가 쓴 게시글 섹션 */}
-        <section style={sectionCardStyle}>
-          <h3 style={sectionTitleStyle}>📝 내가 쓴 글 ({myPosts.length})</h3>
-          {myPosts.slice(0, 5).map(post => (
+
+      {/* 2. 내가 쓴 게시글 섹션 */}
+      <section style={sectionCardStyle}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h3 style={{ ...sectionTitleStyle, marginBottom: 0 }}>📝 내가 쓴 글 ({myPosts.length})</h3>
+          <Link to="/my-activity/posts" style={moreLinkStyle}>전체보기 〉</Link>
+        </div>
+
+        {myPosts.length === 0 ? <p style={emptyTextStyle}>작성한 글이 없습니다.</p> :
+          myPosts.slice(0, 5).map(post => (
             <div key={post.id} style={activityItemStyle}>
               <Link to={`/posts/${post.id}`} style={linkStyle}>{post.title}</Link>
+              <span style={dateTextStyle}>{new Date(post.createdDate).toLocaleDateString()}</span>
             </div>
-          ))}
-        </section>
+          ))
+        }
+      </section>
 
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
         {/* 4. 좋아요 한 글 섹션 */}
         <section style={sectionCardStyle}>
-          <h3 style={sectionTitleStyle}>❤️ 좋아요 한 글 ({likedPosts.length})</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h3 style={{ ...sectionTitleStyle, marginBottom: 0 }}>❤️ 좋아요 ({likedPosts.length})</h3>
+            <Link to="/my-activity/likes" style={moreLinkStyle}>더보기</Link>
+          </div>
           {likedPosts.slice(0, 5).map(post => (
             <div key={post.id} style={activityItemStyle}>
               <Link to={`/posts/${post.id}`} style={linkStyle}>{post.title}</Link>
             </div>
           ))}
         </section>
-      </div>
 
-      {/* 3. 내가 쓴 댓글 섹션 */}
-      <section style={{ ...sectionCardStyle, marginTop: '20px' }}>
-        <h3 style={sectionTitleStyle}>💬 작성한 댓글 ({myComments.length})</h3>
-        {myComments.map(comment => (
-          <div key={comment.id} style={activityItemStyle}>
-            <div style={{ flex: 1 }}>
-              <p style={{ margin: '0 0 5px 0', fontSize: '15px' }}>{comment.content}</p>
-              <Link to={`/posts/${comment.postId}`} style={{ fontSize: '12px', color: '#339af0', textDecoration: 'none' }}>원문 보기 →</Link>
-            </div>
+        {/* 4. 내가 쓴 댓글 섹션 */}
+        <section style={sectionCardStyle}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h3 style={{ ...sectionTitleStyle, marginBottom: 0 }}>💬 댓글 ({myComments.length})</h3>
+            <Link to="/my-activity/comments" style={moreLinkStyle}>더보기</Link>
           </div>
-        ))}
-      </section>
+          {myComments.slice(0, 5).map(comment => (
+            <div key={comment.id} style={activityItemStyle}>
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: '0 0 5px 0', fontSize: '14px', color: '#444' }}>{comment.content}</p>
+                <Link to={`/posts/${comment.postId}`} style={{ fontSize: '12px', color: '#339af0', textDecoration: 'none' }}>원문 보기</Link>
+              </div>
+            </div>
+          ))}
+        </section>
+      </div>
     </div>
   );
 };
+
+const moreLinkStyle = { fontSize: '13px', color: '#adb5bd', textDecoration: 'none', fontWeight: '500' };
+const emptyTextStyle = { color: '#adb5bd', fontSize: '14px', padding: '20px 0' };
+const dateTextStyle = { fontSize: '12px', color: '#dee2e6', marginLeft: '10px' };
 
 // --- 고도화된 스타일 객체 ---
 const sectionCardStyle = {

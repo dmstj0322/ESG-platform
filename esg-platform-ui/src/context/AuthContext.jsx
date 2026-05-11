@@ -17,7 +17,8 @@ export const AuthProvider = ({ children }) => {
           memberId: decoded.memberId,
           role: decoded.role,
           companyId: decoded.companyId,
-          email: decoded.sub
+          email: decoded.sub,
+          nickname: decoded.nickname
         });
       } catch (err) {
         console.error("토큰 복구 실패", err);
@@ -36,7 +37,8 @@ export const AuthProvider = ({ children }) => {
       memberId: decoded.memberId,
       role: decoded.role,
       companyId: decoded.companyId,
-      email: decoded.sub
+      email: decoded.sub,
+      nickname: decoded.nickname
     };
     
     localStorage.setItem('memberId', decoded.memberId);

@@ -60,6 +60,13 @@ const ProductDetail = () => {
   if (loading) return <div style={{ textAlign: 'center', padding: '50px' }}>상품 정보를 불러오는 중...</div>;
   if (!product) return <div style={{ textAlign: 'center', padding: '50px' }}>상품을 찾을 수 없습니다.</div>;
 
+  const isSoldOut = product.status === 'SOLD_OUT' || (product.category === 'GIFTICON' && product.stock <= 0);
+  
+  // ✅ [수정] 카테고리에 따른 버튼 텍스트 설정
+  const buttonText = isSoldOut 
+    ? (product.category === 'DONATION' ? "참여 종료" : "품절된 상품") 
+    : (product.category === 'DONATION' ? "지금 기부하기" : "지금 구매하기");
+
 //   return (
 //     <div style={{ display: 'flex', gap: '50px', padding: '60px', maxWidth: '1100px', margin: '0 auto' }}>
 //       {/* 왼쪽: 상품 이미지 구역 */}
@@ -112,7 +119,7 @@ console.log("백엔드 데이터:", product);
       {/* 1. 상품 홍보 이미지 (S3 URL) */}
       <div style={imageContainerStyle}>
         <img src={product.voucherUrl} alt={product.name} style={imageStyle} />
-        {product.stock <= 0 && <div style={soldOutBadge}>품절</div>}
+        {isSoldOut && <div style={soldOutBadge}>{product.category === 'DONATION' ? "종료" : "품절"}</div>}
       </div>
 
       {/* 2. 상품 정보 섹션 */}
@@ -128,7 +135,7 @@ console.log("백엔드 데이터:", product);
           </div>
           <div style={priceRowStyle}>
             <span>남은 수량</span>
-            <span>{product.stock}개</span>
+            <span>{product.category === 'DONATION' ? (isSoldOut ? '참여 종료' : '무제한') : `${product.stock}개`}</span>
           </div>
         </div>
 
@@ -136,18 +143,18 @@ console.log("백엔드 데이터:", product);
         <div style={noticeBoxStyle}>
           <p style={noticeTitle}>📢 구매 전 확인하세요!</p>
           <ul>
-            <li>본 상품은 디지털 바우처이며, 구매 즉시 이메일로 발송됩니다.</li>
-            <li>마이페이지 {'>'} 주문내역에서도 바코드를 확인하실 수 있습니다.</li>
-            <li>디지털 상품 특성상 발송 후에는 환불이 불가합니다.</li>
+            <li>본 상품은 디지털 바우처이며, 구매 즉시 이메일로 발송되고 마이페이지에 등록됩니다.</li>
+            <li>기부 상품은 별도의 바우처가 발급되지 않으며 인증서가 제공됩니다.</li>
+            <li>디지털 상품 특성상 처리 후에는 취소가 불가할 수 있습니다.</li>
           </ul>
         </div>
 
         <button 
           onClick={handleOrder}
-          disabled={product.stock <= 0}
-          style={product.stock <= 0 ? disabledBtnStyle : activeBtnStyle}
+          disabled={isSoldOut}
+          style={isSoldOut ? disabledBtnStyle : activeBtnStyle}
         >
-          {product.stock <= 0 ? "재고 부족" : "지금 구매하기"}
+          {buttonText}
         </button>
       </div>
     </div>

@@ -86,7 +86,8 @@ public class AuthService {
       member.getId(),
       member.getEmail(),
       member.getCompanyId(),
-      member.getRole().name());
+      member.getRole().name(),
+      member.getNickname());
 
     String refreshToken = jwtUtil.createRefreshToken(member.getEmail());
 
@@ -108,7 +109,8 @@ public class AuthService {
       member.getId(),
       member.getEmail(),
       member.getCompanyId(),
-      member.getRole().name()
+      member.getRole().name(),
+      member.getNickname()
     );
   }
 
