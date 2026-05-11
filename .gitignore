@@ -43,6 +43,8 @@ out/
 *.log
 .DS_Store
 Thumbs.db
+/keys-m.env
+/keys-c.env
 
 # --- Secrets ---
 *.env
