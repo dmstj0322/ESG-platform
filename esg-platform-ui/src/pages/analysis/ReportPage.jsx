@@ -393,7 +393,7 @@ const SubIndicatorCard = ({ sub, color }) => {
         <span style={{
           fontWeight: 600, fontSize: '13px', color: C.gray900,
           flex: 1, minWidth: 0,
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          wordBreak: 'break-word',
         }}>
           {sub.title}
         </span>

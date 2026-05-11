@@ -184,12 +184,6 @@ public class AnalysisApiService {
                 throw new RuntimeException("분석 대기열 등록에 실패했습니다.");
             }
 
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-
             return savedAnalysis.getId();
 
         } catch (InterruptedException e) {
