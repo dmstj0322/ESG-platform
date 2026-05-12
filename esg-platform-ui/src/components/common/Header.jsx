@@ -65,6 +65,10 @@ const Header = () => {
   const navItemStyle = { textDecoration: 'none', color: 'black', marginRight: '15px' };
   const activeStyle = { ...navItemStyle, fontWeight: 'bold', color: '#339af0' };
 
+  const logoTo = isLoggedIn
+    ? (isAdmin ? '/analysis/dashboard' : '/community')
+    : '/';
+
   return (
     <header style={{
       padding: '15px 20px',
@@ -75,7 +79,7 @@ const Header = () => {
     }}>
       {/* 좌측 메뉴: 홈 및 서비스 탭 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-        <Link to="/" style={{ textDecoration: 'none', fontWeight: 'bold', fontSize: '20px', color: '#2b8a3e' }}>
+        <Link to={logoTo} style={{ textDecoration: 'none', fontWeight: 'bold', fontSize: '20px', color: '#2b8a3e' }}>
           GreenTrace
         </Link>
 

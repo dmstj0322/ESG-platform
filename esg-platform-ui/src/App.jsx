@@ -2,7 +2,7 @@ import React from 'react';
 
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { AnalysisProvider } from './context/AnalysisContext';
 
 import Header from './components/common/Header';
@@ -28,6 +28,15 @@ import MyActivityList from './pages/user/MyActiviyList';
 import DashboardPage from './pages/analysis/DashboardPage';
 import AnalysisPage from './pages/analysis/AnalysisPage';
 import ReportPage from './pages/analysis/ReportPage';
+
+const ProtectedLanding = () => {
+  const { isLoggedIn, user } = useAuth();
+  if (isLoggedIn) {
+    const isAdmin = user?.role === 'SYSTEM_ADMIN' || user?.role === 'COMPANY_ADMIN';
+    return <Navigate to={isAdmin ? '/analysis' : '/community'} replace />;
+  }
+  return <LandingPage />;
+};
 
 const CommunityLayout = () => (
   <>
@@ -56,7 +65,7 @@ function App() {
       <AnalysisProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<LandingPage />} />
+            <Route path="/" element={<ProtectedLanding />} />
             <Route element={<CommunityLayout />}>
               <Route path="/community" element={<PostList />} />
               <Route path="/write" element={<PostWrite />} />
