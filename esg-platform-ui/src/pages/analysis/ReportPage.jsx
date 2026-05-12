@@ -831,7 +831,7 @@ export default function ReportPage() {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/analysis/dashboard')}
             style={{
               padding: '8px 14px', background: C.white,
               border: `1px solid ${C.gray200}`, borderRadius: '10px',
