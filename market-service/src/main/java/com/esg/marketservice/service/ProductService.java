@@ -95,10 +95,18 @@ public class ProductService {
   }
 
   @Transactional
-  public void updateProduct(Long companyId, Long productId, ProductRequestDto dto) {
+  public void updateProduct(Long companyId, Long productId, ProductRequestDto dto, MultipartFile file) throws IOException {
     Product product = findActiveProduct(companyId, productId);
 
-    product.update(dto.name(), dto.price(), dto.stock(), dto.category(), dto.content(), dto.voucherUrl());
+    String imageUrl = product.getVoucherUrl(); // 기본적으로 기존 URL 유지
+
+    if (file != null && !file.isEmpty()) {
+      imageUrl = s3Uploader.upload(file, "products");
+      log.info("상품 이미지 변경 완료: {}", imageUrl);
+    }
+
+    product.update(dto.name(), dto.price(), dto.stock(), dto.category(), dto.content(), imageUrl);
+
     log.info("상품 상품 수정 완료 - ID: {}, Company: {}", productId, companyId);
   }
 

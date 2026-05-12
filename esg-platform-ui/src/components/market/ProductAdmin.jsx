@@ -9,13 +9,13 @@ const ProductAdmin = () => {
   const [products, setProducts] = useState([]);
   const [formData, setFormData] = useState({ name: '', price: '', content: '', category: 'GIFTICON', stock: 0 });
   const [file, setFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null); // ✅ 이미지 미리보기 URL 상태 추가
   const [voucherText, setVoucherText] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
   const [voucherInput, setVoucherInput] = useState({ id: null, text: '' });
 
   const [showForm, setShowForm] = useState(false);
-  // ✅ 검색 및 필터링 상태 추가
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("ALL");
 
@@ -30,12 +30,22 @@ const ProductAdmin = () => {
     } catch (err) { console.error("목록 로드 실패"); }
   };
 
-  // ✅ 검색/필터링 로직
   const filteredProducts = products.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = filterCategory === "ALL" || p.category === filterCategory;
     return matchesSearch && matchesCategory;
   });
+
+  // ✅ 파일 선택 시 호출되는 함수 (미리보기 생성)
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      // 브라우저 내 임시 URL 생성하여 미리보기 반영
+      const objectUrl = URL.createObjectURL(selectedFile);
+      setPreviewUrl(objectUrl);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -53,12 +63,12 @@ const ProductAdmin = () => {
     try {
       if (isEditing) {
         await api.put(`/market/admin/products/${editId}`, sendData, {
-          headers: { 'X-Company-Id': companyId, 'Content-Type': 'multipart/form-data' }
+          headers: { 'X-Company-Id': companyId }
         });
         alert("수정되었습니다.");
       } else {
         await api.post('/market/admin/products', sendData, {
-          headers: { 'X-Company-Id': companyId, 'Content-Type': 'multipart/form-data' }
+          headers: { 'X-Company-Id': companyId }
         });
         alert("등록되었습니다.");
       }
@@ -72,6 +82,7 @@ const ProductAdmin = () => {
     setEditId(p.id);
     setIsEditing(true);
     setShowForm(true);
+    setPreviewUrl(p.voucherUrl); // ✅ 수정 시 기존 이미지 URL을 미리보기에 설정
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -110,6 +121,7 @@ const ProductAdmin = () => {
   const resetForm = () => {
     setFormData({ name: '', price: '', content: '', category: 'GIFTICON', stock: 0 });
     setFile(null);
+    setPreviewUrl(null); // ✅ 리셋 시 미리보기 초기화
     setVoucherText("");
     setIsEditing(false);
     setEditId(null);
@@ -131,7 +143,6 @@ const ProductAdmin = () => {
         </button>
       </header>
 
-      {/* 폼 섹션 (토글 방식) */}
       {showForm && (
         <div style={formWrapperStyle}>
           <h3 style={formTitleStyle}>{isEditing ? "✏️ 정보 수정" : "🆕 신규 등록"}</h3>
@@ -152,9 +163,20 @@ const ProductAdmin = () => {
                   </select>
                 </div>
               </div>
+
+              {/* ✅ 이미지 미리보기 영역 추가 */}
               <label style={labelStyle}>대표 이미지</label>
-              <input type="file" style={{ fontSize: '12px' }} onChange={e => setFile(e.target.files[0])} />
+              {previewUrl && (
+                <div style={previewContainerStyle}>
+                  <img src={previewUrl} alt="Preview" style={previewImageStyle} />
+                  <p style={{ fontSize: '10px', color: '#888', marginTop: '5px' }}>
+                    {isEditing ? "현재 등록된 이미지" : "선택된 이미지 미리보기"}
+                  </p>
+                </div>
+              )}
+              <input type="file" style={{ fontSize: '12px' }} onChange={handleFileChange} />
             </div>
+
             <div style={formRightStyle}>
               <label style={labelStyle}>상세 설명</label>
               <textarea style={{ ...inputStyle, height: '80px', resize: 'none' }} value={formData.content} onChange={e => setFormData({ ...formData, content: e.target.value })} />
@@ -172,7 +194,6 @@ const ProductAdmin = () => {
         </div>
       )}
 
-      {/* 🔍 검색 및 필터링 바 */}
       <div style={searchBarStyle}>
         <div style={{ position: 'relative', flex: 1 }}>
           <input
@@ -194,7 +215,6 @@ const ProductAdmin = () => {
         </select>
       </div>
 
-      {/* 📊 메인 리스트 */}
       <div style={tableContainerStyle}>
         <table style={tableStyle}>
           <thead>
@@ -244,9 +264,7 @@ const ProductAdmin = () => {
                       : <button onClick={() => handleUpdateStatus(p.id, 'ON_SALE')} style={saleBtn}>판매</button>
                     }
                     {p.status === 'HIDDEN' ? (
-                      <button onClick={() => handleDelete(p.id)} style={iconBtnStyle} title="영구 삭제">
-                        🗑️
-                      </button>
+                      <button onClick={() => handleDelete(p.id)} style={iconBtnStyle} title="영구 삭제">🗑️</button>
                     ) : (
                       <button onClick={() => handleUpdateStatus(p.id, 'HIDDEN')} style={statusBtnStyle('#adb5bd')}>숨김</button>
                     )}
@@ -262,7 +280,7 @@ const ProductAdmin = () => {
   );
 };
 
-// --- 스타일 개선 (지저분함 해소 포인트) ---
+// --- 스타일 정의 ---
 const pageContainerStyle = { padding: '40px 20px', maxWidth: '1200px', margin: '0 auto', backgroundColor: '#fdfdfd' };
 const headerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' };
 const titleStyle = { margin: 0, fontSize: '26px', fontWeight: '800' };
@@ -295,13 +313,11 @@ const baseBtn = { padding: '6px 10px', borderRadius: '6px', fontSize: '11px', fo
 const editBtn = { ...baseBtn, backgroundColor: '#fff', color: '#339af0', borderColor: '#339af0' };
 const soldOutBtn = { ...baseBtn, backgroundColor: '#fff', color: '#fa5252', borderColor: '#fa5252' };
 const saleBtn = { ...baseBtn, backgroundColor: '#fff', color: '#20c997', borderColor: '#20c997' };
-const hideBtn = { ...baseBtn, backgroundColor: '#fff', color: '#adb5bd', borderColor: '#adb5bd' };
 const iconBtnStyle = { background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' };
 const statusBtnStyle = (color) => ({ backgroundColor: 'transparent', color, border: `1px solid ${color}`, padding: '4px 8px', borderRadius: '5px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' });
 
 const emptyStyle = { padding: '50px', textAlign: 'center', color: '#adb5bd' };
 
-// 폼 스타일은 이전과 동일하게 유지하되 디자인 톤만 맞춤
 const formWrapperStyle = { backgroundColor: '#fff', padding: '30px', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', marginBottom: '30px', border: '1px solid #e9ecef' };
 const gridFormStyle = { display: 'flex', flexWrap: 'wrap', gap: '25px' };
 const formLeftStyle = { flex: '1 1 350px', display: 'flex', flexDirection: 'column', gap: '15px' };
@@ -311,5 +327,22 @@ const submitBtnStyle = { backgroundColor: '#333', color: '#fff', border: 'none',
 const inputStyle = { padding: '12px', border: '1px solid #eee', borderRadius: '10px', fontSize: '14px', width: '100%', boxSizing: 'border-box' };
 const labelStyle = { display: 'block', marginBottom: '6px', fontWeight: 'bold', fontSize: '13px', color: '#495057' };
 const formTitleStyle = { marginTop: 0, marginBottom: '20px', fontSize: '18px' };
+
+// ✅ 미리보기 관련 추가 스타일
+const previewContainerStyle = {
+  marginBottom: '10px',
+  textAlign: 'center',
+  border: '1px dashed #dee2e6',
+  padding: '10px',
+  borderRadius: '8px',
+  backgroundColor: '#f8f9fa'
+};
+
+const previewImageStyle = {
+  maxWidth: '100%',
+  maxHeight: '150px',
+  borderRadius: '4px',
+  objectFit: 'contain'
+};
 
 export default ProductAdmin;

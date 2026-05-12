@@ -47,8 +47,8 @@ public class OrderService {
     RLock lock = redissonClient.getLock(lockKey);
 
     try {
-      // 락 획득 시도 (waitTime: 5초, leaseTime: 2초)
-      boolean isLocked = lock.tryLock(5, 2, TimeUnit.SECONDS);
+      // 락 획득 시도 (waitTime: 5초)
+      boolean isLocked = lock.tryLock(5, TimeUnit.SECONDS);
 
       if (!isLocked) {
         log.info("락 획득 실패 - productId: {}", productId);
