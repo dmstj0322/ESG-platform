@@ -135,7 +135,7 @@ const VoucherDetail = () => {
             {/* 📸 이미지 컨테이너 (고정 높이 부여) */}
             <div className="img-container" style={imageContainerStyle}>
               <img
-                src={base64Image || 'https://via.placeholder.com/400x300?text=Green-Trace'}
+                src={base64Image}
                 alt="product"
                 style={productImgStyle}
               />

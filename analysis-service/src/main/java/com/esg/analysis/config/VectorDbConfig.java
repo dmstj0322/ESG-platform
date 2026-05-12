@@ -17,7 +17,7 @@ import java.time.Duration;
 @Configuration
 public class VectorDbConfig {
 
-    @Value("${ollama.base-url:http://localhost:11435 de}")
+    @Value("${ollama.base-url:http://localhost:11434}")
     private String ollamaBaseUrl;
 
     // 반드시 127.0.0.1 사용 — localhost는 IPv6([::1])로 해석될 수 있어 405 유발

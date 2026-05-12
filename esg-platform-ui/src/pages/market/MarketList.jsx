@@ -52,7 +52,7 @@ const MarketList = () => {
             <div key={p.id} style={cardStyle} onClick={() => navigate(`/products/${p.id}`)}>
               <div style={{ position: 'relative', height: '220px', overflow: 'hidden' }}>
                 <img
-                  src={p.voucherUrl || 'https://via.placeholder.com/400x300?text=Green-Trace'}
+                  src={p.voucherUrl}
                   alt={p.name}
                   style={imageStyle}
                 />

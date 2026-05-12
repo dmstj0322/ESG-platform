@@ -29,7 +29,7 @@ const PostDetails = () => {
     } catch (err) {
       console.error("데이터 로드 실패:", err);
       alert("존재하지 않거나 접근 권한이 없는 게시글입니다.");
-      navigate('/');
+      navigate('/community');
     }
   }, [id, targetCompanyId, navigate]);
 
@@ -45,7 +45,7 @@ const PostDetails = () => {
       const headers = targetCompanyId ? { 'X-Company-Id': targetCompanyId } : {};
       await api.delete(`/community/posts/${id}`, { headers });
       alert("삭제되었습니다.");
-      navigate('/');
+      navigate('/community');
     } catch (err) {
       console.error("삭제 실패:", err);
       alert("삭제 권한이 없거나 오류가 발생했습니다.");
@@ -299,7 +299,7 @@ const PostDetails = () => {
         <button onClick={handleLike} style={isLiked ? activeLikeBtnStyle : likeBtnStyle}>
           {isLiked ? '❤️ 좋아요 취소' : '🤍 좋아요'}
         </button>
-        <button onClick={() => navigate('/')} style={listBackBtnStyle}>목록으로</button>
+        <button onClick={() => navigate('/community')} style={listBackBtnStyle}>목록으로</button>
 
         {/* 관리 권한 있을 때만 메뉴 노출 */}
         {canManage && (

@@ -60,3 +60,4 @@ ollama-data/
 
 # --- Node lock files ---
 package-lock.json
+node_modules/
