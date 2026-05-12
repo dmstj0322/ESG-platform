@@ -18,6 +18,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -35,6 +36,9 @@ public class ReportRagService {
 
     @Value("${chroma.base-url:http://127.0.0.1:8000}")
     private String chromaBaseUrl;
+
+    // 세션별 store 캐싱 — 동일 세션에 대한 ChromaDB 다중 접근 방지
+    private final Map<String, ChromaEmbeddingStore> storeCache = new ConcurrentHashMap<>();
 
     /**
      * K-ESG 18개 핵심 지표 코드 → 일반 벡터 검색 키워드 (개념·전략 중심).
@@ -110,10 +114,7 @@ public class ReportRagService {
             List<TextSegment> segments = splitter.split(Document.from(reportContent));
             log.info("[ReportRAG] 청킹 완료 sessionId={} → {}개 세그먼트", sessionId, segments.size());
 
-            ChromaEmbeddingStore sessionStore = ChromaEmbeddingStore.builder()
-                    .baseUrl(normalize(chromaBaseUrl))
-                    .collectionName(sessionId)
-                    .build();
+            ChromaEmbeddingStore sessionStore = getOrCreateStore(sessionId);
 
             // 배치 임베딩 후 일괄 저장
             List<Embedding> embeddings = embeddingModel.embedAll(segments).content();
@@ -143,10 +144,7 @@ public class ReportRagService {
                 indicatorKey.contains("_") ? indicatorKey.split("_", 2)[1] : indicatorKey);
         String tableQuery = INDICATOR_TABLE_QUERIES.getOrDefault(indicatorKey, generalQuery);
         try {
-            ChromaEmbeddingStore sessionStore = ChromaEmbeddingStore.builder()
-                    .baseUrl(normalize(chromaBaseUrl))
-                    .collectionName(sessionId)
-                    .build();
+            ChromaEmbeddingStore sessionStore = getOrCreateStore(sessionId);
 
             // 텍스트 → 최고 유사도 점수 (중복 제거)
             Map<String, Double> bestByText = new LinkedHashMap<>();
@@ -193,6 +191,7 @@ public class ReportRagService {
      * 실패해도 분석 결과에는 영향 없음 — 경고 로그만 출력.
      */
     public void deleteSessionCollection(String sessionId) {
+        storeCache.remove(sessionId);
         try {
             String url = normalize(chromaBaseUrl) + "/api/v1/collections/" + sessionId;
             restTemplate.delete(url);
@@ -200,6 +199,14 @@ public class ReportRagService {
         } catch (Exception e) {
             log.warn("[ReportRAG] 임시 컬렉션 삭제 실패 (수동 정리 필요) sessionId={} 원인={}", sessionId, e.getMessage());
         }
+    }
+
+    private ChromaEmbeddingStore getOrCreateStore(String sessionId) {
+        return storeCache.computeIfAbsent(sessionId, id ->
+                ChromaEmbeddingStore.builder()
+                        .baseUrl(normalize(chromaBaseUrl))
+                        .collectionName(id)
+                        .build());
     }
 
     private String normalize(String url) {

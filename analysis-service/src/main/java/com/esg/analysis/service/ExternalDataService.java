@@ -45,7 +45,7 @@ public class ExternalDataService {
             String yearMonth = year + formattedMonth;
 
             // --- 1. 한전(ELECTRIC) 데이터 수집 및 저장 ---
-            KepcoResponseDto powerRes = kepcoClient.getPowerUsage(year, formattedMonth, kepcoApiKey, "json");
+            KepcoResponseDto powerRes = kepcoClient.getPowerUsage(year, formattedMonth, null, kepcoApiKey, "json");
             List<KepcoResponseDto.KepcoData> kepcoList = (powerRes != null) ? powerRes.getActualData() : null;
 
             if (kepcoList != null && !kepcoList.isEmpty()) {

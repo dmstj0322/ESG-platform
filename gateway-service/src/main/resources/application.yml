@@ -16,11 +16,12 @@ spring:
               - GET
               - POST
               - PUT
-              - PATCH
               - DELETE
               - OPTIONS
             allowedHeaders: "*"
             allowCredentials: true
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials RETAIN_UNIQUE
       discovery:
         locator:
           enabled: true
@@ -28,6 +29,22 @@ spring:
         connect-timeout: 10000 # 연결 타임아웃을 넉넉히 설정
         response-timeout: 5s
       routes:
+        # WebSocket 전용 라우트 (JwtFilter 없이, /ws-esg/** 직접 전달)
+        - id: analysis-websocket
+          uri: lb://ANALYSIS-SERVICE
+          predicates:
+            - Path=/ws-esg/**
+
+        # POST /analysis/report → 컨트롤러 실제 경로 /api/v1/analysis/report (와일드카드보다 먼저 등록)
+        - id: analysis-report-upload
+          uri: lb://ANALYSIS-SERVICE
+          predicates:
+            - Path=/analysis/report
+            - Method=POST
+          filters:
+            - SetPath=/api/v1/analysis/report
+            - JwtAuthFilter
+
         - id: analysis-service
           uri: lb://ANALYSIS-SERVICE
           predicates:

@@ -544,33 +544,33 @@ const Dashboard = () => {
                                     title={<span style={{ color: '#047857' }}>에코 포인트</span>}
                                     value={ecoPreview.ecoPoints}
                                     suffix="EP"
-                                    valueStyle={{ color: '#065f46', fontWeight: 700 }}
+                                    styles={{ content: { color: '#065f46', fontWeight: 700 } }}
                                 />
                                 <Statistic
                                     title={<span style={{ color: '#047857' }}>탄소 절감량</span>}
                                     value={ecoPreview.carbonReductionKg}
                                     suffix="kg CO₂"
                                     precision={1}
-                                    valueStyle={{ color: '#065f46', fontWeight: 700 }}
+                                    styles={{ content: { color: '#065f46', fontWeight: 700 } }}
                                 />
                                 <Statistic
                                     title={<span style={{ color: '#047857' }}>소나무 환산</span>}
                                     value={ecoPreview.equivalentTrees}
                                     suffix="그루"
                                     precision={1}
-                                    valueStyle={{ color: '#065f46', fontWeight: 700 }}
+                                    styles={{ content: { color: '#065f46', fontWeight: 700 } }}
                                 />
                                 <Statistic
                                     title={<span style={{ color: '#047857' }}>E 점수 보정</span>}
                                     value={`+${ecoPreview.eBonus}`}
                                     suffix="점"
-                                    valueStyle={{ color: '#059669', fontWeight: 700 }}
+                                    styles={{ content: { color: '#059669', fontWeight: 700 } }}
                                 />
                                 <Statistic
                                     title={<span style={{ color: '#047857' }}>S 점수 보정</span>}
                                     value={`+${ecoPreview.sBonus}`}
                                     suffix="점"
-                                    valueStyle={{ color: '#059669', fontWeight: 700 }}
+                                    styles={{ content: { color: '#059669', fontWeight: 700 } }}
                                 />
                             </div>
                         </div>

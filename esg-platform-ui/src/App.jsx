@@ -1,6 +1,7 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import LandingPage from './pages/LandingPage';
 import { AuthProvider } from './context/AuthContext';
 import { AnalysisProvider } from './context/AnalysisContext';
 
@@ -22,7 +23,6 @@ import MyPage from './pages/user/MyPage';
 import MarketList from './pages/market/MarketList';
 import ProductDetail from './pages/market/ProductDetail';
 import VoucherDetail from './pages/market/VoucherDetail';
-import MyActivityList from './pages/user/MyActivityList';
 
 import DashboardPage from './pages/analysis/DashboardPage';
 import AnalysisPage from './pages/analysis/AnalysisPage';
@@ -55,8 +55,9 @@ function App() {
       <AnalysisProvider>
         <BrowserRouter>
           <Routes>
+            <Route path="/" element={<LandingPage />} />
             <Route element={<CommunityLayout />}>
-              <Route path="/" element={<PostList />} />
+              <Route path="/community" element={<PostList />} />
               <Route path="/write" element={<PostWrite />} />
               <Route path="/posts/:id" element={<PostDetail />} />
               <Route path="/edit/:id" element={<PostEdit />} />
@@ -68,7 +69,6 @@ function App() {
               <Route path="/products/:productId" element={<ProductDetail />} />
               <Route path="/mypage" element={<MyPage />} />
               <Route path="/my-page/:orderId" element={<VoucherDetail />} />
-              <Route path="/my-activity/:type" element={<MyActivityList />} />
 
               <Route path="/admin" element={
                 <AdminRoute><AdminDashboard /></AdminRoute>

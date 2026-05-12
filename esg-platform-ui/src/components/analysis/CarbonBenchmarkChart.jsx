@@ -124,7 +124,7 @@ const CarbonBenchmarkChart = ({ data }) => {
                         <Statistic
                             title={<span style={{ color: textColor, fontSize: '12px' }}>우리 기업 연간</span>}
                             value={annualMyTotal} suffix="tCO₂eq" precision={1}
-                            valueStyle={{ color: textColor, fontWeight: 700 }}
+                            styles={{ content: { color: textColor, fontWeight: 700 } }}
                         />
                         <div style={{ marginTop: '4px', fontSize: '12px', color: textColor, opacity: 0.75 }}>
                             ⚡ {annualMyElec.toFixed(1)} t &nbsp;|&nbsp; 🔥 {annualMyGas.toFixed(1)} t
@@ -134,7 +134,7 @@ const CarbonBenchmarkChart = ({ data }) => {
                         <Statistic
                             title={<span style={{ color: textColor, fontSize: '12px' }}>{regionName} 업종 평균</span>}
                             value={annualRegionAvgTotal} suffix="tCO₂eq" precision={1}
-                            valueStyle={{ color: textColor, fontWeight: 700 }}
+                            styles={{ content: { color: textColor, fontWeight: 700 } }}
                         />
                         <div style={{ marginTop: '4px', fontSize: '12px', color: textColor, opacity: 0.75 }}>
                             ⚡ {annualAvgElec.toFixed(1)} t &nbsp;|&nbsp; 🔥 {annualAvgGas.toFixed(1)} t
@@ -149,7 +149,7 @@ const CarbonBenchmarkChart = ({ data }) => {
                             prefix={computedIsBetter
                                 ? <ArrowDownOutlined style={{ color: accentColor }} />
                                 : <ArrowUpOutlined  style={{ color: accentColor }} />}
-                            valueStyle={{ color: accentColor, fontWeight: 800, fontSize: '24px' }}
+                            styles={{ content: { color: accentColor, fontWeight: 800, fontSize: '24px' } }}
                         />
                     </Col>
                 </Row>
@@ -173,7 +173,7 @@ const CarbonBenchmarkChart = ({ data }) => {
             )}
 
             {/* ── 월별 ComposedChart (막대 + 지역 평균 기준선) ── */}
-            <ResponsiveContainer width="100%" height={420}>
+            <ResponsiveContainer width="100%" height={520}>
                 <ComposedChart
                     data={monthlyData}
                     margin={{ top: 12, right: 20, left: 0, bottom: 4 }}
@@ -224,7 +224,7 @@ const CarbonBenchmarkChart = ({ data }) => {
                          stackId="my" fill={MY_GAS_COLOR} maxBarSize={32}
                          radius={[3, 3, 0, 0]}>
                         {monthlyData.map((entry, idx) => (
-                            <Cell key={idx} fill={entry.isBetterThanAverage ? MY_GAS_COLOR : DANGER_COLOR} />
+                            <Cell key={idx} fill={entry.betterThanAverage ? MY_GAS_COLOR : DANGER_COLOR} />
                         ))}
                     </Bar>
 
@@ -250,13 +250,13 @@ const CarbonBenchmarkChart = ({ data }) => {
             </ResponsiveContainer>
 
             {/* 월별 초과 현황 세부 표 */}
-            {monthlyData.some(m => !m.isBetterThanAverage) && (
+            {monthlyData.some(m => !m.betterThanAverage) && (
                 <div style={{ marginTop: '16px' }}>
                     <Text type="secondary" style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
                         ⚠️ 평균 초과 월 상세
                     </Text>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        {monthlyData.filter(m => !m.isBetterThanAverage).map(m => (
+                        {monthlyData.filter(m => !m.betterThanAverage).map(m => (
                             <div key={m.month} style={{
                                 background: '#fef2f2',
                                 border: '1px solid #fca5a5',

@@ -45,7 +45,7 @@ public class EsgIntegrationService {
         String bizCd = ksicCodeMapper.mapToKepcoBizCd(inferredKsic);
 
         // 3. [API 단계] 한전 API에서 해당 업종의 평균 데이터 가져오기
-        KepcoResponseDto powerRes = kepcoClient.getPowerUsage(year, month, kepcoApiKey, "json");
+        KepcoResponseDto powerRes = kepcoClient.getPowerUsage(year, month, null, kepcoApiKey, "json");
         double avgPower = 0;
         if (powerRes != null && powerRes.getActualData() != null) {
             List<KepcoResponseDto.KepcoData> dataList = powerRes.getActualData();

@@ -22,17 +22,24 @@ public class UpstageService {
     private final WebClient upstageWebClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    /** MultipartFile 편의 오버로드 — 내부적으로 byte[] 버전을 호출한다. */
     public String parsePdfToMarkdown(MultipartFile file) throws IOException {
-        log.info(">>>> [Upstage] Layout Analysis 호출 시작: {}", file.getOriginalFilename());
+        return parsePdfToMarkdown(file.getBytes(), file.getOriginalFilename(), file.getContentType());
+    }
+
+    /**
+     * byte[] 기반 호출 — HTTP 요청 스레드가 종료된 후 비동기 스레드에서 호출할 때 사용.
+     * MultipartFile 스트림은 요청 범위(request-scoped)이므로 비동기 컨텍스트에서 직접 접근하면 닫혀 있다.
+     */
+    public String parsePdfToMarkdown(byte[] fileBytes, String filename, String contentType) throws IOException {
+        log.info(">>>> [Upstage] Layout Analysis 호출 시작: {}", filename);
 
         // 1. Multipart 요청 구성
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
 
-        // [중요] .contentType(...)을 추가하여 415 에러를 원천 차단합니다.
-        builder.part("document", new ByteArrayResource(file.getBytes()))
-                .filename(file.getOriginalFilename())
-                .contentType(MediaType.valueOf(file.getContentType())); // application/pdf 등 주입
-        // 스캔 PDF·이미지 임베딩 표 인식률 향상을 위해 OCR 강제 실행
+        builder.part("document", new ByteArrayResource(fileBytes))
+                .filename(filename)
+                .contentType(MediaType.valueOf(contentType != null ? contentType : "application/pdf"));
         builder.part("ocr", "force");
 
         try {
@@ -45,7 +52,7 @@ public class UpstageService {
                     .block();
 
             if (rawResponse == null || rawResponse.trim().isEmpty()) {
-                log.error(">>>> Upstage 응답이 비어있습니다.");
+                log.error(">>>> [Upstage] 응답이 비어있습니다. filename={}", filename);
                 return "";
             }
 

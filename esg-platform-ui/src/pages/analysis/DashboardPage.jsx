@@ -6,7 +6,7 @@ const CountUp = _CountUp?.default ?? _CountUp;
 import api from '../../api/api';
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer,
 } from 'recharts';
 import {
@@ -328,8 +328,8 @@ const ESGRadarChartCard = ({ sections }) => {
           분석 리포트를 업로드하면 차트가 표시됩니다.
         </div>
       ) : (
-        <ResponsiveContainer width="100%" height={260}>
-          <RadarChart data={radarData} margin={{ top: 10, right: 30, left: 30, bottom: 10 }}>
+        <ResponsiveContainer width="100%" height={380}>
+          <RadarChart data={radarData} margin={{ top: 10, right: 40, left: 40, bottom: 10 }}>
             <PolarGrid stroke={C.gray100} />
             <PolarAngleAxis
               dataKey="subject"
@@ -359,129 +359,101 @@ const ESGRadarChartCard = ({ sections }) => {
   );
 };
 
-// K-ESG 업종별 표준 ESG 점수 — 산업부·환경부 공시 통계 기반 (100점 만점)
-const KSIC_ESG_BENCHMARK = {
-  '26': { E: 64, S: 61, G: 58 },
-  '24': { E: 48, S: 50, G: 44 },
-  '20': { E: 50, S: 52, G: 46 },
-  '23': { E: 46, S: 48, G: 43 },
-  '29': { E: 58, S: 54, G: 51 },
-  '30': { E: 55, S: 57, G: 53 },
-  '13': { E: 52, S: 56, G: 49 },
-  '10': { E: 54, S: 58, G: 52 },
-  '62': { E: 60, S: 65, G: 62 },
-  '64': { E: 58, S: 62, G: 65 },
-};
-const DEFAULT_BENCHMARK = { E: 57, S: 55, G: 52 };
-
-// ── 지역 기업 비교 Bar Chart ──────────────────────────────────────
-const RegionalCompareChart = ({ sections, ksicCode, industryName, regionName, loading }) => {
-  const benchmarkKey = (ksicCode || '').substring(0, 2);
-  const benchmark = KSIC_ESG_BENCHMARK[benchmarkKey] || DEFAULT_BENCHMARK;
-
-  // 업종명 동적 표시: 백엔드 industryName 우선
-  const dynamicIndustryLabel = industryName
-    ? `${industryName} 평균`
-    : (KSIC_ESG_BENCHMARK[benchmarkKey] ? `KSIC ${benchmarkKey} 업종` : '업종') + ' 평균';
-
-  const data = sections.map(s => {
-    const mine = s.score ?? 0;
-    const benchKey = s.category === 'Environment' ? 'E'
-                   : s.category === 'Social' ? 'S' : 'G';
-    return {
-      name: s.category === 'Environment' ? '환경 (E)'
-           : s.category === 'Social' ? '사회 (S)' : '지배구조 (G)',
-      우리기업: mine,
-      업종평균: benchmark[benchKey],
-    };
-  });
-
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (!active || !payload?.length) return null;
-    const my  = payload.find(p => p.dataKey === '우리기업')?.value ?? 0;
-    const avg = payload.find(p => p.dataKey === '업종평균')?.value  ?? 0;
-    const diff = my - avg;
-    return (
-      <div style={{
-        background: C.white, border: `1px solid ${C.gray100}`,
-        borderRadius: '10px', padding: '12px 16px', fontSize: '13px',
-      }}>
-        <div style={{ fontWeight: 700, marginBottom: '8px' }}>{label}</div>
-        <div style={{ color: C.blue }}>우리 기업: <strong>{my}점</strong></div>
-        <div style={{ color: C.gray500 }}>{dynamicIndustryLabel}: <strong>{avg}점</strong></div>
-        <div style={{ color: diff >= 0 ? C.green : C.red, fontWeight: 700, marginTop: '4px' }}>
-          {diff >= 0 ? `▲ +${diff}점 우위` : `▼ ${Math.abs(diff)}점 미달`}
-        </div>
-      </div>
-    );
-  };
-
-  // 데이터 로딩 중일 때 Skeleton UI
-  if (loading && sections.length === 0) {
+// ── 월별 탄소 배출 추세 Line Chart ───────────────────────────────
+const MonthlyEmissionTrendChart = ({ benchmarkData, loading }) => {
+  if (loading && !benchmarkData) {
     return (
       <Card>
-        <SectionTitle icon={BarChart3} color={C.navy}>업종 벤치마크 비교</SectionTitle>
+        <SectionTitle icon={TrendingDown} color={C.green}>월별 탄소 배출 추세</SectionTitle>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '8px 0' }}>
           <SkeletonBar width="60%" height="14px" />
-          <SkeletonBar width="100%" height="180px" radius="12px" />
-          <div style={{ color: C.gray400, fontSize: '12px', textAlign: 'center' }}>
-            업종을 파악 중...
-          </div>
+          <SkeletonBar width="100%" height="300px" radius="12px" />
         </div>
       </Card>
     );
   }
 
+  if (!benchmarkData?.monthlyData) {
+    return (
+      <Card>
+        <SectionTitle icon={TrendingDown} color={C.green}>월별 탄소 배출 추세</SectionTitle>
+        <div style={{ textAlign: 'center', color: C.gray400, padding: '40px 0', fontSize: '14px' }}>
+          데이터를 불러오는 중입니다.
+        </div>
+      </Card>
+    );
+  }
+
+  const { monthlyData, industryName, regionName } = benchmarkData;
+  const avgLabel = [regionName, industryName].filter(Boolean).join(' ') + ' 평균';
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    const mine = payload.find(p => p.dataKey === 'myEmissionTco2')?.value ?? 0;
+    const avg  = payload.find(p => p.dataKey === 'regionAvgEmissionTco2')?.value ?? 0;
+    const diff = avg > 0 ? ((mine - avg) / avg * 100).toFixed(1) : null;
+    const better = parseFloat(diff) <= 0;
+    return (
+      <div style={{
+        background: C.white, border: `1px solid ${C.gray200}`,
+        borderRadius: '10px', padding: '12px 16px', fontSize: '13px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.08)', minWidth: '190px',
+      }}>
+        <div style={{ fontWeight: 700, marginBottom: '8px', color: C.gray900 }}>{label}</div>
+        <div style={{ color: C.blue, marginBottom: '2px' }}>
+          우리 기업: <strong>{mine.toFixed(1)} tCO₂eq</strong>
+        </div>
+        <div style={{ color: C.gray400, marginBottom: '6px' }}>
+          {avgLabel}: <strong>{avg.toFixed(1)} tCO₂eq</strong>
+        </div>
+        {diff !== null && (
+          <div style={{ color: better ? C.green : C.red, fontWeight: 700 }}>
+            {better
+              ? `▼ ${Math.abs(diff)}% 절감`
+              : `▲ ${Math.abs(diff)}% 초과`}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <Card>
-      <SectionTitle icon={BarChart3} color={C.navy}>업종 벤치마크 비교</SectionTitle>
-      {/* 동적 업종명 + 지역명 */}
-      <div style={{ fontSize: '11px', color: C.gray400, marginBottom: '8px', marginTop: '-10px' }}>
-        K-ESG 산업부 공시 통계 기준
-        {regionName ? ` · ${regionName}` : ''}
-        {' · '}{dynamicIndustryLabel}
+      <SectionTitle icon={TrendingDown} color={C.green}>월별 탄소 배출 추세</SectionTitle>
+      <div style={{ fontSize: '11px', color: C.gray400, marginBottom: '12px', marginTop: '-10px' }}>
+        우리 기업 실측값 vs {avgLabel} (한국에너지공단 통계 기반 추정)
       </div>
-      {sections.length === 0 ? (
-        <div style={{ textAlign: 'center', color: C.gray500, padding: '40px 0', fontSize: '14px' }}>
-          분석 후 비교 데이터가 표시됩니다.
-        </div>
-      ) : (
-        <>
-          {/* 동적 비교 문구 */}
-          {(regionName || industryName) && (
-            <div style={{
-              background: C.blueL, borderRadius: '10px',
-              padding: '10px 14px', marginBottom: '14px',
-              fontSize: '13px', color: C.navy, fontWeight: 600,
-            }}>
-              우리 기업은{' '}
-              <strong>{[regionName, industryName].filter(Boolean).join(' ')}</strong>{' '}
-              평균과 비교하고 있습니다.
-              {data.length > 0 && (() => {
-                const totalMine = data.reduce((s, d) => s + d.우리기업, 0) / data.length;
-                const totalAvg  = data.reduce((s, d) => s + d.업종평균, 0) / data.length;
-                const diff = (totalMine - totalAvg).toFixed(1);
-                return (
-                  <span style={{ color: diff >= 0 ? C.green : C.red, marginLeft: '6px' }}>
-                    {diff >= 0 ? `▲ 평균 대비 +${diff}점` : `▼ 평균 대비 ${diff}점`}
-                  </span>
-                );
-              })()}
-            </div>
-          )}
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={data} margin={{ top: 8, right: 16, left: -10, bottom: 4 }} barCategoryGap="30%">
-              <CartesianGrid strokeDasharray="3 3" stroke={C.gray100} />
-              <XAxis dataKey="name" tick={{ fontSize: 13, fill: C.gray700 }} />
-              <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: C.gray500 }} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend wrapperStyle={{ fontSize: '13px' }} />
-              <Bar dataKey="우리기업" name="우리 기업"          fill={C.blue}    radius={[6, 6, 0, 0]} maxBarSize={48} />
-              <Bar dataKey="업종평균"  name={dynamicIndustryLabel} fill={C.gray300} radius={[6, 6, 0, 0]} maxBarSize={48} />
-            </BarChart>
-          </ResponsiveContainer>
-        </>
-      )}
+      <ResponsiveContainer width="100%" height={360}>
+        <LineChart data={monthlyData} margin={{ top: 8, right: 16, left: -10, bottom: 4 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke={C.gray100} />
+          <XAxis dataKey="monthLabel" tick={{ fontSize: 12, fill: C.gray700 }} />
+          <YAxis
+            unit=" t"
+            tick={{ fontSize: 11, fill: C.gray500 }}
+            tickFormatter={(v) => v.toFixed(1)}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend wrapperStyle={{ fontSize: '13px' }} />
+          <Line
+            type="monotone"
+            dataKey="myEmissionTco2"
+            name="우리 기업"
+            stroke={C.blue}
+            strokeWidth={2.5}
+            dot={{ r: 4, fill: C.blue, strokeWidth: 0 }}
+            activeDot={{ r: 6 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="regionAvgEmissionTco2"
+            name={avgLabel}
+            stroke={C.gray300}
+            strokeWidth={2}
+            strokeDasharray="5 4"
+            dot={{ r: 3, fill: C.gray300, strokeWidth: 0 }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
     </Card>
   );
 };
@@ -606,7 +578,7 @@ const EcoPointWidget = ({ ecoPreview, companyId, onCommitDone }) => {
   );
 };
 
-// ── ESG 등급 배지 카드 ────────────────────────────────────────────
+// ── ESG 등급 배지 카드 (컴팩트 — Row 1 우측 배치용) ─────────────
 const GradeBadge = ({ report, navigate }) => {
   const grade = report?.finalGrade;
   const color = gradeColor(grade);
@@ -614,41 +586,42 @@ const GradeBadge = ({ report, navigate }) => {
     <Card style={{
       background: `linear-gradient(135deg, ${C.navy} 0%, #2d5a8f 100%)`,
       display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
-      minHeight: '180px', cursor: 'pointer',
+      cursor: 'pointer', padding: '20px 16px',
     }} onClick={() => navigate('/analysis/report')}>
-      <div style={{ color: '#93c5fd', fontSize: '13px', fontWeight: 600, marginBottom: '12px' }}>
-        최종 ESG 종합 등급
+      <div style={{ color: '#93c5fd', fontSize: '11px', fontWeight: 600, marginBottom: '8px', textAlign: 'center' }}>
+        최종 ESG 종합등급
       </div>
       {grade ? (
         <>
           <div style={{
-            fontSize: '72px', fontWeight: 900, color: C.white, lineHeight: 1,
-            textShadow: `0 0 24px ${color}88`,
+            fontSize: '52px', fontWeight: 900, color: C.white, lineHeight: 1,
+            textShadow: `0 0 20px ${color}99`,
           }}>
             {grade}
           </div>
           <div style={{
-            marginTop: '12px', background: color,
-            color: C.white, padding: '4px 16px', borderRadius: '99px',
-            fontSize: '13px', fontWeight: 700,
+            marginTop: '10px', background: color,
+            color: C.white, padding: '3px 12px', borderRadius: '99px',
+            fontSize: '11px', fontWeight: 700,
           }}>
             K-ESG 기준
           </div>
           <div style={{
-            color: '#93c5fd', fontSize: '12px', marginTop: '12px',
-            display: 'flex', alignItems: 'center', gap: '4px',
+            color: '#93c5fd', fontSize: '11px', marginTop: '10px',
+            display: 'flex', alignItems: 'center', gap: '3px',
           }}>
-            리포트 보기 <ChevronRight size={14} />
+            리포트 보기 <ChevronRight size={12} />
           </div>
         </>
       ) : (
-        <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px', textAlign: 'center' }}>
-          PDF 업로드 후<br />등급이 표시됩니다
+        <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '13px', textAlign: 'center', lineHeight: 1.5 }}>
+          PDF 업로드 후<br />등급 표시
         </div>
       )}
     </Card>
   );
 };
+
 
 // ── 탄소 벤치마크 Skeleton UI ─────────────────────────────────────
 const BenchmarkSkeleton = () => (
@@ -749,7 +722,7 @@ export default function DashboardPage() {
           </button>
           <button
             data-html2canvas-ignore
-            onClick={() => navigate('/analysis')}
+            onClick={() => navigate('/analysis/detail')}
             style={{
               padding: '8px 18px', background: C.green, color: C.white,
               border: 'none', borderRadius: '10px', cursor: 'pointer',
@@ -763,8 +736,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Row 1: 실시간 탄소 + 3-Step */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '28px', marginBottom: '28px' }}>
+      {/* Row 1: 실시간 탄소 + 3-Step + 등급 배지(컴팩트) */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 190px', gap: '28px', marginBottom: '28px' }}>
         <CarbonLiveWidget carbonStats={carbonStats} />
         <ThreeStepStatus
           carbonStats={carbonStats}
@@ -773,21 +746,15 @@ export default function DashboardPage() {
           wsStatus={wsStatus}
           isAnalyzing={isAnalyzing}
         />
+        <GradeBadge report={latestReport} navigate={navigate} />
       </div>
 
-      {/* Row 2: Radar + 업종 벤치마크 (동적) + 등급 배지 */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 300px', gap: '28px', marginBottom: '28px' }}>
+      {/* Row 2: Radar + 월별 탄소 추세 — 풀너비 2컬럼 */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '28px', marginBottom: '28px' }}>
         <ChartErrorBoundary><ESGRadarChartCard sections={sections} /></ChartErrorBoundary>
         <ChartErrorBoundary>
-          <RegionalCompareChart
-            sections={sections}
-            ksicCode={benchmarkData?.ksicCode || ''}
-            industryName={benchmarkData?.industryName || ''}
-            regionName={benchmarkData?.regionName || ''}
-            loading={loading}
-          />
+          <MonthlyEmissionTrendChart benchmarkData={benchmarkData} loading={loading} />
         </ChartErrorBoundary>
-        <GradeBadge report={latestReport} navigate={navigate} />
       </div>
 
       {/* Row 3: 에코 포인트 위젯 */}
@@ -817,9 +784,9 @@ export default function DashboardPage() {
             background: C.blueL, color: C.blue, fontSize: '11px',
             padding: '2px 8px', borderRadius: '99px', fontWeight: 700, marginLeft: '4px',
           }}>
-            공공 API 기반
+            업종별 통계 기반
           </span>
-          {/* 동적 요약 문구: 데이터가 있을 때만 표시 */}
+          {/* 절감/초과 요약 문구 */}
           {benchmarkData?.annualMyTotal != null && benchmarkData?.annualRegionAvgTotal != null && (
             <span style={{
               fontSize: '12px', fontWeight: 600,
@@ -831,21 +798,9 @@ export default function DashboardPage() {
                 : `▲ ${Math.abs(benchmarkData.annualReductionPercent ?? 0).toFixed(1)}% 초과`}
             </span>
           )}
-          {!benchmarkData && !loading && (
-            <button
-              onClick={() => fetchBenchmarkData(companyId)}
-              style={{
-                marginLeft: 'auto', padding: '4px 12px', background: C.blueL,
-                color: C.blue, border: 'none', borderRadius: '8px',
-                cursor: 'pointer', fontSize: '12px', fontWeight: 600,
-              }}
-            >
-              데이터 불러오기
-            </button>
-          )}
         </div>
 
-        {/* 데이터 로딩 중 → Skeleton, 완료 → 차트, 없음 → 빈 상태 */}
+        {/* 로딩 → Skeleton | 데이터 있음 → 차트 | 없음 → 설정 안내 */}
         {loading && !benchmarkData ? (
           <BenchmarkSkeleton />
         ) : benchmarkData ? (
@@ -854,12 +809,16 @@ export default function DashboardPage() {
           </ChartErrorBoundary>
         ) : (
           <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            height: '200px', color: C.gray400, fontSize: '14px',
-            flexDirection: 'column', gap: '8px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'center', padding: '48px 0', gap: '10px',
           }}>
-            <BarChart3 size={40} color={C.gray200} />
-            공공 API 데이터를 불러오지 못했습니다. 상단 버튼으로 재시도하세요.
+            <BarChart3 size={48} color={C.gray200} />
+            <div style={{ fontWeight: 600, fontSize: '15px', color: C.gray700 }}>
+              벤치마크 데이터를 불러올 수 없습니다
+            </div>
+            <div style={{ color: C.gray400, fontSize: '13px' }}>
+              회원가입 시 입력한 지역·업종 정보를 확인해주세요
+            </div>
           </div>
         )}
       </div>

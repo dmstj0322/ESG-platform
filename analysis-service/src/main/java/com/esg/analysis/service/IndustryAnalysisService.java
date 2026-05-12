@@ -37,7 +37,7 @@ public class IndustryAnalysisService {
         if (ksicCode.startsWith("62")) bizCd = "J";
 
         // 1. 전력 평균 계산 (총사용량 / 총고객수)
-        KepcoResponseDto powerRes = kepcoClient.getPowerUsage(year, month, kepcoApiKey, "json");
+        KepcoResponseDto powerRes = kepcoClient.getPowerUsage(year, month, null, kepcoApiKey, "json");
         double avgPower = 0;
         if (powerRes != null && powerRes.getActualData() != null) {
             List<KepcoResponseDto.KepcoData> data = powerRes.getActualData();

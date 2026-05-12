@@ -101,5 +101,8 @@ openai:
     key: ${OPENAI_API_KEY}
     model-name: gpt-4o-mini
 
+ollama:
+  base-url: http://localhost:11435
+
 jwt:
   secret: vms_secret_key_testing_1234567890_vms_secret_key

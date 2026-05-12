@@ -81,11 +81,11 @@ const Header = () => {
 
         {isLoggedIn && (
           <nav style={{ display: 'flex', marginLeft: '20px' }}>
-            <NavLink to="/" style={({ isActive }) => isActive ? activeStyle : navItemStyle}>커뮤니티</NavLink>
-            <NavLink to="/market" style={({ isActive }) => isActive ? activeStyle : navItemStyle}>ESG 마켓</NavLink>
             {isAdmin && (
               <NavLink to="/analysis" style={({ isActive }) => isActive ? activeStyle : navItemStyle}>분석</NavLink>
             )}
+            <NavLink to="/community" style={({ isActive }) => isActive ? activeStyle : navItemStyle}>커뮤니티</NavLink>
+            <NavLink to="/market" style={({ isActive }) => isActive ? activeStyle : navItemStyle}>ESG 마켓</NavLink>
           </nav>
         )}
       </div>
@@ -102,8 +102,9 @@ const Header = () => {
               <>
                 <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f8f9fa', padding: '5px 10px', borderRadius: '20px' }}>
                   <Link to="/points/history" style={{ textDecoration: 'none', color: '#444', fontSize: '14px' }}>
-                    포인트<span style={{ fontWeight: 'bold', marginLeft: '5px', color: '#339af0' }}>: {points}P</span>
+                    포인트
                   </Link>
+                  <span style={{ fontWeight: 'bold', marginLeft: '5px', color: '#339af0' }}>: {points}P</span>
                 </div>
                 <Link to="/mypage" style={{ textDecoration: 'none', color: '#666', fontSize: '14px' }}>
                   👤 마이페이지

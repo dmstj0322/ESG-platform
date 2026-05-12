@@ -183,15 +183,28 @@ export function AnalysisProvider({ children }) {
 
   const fetchBenchmarkData = useCallback(async () => {
     try {
-      const res = await axios.get(
-        '/analysis/benchmark/company',
-        { params: { year: new Date().getFullYear() } }
-      );
+      const res = await api.get('/analysis/benchmark/company', {
+        params: { year: new Date().getFullYear() },
+      });
       setBenchmarkData(res.data);
       if (res.data?.companyName) {
         localStorage.setItem('esg_companyName', res.data.companyName);
         setCompanyProfileName(res.data.companyName);
       }
+    } catch { setBenchmarkData(null); }
+  }, []);
+
+  const saveCompanyProfile = useCallback(async ({ regionCode, ksicCode, employeeCount }) => {
+    await api.post('/analysis/benchmark/company/profile', { regionCode, ksicCode, employeeCount });
+    localStorage.setItem('esg_regionCode',    regionCode);
+    localStorage.setItem('esg_ksicCode',      ksicCode);
+    localStorage.setItem('esg_employeeCount', String(employeeCount));
+    // 저장 직후 벤치마크 재조회
+    try {
+      const res = await api.get('/analysis/benchmark/company', {
+        params: { year: new Date().getFullYear() },
+      });
+      setBenchmarkData(res.data);
     } catch { setBenchmarkData(null); }
   }, []);
 
@@ -239,7 +252,7 @@ export function AnalysisProvider({ children }) {
     carbonStats,
     isAnalyzing, setIsAnalyzing,
     wsStatus, setWsStatus,
-    fetchLatestData, fetchEcoPreview, fetchBenchmarkData,
+    fetchLatestData, fetchEcoPreview, fetchBenchmarkData, saveCompanyProfile,
     connectWebSocket,
     K_ESG_WEIGHTS,
     KSIC_CARBON_ANNUAL_AVG,

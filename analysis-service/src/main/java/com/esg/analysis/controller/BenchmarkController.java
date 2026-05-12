@@ -1,9 +1,10 @@
 package com.esg.analysis.controller;
 
+import com.esg.analysis.dto.CompanyProfileRequest;
 import com.esg.analysis.dto.RegionalBenchmarkDto;
 import com.esg.analysis.service.BenchmarkService;
-import com.esg.analysis.service.domain.Company;
-import com.esg.analysis.service.repository.CompanyRepository;
+import com.esg.analysis.client.AuthServiceClient;
+import com.esg.common.dto.CompanyResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,7 +22,20 @@ import org.springframework.web.bind.annotation.*;
 public class BenchmarkController {
 
   private final BenchmarkService benchmarkService;
-  private final CompanyRepository companyRepository;
+  private final AuthServiceClient authServiceClient;
+
+  /**
+   * 기업 지역·업종·임직원 수 프로파일 저장 (UPSERT).
+   * 저장 후 /company 엔드포인트를 다시 호출하면 저장된 값으로 벤치마크 조회.
+   */
+  @PostMapping("/company/profile")
+  public ResponseEntity<Void> saveCompanyProfile(
+    @RequestHeader("X-Company-Id") Long companyId,
+    @RequestBody CompanyProfileRequest req) {
+
+    benchmarkService.saveProfile(companyId, req);
+    return ResponseEntity.ok().build();
+  }
 
   /**
    * 직접 파라미터 방식 (기존 API 유지)
@@ -39,20 +53,19 @@ public class BenchmarkController {
   }
 
   /**
-   * Company 테이블 기반 자동 조회 엔드포인트.
-   * company.regionCode / ksicCode / employeeCount 를 DB 에서 읽어 벤치마크 산출.
-   * 등록된 기업 정보가 없으면 서울·반도체·500명 기본값 적용.
+   * 로그인한 기업의 회원가입 시 선택한 지역·업종으로 동종업계 벤치마크 조회.
+   * auth-service에서 company 프로파일(regionCode, ksicCode, employeeCount)을 가져옴.
    */
   @GetMapping("/company")
   public ResponseEntity<RegionalBenchmarkDto> getBenchmarkByCompany(
     @RequestHeader("X-Company-Id") Long companyId,
     @RequestParam(defaultValue = "2025") int year) {
 
-    Company company = companyRepository.findById(companyId).orElse(null);
+    CompanyResponse company = authServiceClient.getCompanyById(companyId);
 
-    String regionCode = (company != null && company.getRegionCode() != null) ? company.getRegionCode() : "11";
-    String ksicCode = (company != null && company.getKsicCode() != null) ? company.getKsicCode() : "26110";
-    int employeeCount = (company != null && company.getEmployeeCount() != null) ? company.getEmployeeCount() : 500;
+    String regionCode   = (company.regionCode()   != null) ? company.regionCode()   : "11";
+    String ksicCode     = (company.ksicCode()     != null) ? company.ksicCode()     : "26110";
+    int    employeeCount = (company.employeeCount() != null) ? company.employeeCount() : 500;
 
     return ResponseEntity.ok(
       benchmarkService.getBenchmark(companyId, year, regionCode, ksicCode, employeeCount));

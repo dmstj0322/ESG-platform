@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { jwtDecode } from 'jwt-decode';
 import api from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -22,10 +23,16 @@ const Login = () => {
 
       const { accessToken, refreshToken } = response.data;
 
-      login(accessToken, refreshToken );
+      login(accessToken, refreshToken);
 
       alert('로그인 성공!');
-      navigate('/'); 
+      const decoded = jwtDecode(accessToken);
+      const role = decoded.role;
+      if (role === 'SYSTEM_ADMIN' || role === 'COMPANY_ADMIN') {
+        navigate('/analysis');
+      } else {
+        navigate('/community');
+      }
     } catch (error) {
       console.error('로그인 실패:', error);
       alert('로그인에 실패했습니다. 이메일과 비밀번호를 확인하세요.');
