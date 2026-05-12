@@ -16,6 +16,7 @@ public interface KepcoClient {
     KepcoResponseDto getPowerUsage(
             @RequestParam("year") String year,
             @RequestParam("month") String month,
+            @RequestParam(value = "metroCd", required = false) String metroCd,
             @RequestParam("apiKey") String apiKey,
             @RequestParam("returnType") String returnType
     );

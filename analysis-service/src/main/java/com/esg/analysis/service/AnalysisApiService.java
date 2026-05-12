@@ -15,15 +15,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.time.Duration;
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -33,18 +30,16 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class AnalysisApiService {
 
-    private final UpstageService upstageService;
+    private final AsyncAnalysisProcessor asyncProcessor;
     private final AnalysisReportRepository analysisReportRepository;
-    private final KafkaTemplate<String, Object> kafkaTemplate;
     private final RedissonClient redissonClient;
     private final RedisTemplate<String, Object> redisTemplate;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate transactionTemplate;
     private final PointServiceClient pointServiceClient;
-    private final SimpMessagingTemplate messagingTemplate;
 
-    private static final String TOPIC = "esg-analysis-requests";
-    private static final String CACHE_PREFIX = "analysis:cache:";
+    private static final String CACHE_PREFIX    = "analysis:cache:";
+    private static final String COOLDOWN_PREFIX = "analysis:cooldown:";
 
     private final Map<Long, Bucket> buckets = new ConcurrentHashMap<>();
 
@@ -52,47 +47,55 @@ public class AnalysisApiService {
         return buckets.computeIfAbsent(companyId, id ->
                 Bucket4j.builder()
                         .addLimit(Bandwidth.classic(5, Refill.intervally(5, Duration.ofDays(1))))
-                        .build()
-        );
+                        .build());
     }
 
     private String serializeToJson(Object obj) {
-        try {
-            return objectMapper.writeValueAsString(obj);
-        } catch (Exception e) {
-            log.error("직렬화 실패", e);
-            return "{}";
-        }
+        try { return objectMapper.writeValueAsString(obj); }
+        catch (Exception e) { log.error("직렬화 실패", e); return "{}"; }
     }
 
-    public Object initiateAnalysis(Long userId, Long companyId, MultipartFile file) {
+    /**
+     * 분석 시작 진입점.
+     * 파일 복사 → 검증 → PENDING DB 저장 → 202 반환.
+     * Upstage 호출과 Kafka 발행은 AsyncAnalysisProcessor에서 백그라운드 처리.
+     */
+    public Long initiateAnalysis(Long userId, Long companyId, MultipartFile file) {
 
-        // 1. [F-204] API 쿼터 체크
+        // ── 0. 파일 바이트를 요청 스레드에서 즉시 복사 ─────────────────────
+        // MultipartFile 스트림은 요청 범위(request-scoped)이므로 비동기 스레드에서
+        // 접근하면 이미 닫혀 있다. 여기서 byte[]로 복사해야 한다.
+        byte[] fileBytes;
+        try {
+            fileBytes = file.getBytes();
+        } catch (Exception e) {
+            throw new RuntimeException("파일을 읽는 중 오류가 발생했습니다.");
+        }
+        String filename    = file.getOriginalFilename();
+        String contentType = file.getContentType();
+
+        // ── 1. API 쿼터 체크 ──────────────────────────────────────────────
         Bucket bucket = resolveBucket(companyId);
         if (!bucket.tryConsume(1)) {
             log.warn("★쿼터 초과★ 기업 ID: {}", companyId);
             throw new RuntimeException("오늘 분석 가능한 횟수(5회)를 초과하였습니다. 내일 다시 시도해주세요.");
         }
-        log.info("★쿼터 확인 완료★ 남은 횟수: {}", bucket.getAvailableTokens());
 
-        // 2. [F-301] 파일 해시 생성
+        // ── 2. 파일 해시 생성 ─────────────────────────────────────────────
         String fileHash;
         try {
             fileHash = FileHashUtil.calculateChecksum(file);
         } catch (Exception e) {
-            log.error("파일 해시 계산 오류", e);
-            throw new RuntimeException("파일을 읽는 중 오류가 발생했습니다.");
+            bucket.addTokens(1);
+            throw new RuntimeException("파일 해시 계산 중 오류가 발생했습니다.");
         }
 
-        // 3. [F-301] Redis 캐시 확인
-        String cacheKey = CACHE_PREFIX + fileHash;
-        AnalysisResultCache cachedResult = (AnalysisResultCache) redisTemplate.opsForValue().get(cacheKey);
-
+        // ── 3. Redis 캐시 확인 (동일 파일 재분석 방지) ────────────────────
+        AnalysisResultCache cachedResult = (AnalysisResultCache)
+                redisTemplate.opsForValue().get(CACHE_PREFIX + fileHash);
         if (cachedResult != null) {
-            log.info(">>>> [F-301 Cache Hit] 중복 파일. Hash: {}", fileHash);
-
-            // DB 저장 먼저
-            transactionTemplate.execute(status -> {
+            log.info("[Cache Hit] 동일 파일 hash={}", fileHash);
+            AnalysisReport savedReport = transactionTemplate.execute(status -> {
                 AnalysisReport report = AnalysisReport.builder()
                         .memberId(userId)
                         .companyId(companyId)
@@ -102,60 +105,46 @@ public class AnalysisApiService {
                         .build();
                 return analysisReportRepository.save(report);
             });
-            log.info(">>>> [Cache Hit] DB 저장 완료. 등급: {}", cachedResult.getFinalGrade());
-
-            // 프론트 WS 구독 완료 대기 후 바로 COMPLETE 전송
-            try {
-                Thread.sleep(1500);
-                messagingTemplate.convertAndSend("/topic/analysis/" + companyId, "COMPLETE");
-                log.info(">>>> [Cache Hit] COMPLETE 전송 완료");
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-
-            return cachedResult;
+            // WS COMPLETE 통보는 비동기로 (HTTP 스레드 블로킹 제거)
+            asyncProcessor.notifyCompleteAfterDelay(companyId);
+            return savedReport.getId();
         }
 
-        // 4. [F-302] Cooldown 체크
-        String cooldownKey = "analysis:cooldown:" + companyId;
-        if (Boolean.TRUE.equals(redisTemplate.hasKey(cooldownKey))) {
+        // ── 4. Cooldown 체크 ──────────────────────────────────────────────
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(COOLDOWN_PREFIX + companyId))) {
             bucket.addTokens(1);
-            throw new RuntimeException("잦은 분석은 금지! 5분 뒤에 새로운 파일을 올려주세요.");
+            throw new RuntimeException("잦은 분석은 금지! 1분 뒤에 새로운 파일을 올려주세요.");
         }
 
-        // 5. [F-103] 분산 락
+        // ── 5. 이미 진행 중인 분석 존재 여부 확인 ────────────────────────
+        // PENDING: DB 저장 후 Kafka 발행 전 / PROCESSING: Consumer가 처리 중
+        if (analysisReportRepository.existsByCompanyIdAndStatusIn(
+                companyId, List.of("PENDING", "PROCESSING"))) {
+            bucket.addTokens(1);
+            throw new RuntimeException("현재 분석이 이미 진행 중입니다. 완료 후 다시 시도해주세요.");
+        }
+
+        // ── 6. 분산 락 (같은 파일 동시 중복 방지) ────────────────────────
         String lockKey = "analysis:lock:" + companyId + ":" + fileHash;
         RLock lock = redissonClient.getLock(lockKey);
-
         try {
-            if (!lock.tryLock(0, 30, TimeUnit.SECONDS)) {
+            if (!lock.tryLock(0, 10, TimeUnit.SECONDS)) {
                 log.warn("★중복 분석 요청 차단★ 기업 ID: {}", companyId);
-                throw new RuntimeException("현재 해당 문서에 대한 분석이 이미 진행 중입니다.");
+                bucket.addTokens(1);
+                throw new RuntimeException("동일 문서에 대한 분석이 이미 접수되었습니다.");
             }
 
-            log.info("★락 획득 성공★ 기업 ID: {}", companyId);
-
-            // 6. Upstage 호출
-            String markdownContent;
-            try {
-                markdownContent = upstageService.parsePdfToMarkdown(file);
-            } catch (IOException e) {
-                log.error("Upstage 오류", e);
-                throw new RuntimeException("문서 처리 중 서버 오류가 발생했습니다.");
-            }
-
-            // 7. [F-401] point-service 호출
-            log.info(">>>> [F-401] point-service 호출 (memberId: {})", userId);
+            // ── 7. point-service 호출 ─────────────────────────────────────
             Long userPoints = 0L;
             try {
                 userPoints = pointServiceClient.getMemberPointBalance(userId);
-                log.info(">>>> [F-401] 포인트 연동 성공: {}", userPoints);
             } catch (Exception e) {
-                log.error(">>>> [F-401] point-service 호출 실패 → 0점으로 진행", e);
+                log.error("[point-service] 호출 실패 → 0점으로 진행: {}", e.getMessage());
             }
 
-            // 8. DB 저장 (PENDING)
-            AnalysisReport savedAnalysis = transactionTemplate.execute(status -> {
+            // ── 8. PENDING 레코드 DB 저장 ────────────────────────────────
+            final Long finalUserPoints = userPoints;
+            AnalysisReport savedReport = transactionTemplate.execute(status -> {
                 AnalysisReport analysis = AnalysisReport.builder()
                         .memberId(userId)
                         .companyId(companyId)
@@ -164,35 +153,26 @@ public class AnalysisApiService {
                         .build();
                 return analysisReportRepository.save(analysis);
             });
+            log.info("PENDING 저장 완료. analysisId={}", savedReport.getId());
 
-            log.info("DB 저장 완료. Analysis ID: {}", savedAnalysis.getId());
+            // ── 9. Cooldown 키 설정 (1분) ────────────────────────────────
+            redisTemplate.opsForValue().set(COOLDOWN_PREFIX + companyId, "1", Duration.ofMinutes(1));
 
-            // 9. [F-104] Kafka 발행
-            try {
-                Map<String, Object> kafkaMessage = new HashMap<>();
-                kafkaMessage.put("analysisId", savedAnalysis.getId());
-                kafkaMessage.put("companyId", companyId);
-                kafkaMessage.put("content", markdownContent);
-                kafkaMessage.put("fileHash", fileHash);
-                kafkaMessage.put("userPoints", userPoints);
+            // ── 10. 비동기 처리 위임 (Upstage + Kafka) ───────────────────
+            asyncProcessor.processAsync(
+                    savedReport.getId(), companyId,
+                    fileBytes, filename, contentType,
+                    fileHash, finalUserPoints);
 
-                String jsonMessage = objectMapper.writeValueAsString(kafkaMessage);
-                kafkaTemplate.send(TOPIC, String.valueOf(companyId), jsonMessage);
-                log.info("Kafka 전송 완료. 포인트: {}", userPoints);
-            } catch (Exception e) {
-                log.error("Kafka 발행 에러", e);
-                throw new RuntimeException("분석 대기열 등록에 실패했습니다.");
-            }
-
-            return savedAnalysis.getId();
+            return savedReport.getId();  // 202 Accepted
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            bucket.addTokens(1);
             throw new RuntimeException("작업이 중단되었습니다.");
         } finally {
-            if (lock != null && lock.isHeldByCurrentThread()) {
+            if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
-                log.info("★락 해제★ 기업 ID: {}", companyId);
             }
         }
     }

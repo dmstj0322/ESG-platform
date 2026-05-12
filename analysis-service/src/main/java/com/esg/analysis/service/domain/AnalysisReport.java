@@ -21,7 +21,7 @@ public class AnalysisReport extends BaseTimeEntity {
   private Long companyId;
 
   @Column(nullable = false)
-  private String status; // PENDING, COMPLETED, FAILED
+  private String status; // PENDING, PROCESSING, COMPLETED, FAILED
 
   @Column(columnDefinition = "TEXT")
   private String reportContent;
@@ -49,6 +49,10 @@ public class AnalysisReport extends BaseTimeEntity {
   // --- 비즈니스 편의 메서드 ---
   public void updateStatus(String status) {
     this.status = status;
+  }
+
+  public void startProcessing() {
+    this.status = "PROCESSING";
   }
 
   public void completeAnalysis(String content, String grade) {

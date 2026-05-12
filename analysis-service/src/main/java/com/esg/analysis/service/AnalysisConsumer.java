@@ -124,9 +124,11 @@ public class AnalysisConsumer {
             log.error("[Consumer 오류] ID:{} 원인:{}", analysisId, e.getMessage(), e);
             handleAnalysisFailure(companyId, analysisId);
         } finally {
-            reportRagService.deleteSessionCollection(sessionId);
-            if (lockAcquired && lock.isHeldByCurrentThread()) {
-                lock.unlock();
+            if (lockAcquired) {
+                reportRagService.deleteSessionCollection(sessionId);
+                if (lock.isHeldByCurrentThread()) {
+                    lock.unlock();
+                }
             }
         }
     }

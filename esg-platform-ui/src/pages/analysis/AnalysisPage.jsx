@@ -79,8 +79,8 @@ const WebSocketPanel = ({ wsStatus, isAnalyzing, onNavigate }) => {
       <Progress
         percent={info?.pct ?? 5}
         strokeColor={info?.color ?? C.blue}
-        trailColor={C.gray100}
-        strokeWidth={10}
+        railColor={C.gray100}
+        size={{ strokeWidth: 10 }}
         style={{ marginBottom: '16px' }}
         status={fail ? 'exception' : done ? 'success' : 'active'}
       />
@@ -178,7 +178,7 @@ export default function AnalysisPage() {
   const pollingRef = useRef(null);
 
   const handleNavigateToReport = useCallback(() => {
-    navigate('/report');
+    navigate('/analysis/report');
   }, [navigate]);
 
   const startAnalysis = useCallback(async (file) => {

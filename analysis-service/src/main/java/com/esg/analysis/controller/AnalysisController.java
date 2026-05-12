@@ -4,11 +4,9 @@ import com.esg.analysis.dto.GradeStatDto;
 import com.esg.analysis.service.AnalysisApiService;
 import com.esg.analysis.service.EsgGuidelineService;
 import com.esg.analysis.service.repository.AnalysisReportRepository;
-import com.esg.common.security.AuthUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -55,19 +53,16 @@ public class AnalysisController {
     /**
      * [POST] 파일 업로드 및 분석 시작
      */
-    @PostMapping("/report")
+    @PostMapping("/api/v1/analysis/report")
     public ResponseEntity<?> requestReport(
-            @AuthenticationPrincipal AuthUser authUser,
+            @RequestHeader("X-UserId") Long userId,
+            @RequestHeader("X-CompanyId") Long companyId,
             @RequestParam("file") MultipartFile file) {
 
         log.info("★파일 수신★ 이름: {}, 크기: {} bytes", file.getOriginalFilename(), file.getSize());
 
-        Object result = analysisApiService.initiateAnalysis(authUser.memberId(), authUser.companyId(), file);
-
-        if (result instanceof Long) {
-            return ResponseEntity.accepted().body(result);
-        }
-        return ResponseEntity.ok(result);
+        Long analysisId = analysisApiService.initiateAnalysis(userId, companyId, file);
+        return ResponseEntity.accepted().body(analysisId);
     }
 
     /**

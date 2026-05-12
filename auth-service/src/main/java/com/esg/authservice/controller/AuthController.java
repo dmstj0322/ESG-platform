@@ -1,9 +1,11 @@
 package com.esg.authservice.controller;
 
+import com.esg.authservice.dto.AdminSignupRequest;
 import com.esg.authservice.dto.LoginRequest;
 import com.esg.authservice.dto.LoginResponse;
 import com.esg.authservice.dto.SignupRequest;
 import com.esg.authservice.service.AuthService;
+import com.esg.common.dto.CompanyResponse;
 import com.esg.common.dto.MemberResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +21,7 @@ public class AuthController {
   private final AuthService authService;
 
   @PostMapping("/signup/company-admin")
-  public ResponseEntity<String> signupCompanyAdmin(@Valid @RequestBody SignupRequest signupRequest) {
+  public ResponseEntity<String> signupCompanyAdmin(@Valid @RequestBody AdminSignupRequest signupRequest) {
     authService.signupAdmin(signupRequest);
     return ResponseEntity.ok("회사 관리자 등록 및 회사 생성이 완료되었습니다.");
   }
@@ -56,5 +58,18 @@ public class AuthController {
   @GetMapping("/companies/{companyId}/admin-email")
   public ResponseEntity<String> getAdminEmailInternal(@PathVariable("companyId") Long companyId) {
     return ResponseEntity.ok(authService.getAdminEmailByCompanyId(companyId));
+  }
+
+  @GetMapping("/companies/{companyId}")
+  public ResponseEntity<CompanyResponse> getCompanyInternal(@PathVariable("companyId") Long companyId) {
+    return ResponseEntity.ok(authService.getCompanyById(companyId));
+  }
+
+  @PutMapping("/companies/{companyId}/profile")
+  public ResponseEntity<Void> updateCompanyProfile(
+    @PathVariable("companyId") Long companyId,
+    @RequestBody AdminSignupRequest req) {
+    authService.updateCompanyProfile(companyId, req);
+    return ResponseEntity.ok().build();
   }
 }

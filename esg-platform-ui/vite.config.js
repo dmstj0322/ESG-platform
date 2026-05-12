@@ -7,4 +7,7 @@ export default defineConfig({
   define: {
     global: 'globalThis',
   },
+  resolve: {
+    dedupe: ['react', 'react-dom', 'recharts'],
+  },
 })

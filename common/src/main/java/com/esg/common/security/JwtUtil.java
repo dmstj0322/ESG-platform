@@ -26,12 +26,11 @@ public class JwtUtil {
     this.key = Keys.hmacShaKeyFor(secret.getBytes());
   }
 
-  public String createToken(Long memberId, String email, Long companyId, String role, String nickname) {
+  public String createToken(Long memberId, String email, Long companyId, String role) {
     Claims claims = Jwts.claims().setSubject(email);
     claims.put("memberId", memberId);
     claims.put("companyId", companyId);
     claims.put("role", role);
-    claims.put("nickname", nickname);
 
     return Jwts.builder()
       .setClaims(claims)

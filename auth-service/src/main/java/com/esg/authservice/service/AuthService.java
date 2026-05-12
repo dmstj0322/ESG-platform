@@ -3,11 +3,13 @@ package com.esg.authservice.service;
 import com.esg.authservice.domain.Company;
 import com.esg.authservice.domain.Member;
 import com.esg.authservice.domain.Role;
+import com.esg.authservice.dto.AdminSignupRequest;
 import com.esg.authservice.dto.LoginRequest;
 import com.esg.authservice.dto.LoginResponse;
 import com.esg.authservice.dto.SignupRequest;
 import com.esg.authservice.repository.CompanyRepository;
 import com.esg.authservice.repository.MemberRepository;
+import com.esg.common.dto.CompanyResponse;
 import com.esg.common.dto.MemberResponse;
 import com.esg.common.security.JwtUtil;
 import io.jsonwebtoken.Claims;
@@ -25,25 +27,37 @@ public class AuthService {
   private final JwtUtil jwtUtil;
 
   @Transactional
-  public void signupAdmin(SignupRequest signupRequest) {
-    if (memberRepository.findByEmail(signupRequest.email()).isPresent()) {
+  public void signupAdmin(AdminSignupRequest req) {
+    if (memberRepository.findByEmail(req.email()).isPresent()) {
       throw new IllegalArgumentException("이미 존재하는 이메일입니다.");
     }
 
-    String emailDomain = signupRequest.email().split("@")[1];
+    String emailDomain = req.email().split("@")[1];
 
     if (companyRepository.findByEmailDomain(emailDomain).isPresent()) {
       throw new IllegalArgumentException("이미 등록된 회사 도메인입니다.");
     }
-    Company company = companyRepository.save(new Company(null, emailDomain.split("\\.")[0], emailDomain));
 
-    String encodedPassword = passwordEncoder.encode(signupRequest.password());
+    String companyName = (req.companyName() != null && !req.companyName().isBlank())
+      ? req.companyName() : emailDomain.split("\\.")[0];
+
+    Company company = companyRepository.save(Company.builder()
+      .name(companyName)
+      .emailDomain(emailDomain)
+      .regionCode(req.regionCode())
+      .regionName(req.regionName())
+      .ksicCode(req.ksicCode())
+      .industryName(req.industryName())
+      .employeeCount(req.employeeCount())
+      .build());
+
+    String encodedPassword = passwordEncoder.encode(req.password());
 
     Member member = Member.builder()
       .companyId(company.getId())
-      .email(signupRequest.email())
+      .email(req.email())
       .password(encodedPassword)
-      .nickname(signupRequest.nickname())
+      .nickname(req.nickname())
       .role(Role.COMPANY_ADMIN)
       .build();
 
@@ -86,8 +100,7 @@ public class AuthService {
       member.getId(),
       member.getEmail(),
       member.getCompanyId(),
-      member.getRole().name(),
-      member.getNickname());
+      member.getRole().name());
 
     String refreshToken = jwtUtil.createRefreshToken(member.getEmail());
 
@@ -109,8 +122,7 @@ public class AuthService {
       member.getId(),
       member.getEmail(),
       member.getCompanyId(),
-      member.getRole().name(),
-      member.getNickname()
+      member.getRole().name()
     );
   }
 
@@ -132,5 +144,21 @@ public class AuthService {
     return memberRepository.findByCompanyIdAndRole(companyId, Role.COMPANY_ADMIN)
       .map(Member::getEmail)
       .orElseThrow(() -> new IllegalArgumentException("관리자를 찾을 수 없습니다."));
+  }
+
+  @Transactional
+  public void updateCompanyProfile(Long companyId, AdminSignupRequest req) {
+    Company c = companyRepository.findById(companyId)
+      .orElseThrow(() -> new IllegalArgumentException("회사를 찾을 수 없습니다."));
+    c.updateProfile(req.regionCode(), req.regionName(),
+      req.ksicCode(), req.industryName(), req.employeeCount());
+  }
+
+  @Transactional(readOnly = true)
+  public CompanyResponse getCompanyById(Long companyId) {
+    Company c = companyRepository.findById(companyId)
+      .orElseThrow(() -> new IllegalArgumentException("회사를 찾을 수 없습니다."));
+    return new CompanyResponse(c.getId(), c.getName(), c.getEmailDomain(),
+      c.getRegionCode(), c.getRegionName(), c.getKsicCode(), c.getIndustryName(), c.getEmployeeCount());
   }
 }

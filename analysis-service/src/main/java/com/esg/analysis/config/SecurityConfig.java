@@ -20,16 +20,23 @@ public class SecurityConfig {
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     http
+      .cors(cors -> cors.disable())
       .csrf(csrf -> csrf.disable())
       .sessionManagement(session -> session
         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
       .authorizeHttpRequests(auth -> auth
         .requestMatchers("/error").permitAll()
         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-        .requestMatchers("/admin/**").hasRole("ADMIN") // 관리자 전용
-        .anyRequest().authenticated()) // 그 외 모든 분석 API는 인증 필요
+        .requestMatchers("/ws-esg/**").permitAll()
+        .requestMatchers(HttpMethod.GET,
+          "/latest", "/stats", "/carbon/stats", "/carbon/report-data",
+          "/eco/preview", "/benchmark", "/benchmark/company").permitAll()
+        .requestMatchers(HttpMethod.POST, "/report", "/api/v1/analysis/report").permitAll()
+        .requestMatchers("/admin/**").hasRole("ADMIN")
+        .anyRequest().authenticated())
       .addFilterBefore(new JwtAuthenticationFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class);
 
     return http.build();
   }
+
 }

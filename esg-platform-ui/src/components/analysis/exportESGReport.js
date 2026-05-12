@@ -4,22 +4,22 @@ import { K_ESG_WEIGHTS } from '../../context/AnalysisContext';
 
 const loadNanumGothicFont = async (doc) => {
   const response = await fetch('/fonts/NanumGothic-Regular.ttf');
-  if (!response.ok) throw new Error(`Font HTTP ${response.status}`);
-  const blob = await response.blob();
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      try {
-        const base64String = reader.result.split(',')[1];
-        doc.addFileToVFS('NanumGothic-Regular.ttf', base64String);
-        doc.addFont('NanumGothic-Regular.ttf', 'NanumGothic', 'normal');
-        doc.setFont('NanumGothic');
-        resolve();
-      } catch (e) { reject(e); }
-    };
-    reader.onerror = () => reject(new Error('FileReader error'));
-    reader.readAsDataURL(blob);
-  });
+  if (!response.ok) throw new Error(`폰트 파일 응답 오류 HTTP ${response.status} — public/fonts/NanumGothic-Regular.ttf 경로를 확인하세요.`);
+
+  const arrayBuffer = await response.arrayBuffer();
+  const uint8Array = new Uint8Array(arrayBuffer);
+
+  // 대용량 TTF 파일에서 btoa 스택 오버플로 방지를 위한 청크 처리
+  const CHUNK = 8192;
+  let binary = '';
+  for (let i = 0; i < uint8Array.length; i += CHUNK) {
+    binary += String.fromCharCode(...uint8Array.subarray(i, i + CHUNK));
+  }
+  const base64 = btoa(binary);
+
+  doc.addFileToVFS('NanumGothic-Regular.ttf', base64);
+  doc.addFont('NanumGothic-Regular.ttf', 'NanumGothic', 'normal');
+  doc.setFont('NanumGothic', 'normal');
 };
 
 const getCachedReport = () => {
@@ -265,7 +265,7 @@ const drawBenchmarkChart = (doc, bd, sx, sy, totalW) => {
     const slotX = sx + i * slotW;
     const myH   = sh(m.myEmissionTco2 ?? 0);
     const avgH  = sh(m.regionAvgEmissionTco2 ?? 0);
-    doc.setFillColor(...(m.isBetterThanAverage ? P.blue : P.red));
+    doc.setFillColor(...(m.betterThanAverage ? P.blue : P.red));
     doc.roundedRect(slotX + 0.5, baseY - myH, barW, myH, 1, 1, 'F');
     doc.setFillColor(147, 197, 253);
     doc.roundedRect(slotX + barW + 1.5, baseY - avgH, barW, avgH, 1, 1, 'F');
@@ -347,12 +347,11 @@ export const exportESGReport = async (
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-  await Promise.race([
-    loadNanumGothicFont(doc).catch(err => {
-      console.warn('[PDF] 폰트 로드 실패, 기본 폰트 사용:', err.message);
-    }),
-    new Promise(r => setTimeout(r, 4000)),
-  ]);
+  try {
+    await loadNanumGothicFont(doc);
+  } catch (err) {
+    throw new Error(`[PDF] 한글 폰트 로드 실패 — ${err.message}`);
+  }
 
   const W       = 210;
   const today   = new Date();
@@ -636,7 +635,7 @@ export const exportESGReport = async (
     y = drawBenchmarkChart(doc, benchmarkData, 26, y, 158);
     y += 8;
 
-    const badMonths = benchmarkData.monthlyData.filter(m => !m.isBetterThanAverage);
+    const badMonths = benchmarkData.monthlyData.filter(m => !m.betterThanAverage);
     if (badMonths.length > 0) {
       y = ensureSpace(doc, y, 22, '탄소 배출 벤치마킹');
       doc.setFillColor(...P.redL);
