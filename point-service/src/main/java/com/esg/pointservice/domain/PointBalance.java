@@ -1,9 +1,7 @@
 package com.esg.pointservice.domain;
 
 import com.esg.common.BaseTimeEntity;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Version;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -12,6 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class PointBalance extends BaseTimeEntity {
   @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long memberId;
 
   private Long companyId;
