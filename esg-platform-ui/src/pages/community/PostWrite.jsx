@@ -43,6 +43,10 @@ const PostWrite = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    console.log("현재 로그인한 유저 정보:", user);
+    console.log("유저의 닉네임:", user?.nickname);
+
     if (selectedFiles.length === 0) {
       alert("인증샷을 첨부해주세요!");
       return;
@@ -57,7 +61,7 @@ const PostWrite = () => {
     try {
       await api.post('/community/posts', formData);
       alert("성공적으로 등록되었습니다!");
-      navigate('/');
+      navigate('/community');
     } catch (err) {
       alert("작성 실패: " + (err.response?.data?.message || "서버 오류"));
     }

@@ -102,7 +102,7 @@ openai:
     model-name: gpt-4o-mini
 
 ollama:
-  base-url: http://localhost:11435
+  base-url: http://localhost:11434
 
 jwt:
   secret: vms_secret_key_testing_1234567890_vms_secret_key

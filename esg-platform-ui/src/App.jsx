@@ -23,6 +23,7 @@ import MyPage from './pages/user/MyPage';
 import MarketList from './pages/market/MarketList';
 import ProductDetail from './pages/market/ProductDetail';
 import VoucherDetail from './pages/market/VoucherDetail';
+import MyActivityList from './pages/user/MyActiviyList';
 
 import DashboardPage from './pages/analysis/DashboardPage';
 import AnalysisPage from './pages/analysis/AnalysisPage';
@@ -69,6 +70,7 @@ function App() {
               <Route path="/products/:productId" element={<ProductDetail />} />
               <Route path="/mypage" element={<MyPage />} />
               <Route path="/my-page/:orderId" element={<VoucherDetail />} />
+              <Route path="/my-activity/:type" element={<MyActivityList />} />
 
               <Route path="/admin" element={
                 <AdminRoute><AdminDashboard /></AdminRoute>
