@@ -5,7 +5,7 @@ import SockJS from 'sockjs-client';
 import { marked } from 'marked';
 
 const AnalysisContext = createContext(null);
-export const BASE_URL = 'http://localhost:8081';
+export const BASE_URL = 'http://localhost:8081/';
 
 const LS_REPORT_CACHE = 'esg_report_cache';
 

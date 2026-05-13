@@ -44,7 +44,9 @@
       "PowerShell(head *)",
       "Bash(python3 *)",
       "Bash(Get-ChildItem -Path \"C:\\\\SW_Academy\\\\final project\\\\ESG-platform\\\\esg-platform-ui\\\\src\" -Recurse -Filter \"*.jsx\" -o Name)",
-      "Bash(Sort-Object)"
+      "Bash(Sort-Object)",
+      "Bash(Get-ChildItem -Recurse -Directory)",
+      "Bash(Select-Object FullName)"
     ]
   }
 }
