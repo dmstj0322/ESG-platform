@@ -9,9 +9,7 @@ import com.esg.marketservice.dto.OrderResponseDto;
 import com.esg.marketservice.dto.OrderViewResponseDto;
 import com.esg.marketservice.event.OrderCreatedEvent;
 import com.esg.marketservice.kafka.OrderEventProducer;
-import com.esg.marketservice.repository.OrderRepository;
-import com.esg.marketservice.repository.ProductRepository;
-import com.esg.marketservice.repository.VoucherRepository;
+import com.esg.marketservice.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
@@ -33,6 +31,7 @@ public class OrderService {
   private final ProductRepository productRepository;
   private final OrderRepository orderRepository;
   private final VoucherRepository voucherRepository;
+  private final DonationRecordRepository donationRecordRepository;
   private final RedissonClient redissonClient;
   private final PointClient pointClient;
   private final AuthClient authClient;
@@ -47,14 +46,10 @@ public class OrderService {
     RLock lock = redissonClient.getLock(lockKey);
 
     try {
-      // 락 획득 시도 (waitTime: 5초)
-      boolean isLocked = lock.tryLock(5, TimeUnit.SECONDS);
-
-      if (!isLocked) {
+      if (!lock.tryLock(5, TimeUnit.SECONDS)) {
         log.info("락 획득 실패 - productId: {}", productId);
         throw new RuntimeException("현재 주문이 많아 잠시 후 다시 시도해주세요.");
       }
-
       log.info("락 획득 성공 - productId: {}", productId);
 
       // 재고 및 상태 검증
@@ -66,7 +61,6 @@ public class OrderService {
       }
 
       MemberResponse employee = authClient.getMemberById(memberId);
-
       String adminEmail = authClient.getAdminEmailByCompanyId(companyId);
 
       // 포인트 서비스 연동 (포인트 차감 요청)
@@ -74,6 +68,8 @@ public class OrderService {
       pointClient.usePoints(new PointRequest(memberId, companyId, totalAmount, product.getName() + " 구매"));
 
       try {
+        donateOrder(product, employee, totalAmount, count);
+
         // OrderItem 및 Order 생성 (내부에서 재고 차감 실행)
         OrderItem orderItem = OrderItem.createOrderItem(product, count);
         Order order = Order.createOrder(memberId, product.getCompanyId(), List.of(orderItem));
@@ -124,6 +120,30 @@ public class OrderService {
     }
   }
 
+  public void donateOrder(Product product, MemberResponse employee, Long totalAmount, int count) {
+    if (product.getCategory() == Category.DONATION) {
+      // [기부 전용 로직]
+      DonationRecord record = DonationRecord.builder()
+        .memberId(employee.memberId())
+        .memberName(employee.name())
+        .productId(product.getId())
+        .productName(product.getName())
+        .amount(totalAmount)
+        .build();
+
+      record.generateCertificateNo(); // 고유 증서 번호 생성
+      donationRecordRepository.save(record);
+
+      // 상품의 현재 모금액 합산 및 목표 달성 여부 체크 (Product 엔티티 내부 로직 실행)
+      product.addDonation(totalAmount);
+
+      log.info("기부 참여 기록 완료 - 유저: {}, 캠페인: {}, 금액: {}", employee.name(), product.getName(), totalAmount);
+    } else {
+      product.removeStock(count);
+    }
+
+  }
+
   @Transactional(readOnly = true)
   public Page<OrderResponseDto> getAllOrdersByCompany(Long companyId, Pageable pageable) {
     return orderRepository.findByCompanyId(companyId, pageable)
@@ -145,16 +165,39 @@ public class OrderService {
       throw new RuntimeException("해당 주문에 대한 권한이 없습니다.");
     }
 
+    Product product = order.getOrderItems().get(0).getProduct();
+
     order.cancel(); // 상태 변경 및 재고 addStock 실행
+
+    if (product.getCategory() == Category.GIFTICON) {
+      voucherRepository.findByOrderId(orderId).ifPresent(Voucher::releaseOrder);
+    }
 
     try {
       pointClient.earnPoints(new PointRequest(
+        order.getMemberId(), order.getCompanyId(), order.getTotalPrice(),
+        "관리자 주문 취소 환불: " + order.getId()
+      ));
+
+      MemberResponse employee = authClient.getMemberById(order.getMemberId());
+      String adminEmail = authClient.getAdminEmailByCompanyId(order.getCompanyId());
+      String detailLink = String.format("%s/my-page/%d", frontendBaseUrl, order.getId());
+
+      orderEventProducer.sendOrderEvent(new OrderCreatedEvent(
+        order.getId(),
         order.getMemberId(),
         order.getCompanyId(),
+        employee.email(),
+        adminEmail,
+        product.getName(),
+        product.getVoucherUrl(),
+        detailLink,
         order.getTotalPrice(),
-        "주문 취소 환불: " + order.getId()
+        "CANCELED_BY_ADMIN",
+        product.getCategory()
       ));
-      log.info("주문 취소 및 포인트 환불 완료 - orderId: {}, amount: {}", orderId, order.getTotalPrice());
+
+      log.info("관리자 취소 및 포인트 환불 완료 - orderId: {}, amount: {}", orderId, order.getTotalPrice());
     } catch (Exception e) {
       log.error("포인트 환불 서비스 호출 실패 - orderId: {}", orderId);
       throw new RuntimeException("포인트 환불 처리 중 오류가 발생했습니다.");
@@ -170,22 +213,59 @@ public class OrderService {
       throw new RuntimeException("본인의 주문만 취소할 수 있습니다.");
     }
 
-    if (order.getStatus() == OrderStatus.CANCELLED) {
+    if (order.getStatus() == OrderStatus.CANCELED) {
       throw new IllegalStateException("이미 취소된 주문입니다.");
     }
 
-    if (order.getCreatedDate().isBefore(LocalDateTime.now().minusMinutes(10))) {
-      throw new IllegalStateException("주문 후 10분이 지나 직접 취소가 불가능합니다. 고객센터에 문의해주세요.");
+    Product product = order.getOrderItems().get(0).getProduct();
+
+    if (product.getCategory() == Category.DONATION) {
+      throw new IllegalStateException("기부 캠페인 참여 내역은 취소할 수 없습니다. 고객센터에 문의해주세요.");
+
+    } else if (product.getCategory() == Category.GIFTICON) {
+      if (order.getCreatedDate().plusDays(7).isBefore(LocalDateTime.now())) {
+        throw new IllegalStateException("구매 후 7일이 지나 직접 취소가 불가능합니다. 고객센터에 문의해주세요.");
+      }
+
+      Voucher voucher = voucherRepository.findByOrderId(orderId).orElse(null);
+      if (voucher != null) {
+        if (voucher.isUsed()) {
+          throw new IllegalStateException("이미 매장에서 사용 완료된 기프티콘은 취소할 수 없습니다.");
+        }
+        voucher.releaseOrder();
+      }
     }
 
     order.cancel();
 
     pointClient.earnPoints(new PointRequest(
-      order.getMemberId(),
-      order.getCompanyId(),
-      order.getTotalPrice(),
+      order.getMemberId(), order.getCompanyId(), order.getTotalPrice(),
       "회원 직접 취소 환불: " + order.getId()
     ));
+
+    try {
+      MemberResponse employee = authClient.getMemberById(memberId);
+      String adminEmail = authClient.getAdminEmailByCompanyId(order.getCompanyId());
+      String detailLink = String.format("%s/my-page/%d", frontendBaseUrl, order.getId());
+
+      orderEventProducer.sendOrderEvent(new OrderCreatedEvent(
+        order.getId(),
+        order.getMemberId(),
+        order.getCompanyId(),
+        employee.email(),
+        adminEmail,
+        product.getName(),
+        product.getVoucherUrl(),
+        detailLink,
+        order.getTotalPrice(),
+        "CANCELED_BY_MEMBER",
+        product.getCategory()
+      ));
+
+      log.info("취소 알림 이벤트 발행 완료 - orderId: {}", orderId);
+    } catch (Exception e) {
+      log.error("취소 알림 이벤트 발행 중 오류 발생 - orderId: {}", orderId, e);
+    }
 
     log.info("회원 직접 취소 완료 - memberId: {}, orderId: {}", memberId, orderId);
   }
@@ -228,20 +308,40 @@ public class OrderService {
     Product product = order.getOrderItems().get(0).getProduct();
 
     String serialNumber = "N/A";
+    String certificateNumber = "N/A";
+
     if (product.getCategory() == Category.GIFTICON) {
-      Voucher voucher = voucherRepository.findByOrderId(orderId).orElse(null);
-      if (voucher != null) {
-        serialNumber = voucher.getSerialNumber();
-      }
+      serialNumber = voucherRepository.findByOrderId(orderId).map(Voucher::getSerialNumber).orElse("N/A");
+    } else if (product.getCategory() == Category.DONATION) {
+      certificateNumber = donationRecordRepository.findByMemberIdAndProductId(memberId, product.getId())
+        .map(DonationRecord::getCertificateNo).orElse(null);
     }
 
     return OrderViewResponseDto.builder()
       .productName(product.getName())
       .voucherUrl(product.getVoucherUrl())
       .serialNumber(serialNumber) // 실제 로직에선 쿠폰 번호 매핑
+      .certificateNumber(certificateNumber)
       .category(product.getCategory().name())
       .totalPrice(order.getTotalPrice())
       .orderDate(order.getCreatedDate().toString())
       .build();
+  }
+
+  @Transactional
+  public void useVoucher(String serialNumber) {
+    Voucher voucher = voucherRepository.findBySerialNumber(serialNumber)
+      .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 바코드입니다."));
+
+    if (voucher.getOrderId() == null) {
+      throw new IllegalStateException("판매되지 않은 바우처는 사용할 수 없습니다.");
+    }
+
+    if (voucher.isUsed()) {
+      throw new IllegalStateException("이미 사용 완료된 바우처입니다.");
+    }
+
+    voucher.markAsUsed();
+    log.info("바우처 사용 완료 처리 - Serial: {}", serialNumber);
   }
 }

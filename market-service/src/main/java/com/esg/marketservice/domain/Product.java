@@ -44,6 +44,9 @@ public class Product extends BaseTimeEntity {
   @Builder.Default
   private boolean deleted = false;
 
+  private Long targetAmount;
+  private Long currentAmount;
+
   public void removeStock(int quantity) {
     if (this.category == Category.DONATION) {
       log.info("기부 상품 주문: 재고 차감을 진행하지 않습니다.");
@@ -68,13 +71,14 @@ public class Product extends BaseTimeEntity {
     }
   }
 
-  public void update(String name, Long price, Integer stock, Category category, String content, String voucherUrl) {
+  public void update(String name, Long price, Integer stock, Category category, String content, String voucherUrl, Long targetAmount) {
     this.name = name;
     this.price = price;
     this.stock = (stock == null) ? this.stock : stock;
     this.category = category;
     this.content = content;
     this.voucherUrl = voucherUrl;
+    this.targetAmount = targetAmount;
 
     if (this.stock > 0 && this.status == ProductStatus.SOLD_OUT) {
       this.status = ProductStatus.ON_SALE;
@@ -88,5 +92,16 @@ public class Product extends BaseTimeEntity {
   public void delete() {
     this.deleted = true;
     this.status = ProductStatus.SOLD_OUT; // 삭제 시 마켓에서 안 보이게 처리
+  }
+
+  public void addDonation(Long amount) {
+    if (this.category != Category.DONATION) return;
+
+    this.currentAmount = (this.currentAmount == null ? 0L : this.currentAmount) + amount;
+
+    if (this.targetAmount != null && this.currentAmount >= this.targetAmount) {
+      this.status = ProductStatus.SOLD_OUT;
+      log.info("캠페인 목표 달성으로 인한 종료: {}", this.name);
+    }
   }
 }

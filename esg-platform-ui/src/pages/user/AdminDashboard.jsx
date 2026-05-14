@@ -8,7 +8,7 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const companyId = user?.companyId || localStorage.getItem('companyId');
 
-  const [activeTab, setActiveTab] = useState('POSTS'); 
+  const [activeTab, setActiveTab] = useState('POSTS');
   const [posts, setPosts] = useState([]);
   const [orders, setOrders] = useState([]);
   const [postFilter, setPostFilter] = useState('ALL');
@@ -23,7 +23,7 @@ const AdminDashboard = () => {
         api.get('/admin/posts', { headers: { 'X-Company-Id': companyId } }),
         api.get('/market/admin/orders', { headers: { 'X-Company-Id': companyId } })
       ]);
-      
+
       setPosts(postsRes.data.sort((a, b) => b.id - a.id));
       setOrders(ordersRes.data.content || []);
     } catch (err) {
@@ -131,7 +131,7 @@ const AdminDashboard = () => {
                   <h3 style={postTitleStyle}>{post.title}</h3>
                   <span style={statusBadge(post.adminStatus)}>{post.adminStatus}</span>
                 </div>
-                
+
                 <div style={imgScrollStyle}>
                   {post.imageUrls?.map((url, i) => (
                     <img key={i} src={url} alt="인증" style={postImgStyle} />
@@ -182,7 +182,7 @@ const AdminDashboard = () => {
                   <td><span style={orderStatusBadge(order.status)}>{order.status}</span></td>
                   <td>
                     <button onClick={() => handleResendEmail(order.orderId)} style={actionBtnStyle('#339af0')}>재전송</button>
-                    {order.status !== 'CANCELLED' && (
+                    {order.status !== 'CANCELED' && (
                       <button onClick={() => handleCancelOrder(order.orderId)} style={actionBtnStyle('#fa5252')}>취소</button>
                     )}
                   </td>
@@ -202,15 +202,15 @@ const headerContainerStyle = { display: 'flex', justifyContent: 'space-between',
 const dashboardTitleStyle = { margin: 0, fontSize: '28px', fontWeight: '800', color: '#333' };
 const subtitleStyle = { margin: '5px 0 0 0', color: '#adb5bd', fontSize: '15px' };
 
-const navToProductBtnStyle = { 
-  backgroundColor: '#339af0', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '12px', 
-  cursor: 'pointer', fontWeight: 'bold', fontSize: '15px', boxShadow: '0 4px 12px rgba(51, 154, 240, 0.3)', transition: '0.2s' 
+const navToProductBtnStyle = {
+  backgroundColor: '#339af0', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '12px',
+  cursor: 'pointer', fontWeight: 'bold', fontSize: '15px', boxShadow: '0 4px 12px rgba(51, 154, 240, 0.3)', transition: '0.2s'
 };
 
 const tabBarStyle = { display: 'flex', gap: '30px', borderBottom: '2px solid #f1f3f5', marginBottom: '20px' };
 const tabItemStyle = (active) => ({
-  padding: '15px 10px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '17px', 
-  fontWeight: active ? 'bold' : '500', color: active ? '#339af0' : '#adb5bd', 
+  padding: '15px 10px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '17px',
+  fontWeight: active ? 'bold' : '500', color: active ? '#339af0' : '#adb5bd',
   borderBottom: active ? '3px solid #339af0' : '3px solid transparent', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '10px'
 });
 
@@ -253,7 +253,7 @@ const tableHeaderRowStyle = { backgroundColor: '#f8f9fa', borderBottom: '2px sol
 const tableRowStyle = { borderBottom: '1px solid #f8f9fa', textAlign: 'center', height: '60px', fontSize: '14px' };
 
 const actionBtnStyle = (color) => ({
-  backgroundColor: 'transparent', border: `1px solid ${color}`, color: color, padding: '6px 12px', borderRadius: '8px', 
+  backgroundColor: 'transparent', border: `1px solid ${color}`, color: color, padding: '6px 12px', borderRadius: '8px',
   cursor: 'pointer', fontSize: '12px', fontWeight: '600', marginLeft: '5px', transition: '0.2s'
 });
 
