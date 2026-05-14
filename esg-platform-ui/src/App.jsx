@@ -28,6 +28,7 @@ import MyActivityList from './pages/user/MyActiviyList';
 import DashboardPage from './pages/analysis/DashboardPage';
 import AnalysisPage from './pages/analysis/AnalysisPage';
 import ReportPage from './pages/analysis/ReportPage';
+import AnalysisResultPage from './pages/analysis/AnalysisResultPage';
 
 const ProtectedLanding = () => {
   const { isLoggedIn, user } = useAuth();
@@ -49,10 +50,10 @@ const CommunityLayout = () => (
 
 const AnalysisLayout = () => (
   <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-    <Header /> 
+    <Header />
     <div style={{ display: 'flex', flex: 1 }}>
       <Sidebar />
-      <main style={{ flex: 1, overflow: 'auto', minWidth: 0, background: '#F9FAFB',padding: '20px'}}>
+      <main style={{ flex: 1, overflow: 'auto', minWidth: 0 }}>
         <Outlet />
       </main>
     </div>
@@ -99,6 +100,7 @@ function App() {
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="detail" element={<AnalysisPage />} />
               <Route path="report" element={<ReportPage />} />
+              <Route path="result/:analysisId" element={<AnalysisResultPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>

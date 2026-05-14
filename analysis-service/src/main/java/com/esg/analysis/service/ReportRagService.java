@@ -1,7 +1,11 @@
 package com.esg.analysis.service;
 
+import com.esg.analysis.dto.EvidenceResult;
+import com.esg.analysis.service.domain.ESGIndicator;
+import org.jsoup.Jsoup;
 import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.DocumentSplitter;
+import dev.langchain4j.data.document.Metadata;
 import dev.langchain4j.data.document.splitter.DocumentSplitters;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
@@ -15,10 +19,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -39,6 +46,13 @@ public class ReportRagService {
 
     // 세션별 store 캐싱 — 동일 세션에 대한 ChromaDB 다중 접근 방지
     private final Map<String, ChromaEmbeddingStore> storeCache = new ConcurrentHashMap<>();
+
+    /**
+     * final_score 기준 유효 Evidence 최소 임계값.
+     * 이 값 미만은 low-confidence로 분류되며 isValidEvidence=false로 반환됩니다.
+     * Confidence 계산·UI 필터링 시 이 상수를 참조하세요.
+     */
+    public static final double EVIDENCE_THRESHOLD = 0.6;
 
     /**
      * K-ESG 18개 핵심 지표 코드 → 일반 벡터 검색 키워드 (개념·전략 중심).
@@ -109,9 +123,10 @@ public class ReportRagService {
             return;
         }
         try {
+            String cleaned = sanitizeHtml(reportContent);
             // 500~800자 단위 청킹, 150자 오버랩으로 문맥 연속성 보장
             DocumentSplitter splitter = DocumentSplitters.recursive(700, 150);
-            List<TextSegment> segments = splitter.split(Document.from(reportContent));
+            List<TextSegment> segments = splitter.split(Document.from(cleaned));
             log.info("[ReportRAG] 청킹 완료 sessionId={} → {}개 세그먼트", sessionId, segments.size());
 
             ChromaEmbeddingStore sessionStore = getOrCreateStore(sessionId);
@@ -125,6 +140,94 @@ public class ReportRagService {
             // ChromaDB 불가 시 분석은 계속 진행 (graceful degradation)
             log.error("[ReportRAG] 인덱싱 실패 sessionId={} 원인={}", sessionId, e.getMessage());
         }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // 테스트 전용 청킹 인덱서 (문단 우선, 최대 450자 기준)
+    // ──────────────────────────────────────────────────────────────────────────
+
+    private static final int CHUNK_MAX_CHARS = 450;
+    private static final int CHARS_PER_PAGE  = 1000;
+
+    /**
+     * 테스트 전용 인덱싱: 문단 우선 분할 → 450자 초과 시 단어 경계 분할.
+     * chunk_index / page_number / file_name metadata를 각 청크에 부착하여 저장합니다.
+     *
+     * @return 저장된 청크 수
+     */
+    public int indexTestReport(String sessionId, String reportText, String sourceFile) {
+        if (reportText == null || reportText.isBlank()) {
+            log.warn("[ReportRAG] 보고서 내용 없음 sessionId={}", sessionId);
+            return 0;
+        }
+        String src = (sourceFile != null && !sourceFile.isBlank()) ? sourceFile : "test-input";
+        List<TextSegment> segments = chunkByParagraph(sanitizeHtml(reportText), src);
+        if (segments.isEmpty()) return 0;
+
+        try {
+            ChromaEmbeddingStore store = getOrCreateStore(sessionId);
+            List<Embedding> embeddings = embeddingModel.embedAll(segments).content();
+            store.addAll(embeddings, segments);
+            log.info("[ReportRAG] 테스트 인덱싱 완료 sessionId={} chunkCount={}", sessionId, segments.size());
+            return segments.size();
+        } catch (Exception e) {
+            log.error("[ReportRAG] 테스트 인덱싱 실패 sessionId={} 원인={}", sessionId, e.getMessage());
+            return 0;
+        }
+    }
+
+    private List<TextSegment> chunkByParagraph(String text, String sourceFile) {
+        List<TextSegment> result = new ArrayList<>();
+
+        // 빈 줄 기준 1차 분리; 없으면 단일 개행 기준으로 재시도
+        String[] paragraphs = text.split("\\n{2,}");
+        if (paragraphs.length == 1) {
+            paragraphs = text.split("\\n");
+        }
+
+        int chunkIndex = 0;
+        int charOffset  = 0;
+
+        for (String para : paragraphs) {
+            String trimmed = para.trim();
+            if (trimmed.isBlank()) {
+                charOffset += para.length() + 2;
+                continue;
+            }
+
+            List<String> subChunks = trimmed.length() <= CHUNK_MAX_CHARS
+                    ? List.of(trimmed)
+                    : splitByLength(trimmed, CHUNK_MAX_CHARS);
+
+            for (String chunk : subChunks) {
+                int pageNum = charOffset / CHARS_PER_PAGE + 1;
+                result.add(TextSegment.from(chunk,
+                        Metadata.from("chunk_index", chunkIndex)
+                                .put("page_number", pageNum)
+                                .put("file_name", sourceFile)));
+                chunkIndex++;
+                charOffset += chunk.length();
+            }
+            charOffset += para.length() - trimmed.length() + 2;
+        }
+        return result;
+    }
+
+    private List<String> splitByLength(String text, int maxLen) {
+        List<String> chunks = new ArrayList<>();
+        int start = 0;
+        while (start < text.length()) {
+            int end = Math.min(start + maxLen, text.length());
+            if (end < text.length()) {
+                // 단어 경계 역방향 탐색 (최소 절반 이상 채워진 경우만)
+                int spaceIdx = text.lastIndexOf(' ', end);
+                if (spaceIdx > start + maxLen / 2) end = spaceIdx;
+            }
+            String chunk = text.substring(start, end).trim();
+            if (!chunk.isBlank()) chunks.add(chunk);
+            start = end + 1;
+        }
+        return chunks;
     }
 
     /**
@@ -187,6 +290,209 @@ public class ReportRagService {
     }
 
     /**
+     * ESGIndicator keywords를 2-token 슬라이딩 윈도우로 분해하여 다중 쿼리를 생성한 뒤,
+     * 각 쿼리 결과를 텍스트 기준으로 병합하여 반환합니다.
+     *
+     * <p><b>Re-ranking 전략</b>
+     * <pre>
+     * 1. ChromaDB에서 similarity 기준 candidatePool(=topK×CANDIDATE_MULTIPLIER)개 수집
+     *    → topK만 수집하면 similarity가 약간 낮지만 keyword 매칭이 좋은 청크가 탈락
+     * 2. 수집된 후보 전체에 finalScore = similarity×0.7 + keywordMatchScore×0.3 계산
+     * 3. 텍스트 기준 중복 제거 (같은 청크는 finalScore가 높은 쪽 보존)
+     * 4. finalScore 기준 내림차순 정렬
+     * 5. validEvidence 필터 (finalScore >= EVIDENCE_THRESHOLD)
+     * 6. topK 제한
+     * 7. retrievalRank(1-based) 부여
+     * </pre>
+     *
+     * @param sessionId 분석 세션 UUID
+     * @param indicator ESGIndicator (title + keywords 기반 쿼리·점수 계산)
+     * @param topK      최종 반환 개수 (step 6)
+     */
+    /**
+     * ChromaDB 후보 수집 배수.
+     * similarity 기준 상위 N개만 가져오면 keyword 매칭이 좋은 청크가 조기 탈락하므로
+     * topK × CANDIDATE_MULTIPLIER 개를 수집한 뒤 finalScore로 재정렬합니다.
+     */
+    private static final int CANDIDATE_MULTIPLIER = 5;
+
+    /** 다중 쿼리 결과에서 청크별 점수 데이터를 하나로 묶는 내부 홀더입니다. */
+    private record MatchData(
+            EmbeddingMatch<TextSegment> match,
+            double rawSim,
+            double kwScore,
+            double finalScore
+    ) {}
+
+    public List<EvidenceResult> retrieveEvidenceForIndicator(String sessionId, ESGIndicator indicator, int topK) {
+        List<String> queries       = buildRetrievalQueries(indicator);
+        List<String> keywords      = extractKeywords(indicator);
+        // similarity 기준 topK만 수집하면 keyword 우세 청크가 조기 탈락하므로 더 넓은 후보를 수집
+        int          candidatePool = Math.max(topK * CANDIDATE_MULTIPLIER, 20);
+
+        try {
+            ChromaEmbeddingStore store = getOrCreateStore(sessionId);
+
+            // ── step 1·2·3: 후보 수집 + finalScore 계산 + 텍스트 기준 중복 제거 ──────
+            Map<String, MatchData> best = new LinkedHashMap<>();
+
+            for (String query : queries) {
+                for (EmbeddingMatch<TextSegment> match : searchStore(store, query, candidatePool)) {
+                    String text       = match.embedded().text().trim();
+                    double rawSim     = match.score();
+                    double kwScore    = computeKeywordScore(text, keywords);
+                    double finalScore = rawSim * 0.7 + kwScore * 0.3;
+
+                    log.debug("[ReportRAG] candidate indicator={} sim={} kw={} final={} text='{}'",
+                            indicator.getCode(),
+                            String.format("%.3f", rawSim),
+                            String.format("%.3f", kwScore),
+                            String.format("%.3f", finalScore),
+                            text.substring(0, Math.min(40, text.length())));
+
+                    MatchData existing = best.get(text);
+                    if (existing == null || finalScore > existing.finalScore()) {
+                        best.put(text, new MatchData(match, rawSim, kwScore, finalScore));
+                    }
+                }
+            }
+
+            log.info("[ReportRAG] 후보 수집 완료 indicator={} pool={}개 (쿼리×{}, candidatePerQuery={})",
+                    indicator.getCode(), best.size(), queries.size(), candidatePool);
+
+            // ── step 4·5·6·7: finalScore 정렬 → validEvidence 필터 → topK 제한 → rank ──
+            List<EvidenceResult> results = new ArrayList<>();
+            int rank = 1;
+            List<MatchData> sorted = best.values().stream()
+                    .sorted((a, b) -> Double.compare(b.finalScore(), a.finalScore()))
+                    .filter(d -> d.finalScore() >= EVIDENCE_THRESHOLD)   // validEvidence filter
+                    .limit(topK)
+                    .collect(Collectors.toList());
+
+            for (MatchData d : sorted) {
+                String rawChunk  = d.match().embedded().text().trim();
+                String bestSent  = extractBestSentence(rawChunk, keywords);
+                results.add(EvidenceResult.builder()
+                        .evidenceText(bestSent)
+                        .pageNumber(resolvePageNumber(d.match().embedded()))
+                        .similarity(d.rawSim())
+                        .keywordMatchScore(d.kwScore())
+                        .finalScore(d.finalScore())
+                        .isValidEvidence(true)       // filter 통과 = 항상 true
+                        .retrievalRank(rank)
+                        .indicatorCode(indicator.getCode())
+                        .sourceFile(resolveSourceFile(d.match().embedded()))
+                        .build());
+                rank++;
+            }
+
+            log.info("[ReportRAG] Re-ranking 완료 indicator={} valid={}건/pool={}개 (threshold={}, topK={})",
+                    indicator.getCode(), results.size(), best.size(), EVIDENCE_THRESHOLD, topK);
+
+            return results;
+
+        } catch (Exception e) {
+            log.warn("[ReportRAG] Evidence 검색 실패 indicator={} 원인={}", indicator.getCode(), e.getMessage());
+            return List.of();
+        }
+    }
+
+    /**
+     * indicator title + keywords 필드를 토큰 단위로 분해한 키워드 리스트를 반환합니다.
+     * title은 구절 단위 exact match 용도로 첫 번째에 추가됩니다.
+     */
+    private List<String> extractKeywords(ESGIndicator indicator) {
+        List<String> kws = new ArrayList<>();
+        if (indicator.getTitle() != null && !indicator.getTitle().isBlank()) {
+            kws.add(indicator.getTitle());
+        }
+        if (indicator.getKeywords() != null && !indicator.getKeywords().isBlank()) {
+            for (String token : indicator.getKeywords().split("\\s+")) {
+                if (!token.isBlank()) kws.add(token);
+            }
+        }
+        return kws;
+    }
+
+    /**
+     * chunkText 내에 keywords가 몇 개나 포함되는지 비율(0.0~1.0)로 반환합니다.
+     * 한국어 부분 문자열 포함 여부를 기준으로 하며, 대소문자를 무시합니다.
+     */
+    private double computeKeywordScore(String chunkText, List<String> keywords) {
+        if (keywords.isEmpty()) return 0.0;
+        String lower = chunkText.toLowerCase();
+        long hits = keywords.stream()
+                .filter(kw -> lower.contains(kw.toLowerCase()))
+                .count();
+        return (double) hits / keywords.size();
+    }
+
+    /**
+     * keywords 문자열을 공백으로 분리한 뒤 2-token 슬라이딩 윈도우(step=2)로 phrase 쿼리를 생성합니다.
+     * indicator title을 첫 번째 쿼리로 추가하고, 최대 4개로 제한합니다.
+     *
+     * <pre>
+     * S-201 keywords: "산업안전 교육 안전교육 재해예방 교육실시 안전보건 이수율 교육시간"
+     *   → ["산업안전 교육 여부", "산업안전 교육", "안전교육 재해예방", "교육실시 안전보건"]
+     * G-301 keywords: "윤리경영 정책 윤리 행동강령 청렴 반부패 윤리방침 컴플라이언스 준법"
+     *   → ["윤리경영 정책 존재 여부", "윤리경영 정책", "윤리 행동강령", "청렴 반부패"]
+     * </pre>
+     */
+    private List<String> buildRetrievalQueries(ESGIndicator indicator) {
+        List<String> queries = new ArrayList<>();
+        queries.add(indicator.getTitle()); // 지표명 우선 쿼리
+
+        if (indicator.getKeywords() == null || indicator.getKeywords().isBlank()) {
+            return queries;
+        }
+
+        String[] tokens = indicator.getKeywords().split("\\s+");
+        for (int i = 0; i + 1 < tokens.length; i += 2) {
+            queries.add(tokens[i] + " " + tokens[i + 1]);
+            if (queries.size() >= 4) break;
+        }
+        // 홀수 개 토큰인 경우 마지막 단일 토큰 추가 (4개 미만일 때)
+        if (queries.size() < 4 && tokens.length % 2 == 1) {
+            queries.add(tokens[tokens.length - 1]);
+        }
+        return queries;
+    }
+
+    private static final Pattern PAGE_PATTERN = Pattern.compile("\\[FILE_PAGE:(\\d+)\\]");
+    private static final List<String> PAGE_META_KEYS = List.of("page_number", "page", "page_num");
+    private static final List<String> SOURCE_META_KEYS = List.of("file_name", "source", "document_id");
+
+    /**
+     * 페이지 번호를 chunk metadata에서 우선 추출하고, 없으면 텍스트 내 [FILE_PAGE:X] 마커로 폴백합니다.
+     * OCR 파이프라인이 Document metadata에 page 정보를 포함하면 자동으로 활용됩니다.
+     */
+    private int resolvePageNumber(TextSegment segment) {
+        for (String key : PAGE_META_KEYS) {
+            try {
+                String val = segment.metadata().getString(key);
+                if (val != null && !val.isBlank()) {
+                    return Integer.parseInt(val.trim());
+                }
+            } catch (Exception ignored) {}
+        }
+        Matcher m = PAGE_PATTERN.matcher(segment.text());
+        return m.find() ? Integer.parseInt(m.group(1)) : -1;
+    }
+
+    /**
+     * chunk metadata에서 원본 파일명을 추출합니다. (file_name → source → document_id 순)
+     */
+    private String resolveSourceFile(TextSegment segment) {
+        for (String key : SOURCE_META_KEYS) {
+            try {
+                String val = segment.metadata().getString(key);
+                if (val != null && !val.isBlank()) return val;
+            } catch (Exception ignored) {}
+        }
+        return null;
+    }
+
+    /**
      * 분석 완료 후 세션 전용 임시 컬렉션을 ChromaDB에서 삭제합니다.
      * 실패해도 분석 결과에는 영향 없음 — 경고 로그만 출력.
      */
@@ -211,5 +517,44 @@ public class ReportRagService {
 
     private String normalize(String url) {
         return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
+    }
+
+    /**
+     * HTML 태그와 속성을 제거하고 순수 텍스트를 반환합니다.
+     * PDF → HTML 파싱 후 저장된 chunk의 style/tag 오염을 방지합니다.
+     */
+    private String sanitizeHtml(String text) {
+        if (text == null) return "";
+        String parsed = Jsoup.parse(text).text();
+        return parsed.isBlank() ? text : parsed;
+    }
+
+    /**
+     * chunk 원문을 문장 단위로 분리한 뒤, indicator keywords와 가장 관련 높은 문장을 반환합니다.
+     * 모든 문장의 keyword score가 0이면 원문을 최대 200자로 잘라 반환합니다.
+     */
+    private String extractBestSentence(String chunkText, List<String> keywords) {
+        if (chunkText == null || chunkText.isBlank()) return "";
+
+        String[] sentences = chunkText.split("[.。\\n]+");
+        String best = "";
+        double bestScore = -1.0;
+
+        for (String s : sentences) {
+            String trimmed = s.trim();
+            if (trimmed.length() < 8) continue;
+            double score = computeKeywordScore(trimmed, keywords);
+            if (score > bestScore || (score == bestScore && trimmed.length() > best.length())) {
+                bestScore = score;
+                best = trimmed;
+            }
+        }
+
+        if (best.isBlank()) {
+            return chunkText.length() > 200
+                    ? chunkText.substring(0, 200).trim() + "…"
+                    : chunkText;
+        }
+        return best.length() > 200 ? best.substring(0, 200).trim() + "…" : best;
     }
 }

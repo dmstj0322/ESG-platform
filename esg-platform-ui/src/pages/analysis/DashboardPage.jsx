@@ -686,7 +686,7 @@ export default function DashboardPage() {
     : '지역·업종 평균';
 
   return (
-    <div style={{ padding: '36px 48px', width: '100%', boxSizing: 'border-box' }}>
+    <div style={{ padding: '36px 48px', width: '100%', boxSizing: 'border-box', background: '#F9FAFB', minHeight: '100%' }}>
       {/* 헤더 */}
       <div style={{
         display: 'flex', justifyContent: 'space-between',

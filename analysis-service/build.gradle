@@ -42,6 +42,9 @@ dependencies {
     // [추가] JSON 처리를 위한 Jackson (이미 boot-starter-web에 있지만 명시적으로 확인)
     implementation 'com.fasterxml.jackson.core:jackson-databind'
 
+    // HTML 태그 제거 (PDF chunk sanitize)
+    implementation 'org.jsoup:jsoup:1.17.2'
+
     // QueryDSL (기존 유지)
     implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
     annotationProcessor "com.querydsl:querydsl-apt:5.0.0:jakarta"

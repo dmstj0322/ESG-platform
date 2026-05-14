@@ -20,6 +20,13 @@ public class AnalysisScoreAggregator {
         return "D";
     }
 
+    private int computeOverallConfidence(List<IndicatorResult> results) {
+        if (results == null || results.isEmpty()) return 0;
+        return (int) Math.round(results.stream()
+                .mapToInt(IndicatorResult::getConfidenceScore)
+                .average().orElse(0));
+    }
+
     private int computeAvgScore(List<IndicatorResult> results) {
         if (results == null || results.isEmpty()) return 30;
         return (int) Math.round(results.stream().mapToInt(IndicatorResult::getScore).average().orElse(30));
@@ -64,6 +71,11 @@ public class AnalysisScoreAggregator {
         cache.setRiskOpportunity(riskOpportunity);
         cache.setSections(sections);
         cache.setEvidenceMapping(buildEvidenceMapping(results));
+        cache.setEScore(eScore);
+        cache.setSScore(sScore);
+        cache.setGScore(gScore);
+        cache.setTotalScore(finalScore);
+        cache.setOverallConfidence(computeOverallConfidence(results));
         return cache;
     }
 

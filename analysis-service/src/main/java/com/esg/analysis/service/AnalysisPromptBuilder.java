@@ -1,8 +1,12 @@
 package com.esg.analysis.service;
 
+import com.esg.analysis.dto.EvidenceResult;
+import com.esg.analysis.service.domain.ESGIndicator;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
 public class AnalysisPromptBuilder {
@@ -21,6 +25,10 @@ public class AnalysisPromptBuilder {
         return KESG_CODE_MAP.getOrDefault(indicatorKey.substring(0, 2).toUpperCase(), indicatorKey);
     }
 
+    /**
+     * @deprecated Rule-based 점수 엔진 도입으로 미사용. {@link #buildSummaryPrompt} 사용.
+     */
+    @Deprecated
     public String buildIndicatorPrompt(String indicatorKey, String chunk, String kEsgGuidelines) {
         String indicatorName = indicatorKey.contains("_") ? indicatorKey.split("_", 2)[1] : indicatorKey;
         String kesgCode = resolveKesgCode(indicatorKey);
@@ -66,6 +74,56 @@ public class AnalysisPromptBuilder {
                 + "\"evidence_text\": \"원문 인용 문구\", "
                 + "\"page_number\": 121, "
                 + "\"confidence_score\": 85}";
+    }
+
+    /**
+     * Rule-based 점수 산출 후 GPT에게 comment/recommendation만 요청하는 프롬프트.
+     * score와 grade는 이미 서버에서 계산되었으므로 GPT가 재생성하지 않습니다.
+     * confidenceScore를 받아 낮을 경우 부정 평가 금지 지시를 강화합니다.
+     */
+    public String buildSummaryPrompt(ESGIndicator indicator, List<EvidenceResult> evidences,
+                                     int score, String kEsgGuidelines, int confidenceScore) {
+        String evidenceText = evidences.isEmpty()
+                ? "(보고서 내 관련 데이터 미발견)"
+                : evidences.stream()
+                        .limit(5)
+                        .map(e -> "  • " + e.getEvidenceText())
+                        .collect(Collectors.joining("\n"));
+
+        String guidelineSnippet = (kEsgGuidelines == null || kEsgGuidelines.isBlank())
+                ? "(가이드라인 미조회)"
+                : (kEsgGuidelines.length() > 400 ? kEsgGuidelines.substring(0, 400) + "..." : kEsgGuidelines);
+
+        String confidenceWarning = confidenceScore < 50
+                ? "⚠️ 현재 신뢰도=" + confidenceScore + "% (낮음) — 부정적 단정을 금지합니다. 근거 없는 평가는 모두 \"(정보 부족)\"으로 표기하세요.\n"
+                : "신뢰도=" + confidenceScore + "%\n";
+
+        return "당신은 15년 경력의 ESG 전문 컨설턴트로서 진단 코멘트를 작성합니다.\n"
+                + "ESG 점수는 서버 Rule-based 엔진에서 이미 " + score + "점으로 산출되었습니다.\n"
+                + "score와 grade를 직접 생성하지 마세요.\n\n"
+                + "[🚨 Hallucination 방지 — 절대 준수]\n"
+                + "1. 아래 [보고서 근거 원문]에 존재하지 않는 내용을 사실로 서술하지 마세요.\n"
+                + "2. \"없다\", \"미운영\", \"부재\", \"미흡\", \"부족\" 등 부정적 단정은 근거 원문에 명시된 경우에만 허용합니다.\n"
+                + "3. 정책·시스템·제도의 부재를 추론하여 단정하지 마세요.\n"
+                + "4. 근거 원문에 없는 내용은 반드시 \"(정보 부족)\" 또는 \"(근거 없음)\"으로 표기하세요.\n"
+                + "5. " + confidenceWarning
+                + "\n"
+                + "[분석 대상 지표]\n"
+                + indicator.getCode() + " " + indicator.getTitle() + " (산출 점수: " + score + "점)\n\n"
+                + "[보고서 근거 원문 — RAG Evidence Retrieval]\n"
+                + "※ 아래 evidence만을 근거로 작성하세요. evidence에 없는 내용은 \"(정보 부족)\"으로 표기.\n"
+                + "※ 수치와 단위가 있다면 반드시 분석에 포함하세요.\n"
+                + evidenceText + "\n\n"
+                + "[K-ESG 가이드라인 참조]\n"
+                + guidelineSnippet + "\n\n"
+                + "[작성 지시사항]\n"
+                + "1. comment: ① [현황 분석] ② [가이드라인 준수 여부] ③ [성과 평가] ④ [개선 제언] 순서로 작성.\n"
+                + "2. evidence 원문에 있는 수치·단위를 포함하세요. 없으면 \"(정보 부족)\" 표기.\n"
+                + "3. recommendation: 실행 가능한 구체적 개선 방향.\n\n"
+                + "[출력 규칙]\n"
+                + "마크다운 없이 순수 JSON만 반환:\n"
+                + "{\"comment\": \"[현황 분석]...[가이드라인 준수 여부]...[성과 평가]...[개선 제언]...\", "
+                + "\"recommendation\": \"...\"}";
     }
 
     public String buildEcoCommitPrompt(Long ecoPoints, double carbonKg, double trees, int eBonus, int sBonus) {

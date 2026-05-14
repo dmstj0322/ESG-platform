@@ -1,3 +1,47 @@
+/* ── Tailwind CSS v4 ──────────────────────────────────────────────── */
+@import "tailwindcss";
+
+@theme {
+  --color-surface:  #18181b;
+  --color-elevated: #27272a;
+  --color-muted:    #71717a;
+  --color-esg-e:    #22c55e;
+  --color-esg-s:    #3b82f6;
+  --color-esg-g:    #f59e0b;
+
+  --animate-pulse-slow: pulse 2.4s cubic-bezier(0.4,0,0.6,1) infinite;
+  --animate-fade-in:    fadeIn 0.35s ease-out;
+  --animate-slide-in:   slideIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── ESG 리포트 마크다운 타이포그래피 ─────────────────────────────── */
+.prose-esg h1, .prose-esg h2, .prose-esg h3, .prose-esg h4 {
+  color: #e4e4e7;
+  font-weight: 700;
+  margin-top: 1.4em;
+  margin-bottom: 0.5em;
+  line-height: 1.4;
+}
+.prose-esg h2 { font-size: 1em; border-bottom: 1px solid #27272a; padding-bottom: 0.4em; }
+.prose-esg h3 { font-size: 0.95em; }
+.prose-esg h4 { font-size: 0.875em; color: #a1a1aa; }
+.prose-esg p  { margin-top: 0.5em; margin-bottom: 0.5em; }
+.prose-esg ul { padding-left: 1.25em; margin: 0.6em 0; list-style: disc; }
+.prose-esg li { margin: 0.35em 0; }
+.prose-esg strong { color: #f4f4f5; font-weight: 700; }
+.prose-esg em { color: #a1a1aa; font-style: italic; }
+
+/* ── CSS 변수 (기존 커뮤니티 페이지 호환) ─────────────────────────── */
 :root {
   --text: #6b6375;
   --text-h: #08060d;
@@ -24,10 +68,10 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+@media (max-width: 1024px) {
+  :root { font-size: 16px; }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -54,49 +98,24 @@ body {
   margin: 0;
 }
 
+/* #root: 너비·중앙정렬 제약 제거 — 각 레이아웃이 직접 관리 */
 #root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
   min-height: 100svh;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
 }
 
-h1,
-h2 {
+/* ── 기존 커뮤니티 페이지 전용 스타일 ────────────────────────────── */
+h1, h2 {
   font-family: var(--heading);
   font-weight: 500;
   color: var(--text-h);
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
-}
+p { margin: 0; }
 
-code,
-.counter {
+code, .counter {
   font-family: var(--mono);
   display: inline-flex;
   border-radius: 4px;
