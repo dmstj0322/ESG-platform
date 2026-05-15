@@ -49,7 +49,7 @@ public class ProductAdminController {
 
   @PreAuthorize("hasRole('ADMIN')")
   @PutMapping(value = "/{productId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-  public ResponseEntity<Void> updateProductStatus(
+  public ResponseEntity<Void> updateProduct(
     @RequestHeader("X-Company-Id") Long companyId,
     @PathVariable Long productId,
     @RequestPart("dto") ProductRequestDto dto,
@@ -84,13 +84,5 @@ public class ProductAdminController {
     @RequestBody List<String> vouchers) {
     productService.addVouchers(productId, vouchers);
     return ResponseEntity.ok().build();
-  }
-
-  @PreAuthorize("hasRole('ADMIN')")
-  @GetMapping("/{productId}/vouchers")
-  public ResponseEntity<List<String>> getUnusedVouchers(
-    @RequestHeader("X-Company-Id") Long companyId,
-    @PathVariable Long productId) {
-    return ResponseEntity.ok(productService.getUnusedVouchers(companyId, productId));
   }
 }
