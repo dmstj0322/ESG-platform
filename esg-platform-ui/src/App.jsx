@@ -23,7 +23,7 @@ import MyPage from './pages/user/MyPage';
 import MarketList from './pages/market/MarketList';
 import ProductDetail from './pages/market/ProductDetail';
 import VoucherDetail from './pages/market/VoucherDetail';
-import MyActivityList from './pages/user/MyActiviyList';
+import MyActivityList from './pages/user/MyActivityList';
 
 import DashboardPage from './pages/analysis/DashboardPage';
 import AnalysisPage from './pages/analysis/AnalysisPage';

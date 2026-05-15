@@ -58,8 +58,9 @@ public class ProductAdminController {
     return ResponseEntity.ok().build();
   }
 
+  @PreAuthorize("hasRole('ADMIN')")
   @PatchMapping("/{productId}/status")
-  public ResponseEntity<Void> updateProduct(
+  public ResponseEntity<Void> updateProductStatus(
     @RequestHeader("X-Company-Id") Long companyId,
     @PathVariable Long productId,
     @RequestBody ProductStatus status) {
@@ -67,6 +68,7 @@ public class ProductAdminController {
     return ResponseEntity.ok().build();
   }
 
+  @PreAuthorize("hasRole('ADMIN')")
   @DeleteMapping("/{productId}")
   public ResponseEntity<Void> deleteProduct(
     @RequestHeader("X-Company-Id") Long companyId,

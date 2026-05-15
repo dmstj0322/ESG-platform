@@ -55,4 +55,11 @@ public class OrderController {
     OrderViewResponseDto response = orderService.getOrderViewDetails(authUser.memberId(), orderId);
     return ResponseEntity.ok(response);
   }
+
+  @PostMapping("/use-voucher")
+  public ResponseEntity<String> useVoucher(@RequestBody String serialNumber) {
+    String cleanSerial = serialNumber.replace("\"", "").trim();
+    orderService.useVoucher(cleanSerial);
+    return ResponseEntity.ok("정상적으로 사용 처리되었습니다.");
+  }
 }

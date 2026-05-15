@@ -14,6 +14,8 @@ public record ProductResponseDto(
   String status,
   String content,
   String voucherUrl,
+  Long targetAmount,
+  Long currentAmount,
   LocalDateTime createdDate,
   LocalDateTime modifiedDate
 ) {
@@ -27,6 +29,8 @@ public record ProductResponseDto(
       product.getStatus().toString(),
       product.getContent(),
       product.getVoucherUrl(),
+      product.getTargetAmount(),
+      product.getCurrentAmount(),
       product.getCreatedDate(),
       product.getModifiedDate()
     );

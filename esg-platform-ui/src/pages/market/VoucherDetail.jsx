@@ -64,7 +64,6 @@ const VoucherDetail = () => {
     fetchVoucher();
   }, [orderId, user, navigate]);
 
-  // 📸 이미지 저장 로직
   const handleDownloadImage = async () => {
     const element = document.querySelector(".ticket-card");
     if (!element) return;
@@ -76,13 +75,12 @@ const VoucherDetail = () => {
         backgroundColor: "#f1f3f5", 
         onclone: (clonedDoc) => {
           const clonedCard = clonedDoc.querySelector(".ticket-card");
-          // 캡처 시 강제 고정 수치 (찌그러짐 방지 핵심)
           clonedCard.style.width = "400px";
           clonedCard.style.boxShadow = "none";
           
           const imgContainer = clonedDoc.querySelector(".img-container");
           if (imgContainer) {
-            imgContainer.style.height = "250px"; // 👈 저장 시 사진 높이 고정
+            imgContainer.style.height = "250px"; 
           }
         }
       });
@@ -115,6 +113,8 @@ const VoucherDetail = () => {
           <div className="cert-inner" style={certInnerStyle}>
             <div style={certBadgeStyle}>CERTIFICATE OF DONATION</div>
             <h1 style={certTitleStyle}>기부 인증서</h1>
+            {/* ✅ 백엔드에서 넘겨주는 증서번호 출력 추가 */}
+            <p style={{ color: '#888', fontSize: '11px', marginBottom: '15px' }}>No. {data.certificateNumber}</p>
             <div style={dividerStyle} />
             <p style={certDescStyle}>
               위 사람은 <strong>Green-Trace</strong>를 통해<br />
@@ -132,13 +132,8 @@ const VoucherDetail = () => {
               <span style={categoryBadgeStyle}>GIFTICON</span>
             </div>
 
-            {/* 📸 이미지 컨테이너 (고정 높이 부여) */}
             <div className="img-container" style={imageContainerStyle}>
-              <img
-                src={base64Image}
-                alt="product"
-                style={productImgStyle}
-              />
+              <img src={base64Image} alt="product" style={productImgStyle} />
             </div>
 
             <div style={productInfoBox}>
@@ -148,14 +143,7 @@ const VoucherDetail = () => {
 
             <div style={barcodeAreaStyle}>
               <div style={{ display: 'inline-block', width: '100%', maxWidth: '280px' }}>
-                <Barcode
-                  value={data.serialNumber}
-                  width={1.2}
-                  height={60}
-                  fontSize={14}
-                  margin={0}
-                  displayValue={false}
-                />
+                <Barcode value={data.serialNumber} width={1.2} height={60} fontSize={14} margin={0} displayValue={false} />
               </div>
               <div style={serialNumberText}>{data.serialNumber}</div>
             </div>
@@ -177,26 +165,17 @@ const VoucherDetail = () => {
   );
 };
 
-// --- 스타일링 (고정 수치 적용) ---
+// --- 원본 스타일링 완벽 유지 ---
 const centerStyle = { textAlign: 'center', padding: '100px', color: '#888' };
 const containerStyle = { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px', backgroundColor: '#f1f3f5', minHeight: '100vh' };
 const topNavStyle = { width: '100%', maxWidth: '400px', marginBottom: '20px' };
 const backBtnStyle = { background: 'none', border: 'none', color: '#868e96', cursor: 'pointer', fontSize: '14px' };
 
-const voucherCardStyle = { 
-  backgroundColor: '#fff', 
-  width: '100%', 
-  maxWidth: '400px', // 👈 웹 화면에서도 너무 크지 않게 제한
-  padding: '30px', 
-  borderRadius: '24px', 
-  boxShadow: '0 15px 35px rgba(0,0,0,0.08)', 
-  boxSizing: 'border-box' 
-};
-
+const voucherCardStyle = { backgroundColor: '#fff', width: '100%', maxWidth: '400px', padding: '30px', borderRadius: '24px', boxShadow: '0 15px 35px rgba(0,0,0,0.08)', boxSizing: 'border-box' };
 const certCardStyle = { ...voucherCardStyle, border: '10px double #d4af37', backgroundColor: '#fffcf5', padding: '10px' };
 const certInnerStyle = { border: '1px solid #d4af37', padding: '40px 20px', textAlign: 'center' };
-const certBadgeStyle = { color: '#b8860b', fontSize: '11px', fontWeight: 'bold', letterSpacing: '2px', marginBottom: '20px' };
-const certTitleStyle = { fontFamily: 'serif', fontSize: '30px', color: '#5c4033', marginBottom: '20px' };
+const certBadgeStyle = { color: '#b8860b', fontSize: '11px', fontWeight: 'bold', letterSpacing: '2px', marginBottom: '10px' };
+const certTitleStyle = { fontFamily: 'serif', fontSize: '30px', color: '#5c4033', margin: '0' };
 const dividerStyle = { borderTop: '2px solid #d4af37', width: '50px', margin: '0 auto 25px' };
 const certDescStyle = { fontSize: '16px', lineHeight: '1.8', color: '#444', marginBottom: '30px' };
 const certDateStyle = { color: '#999', fontSize: '14px' };
@@ -205,35 +184,14 @@ const brandNameStyle = { marginTop: '20px', fontWeight: '900', color: '#1a1a1a' 
 const voucherHeaderStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' };
 const categoryBadgeStyle = { backgroundColor: '#e7f5ff', color: '#339af0', padding: '4px 10px', borderRadius: '5px', fontSize: '11px', fontWeight: 'bold' };
 
-const imageContainerStyle = { 
-  width: '100%', 
-  height: '250px', // 👈 웹페이지 이미지 크기 고정
-  borderRadius: '16px', 
-  overflow: 'hidden', 
-  marginBottom: '20px',
-  backgroundColor: '#f8f9fa'
-};
-
-const productImgStyle = { 
-  width: '100%', 
-  height: '100%', 
-  objectFit: 'cover' // 👈 찌그러짐 방지
-};
+const imageContainerStyle = { width: '100%', height: '250px', borderRadius: '16px', overflow: 'hidden', marginBottom: '20px', backgroundColor: '#f8f9fa' };
+const productImgStyle = { width: '100%', height: '100%', objectFit: 'cover' };
 
 const productInfoBox = { marginBottom: '25px' };
 const productLabelStyle = { fontSize: '12px', color: '#adb5bd', marginBottom: '4px' };
 const productNameStyle = { fontSize: '20px', fontWeight: '800', color: '#212529' };
 
-const barcodeAreaStyle = { 
-  textAlign: 'center', 
-  backgroundColor: '#fff', 
-  padding: '20px 10px', 
-  border: '1px solid #e9ecef', 
-  borderRadius: '16px', 
-  marginBottom: '20px', 
-  overflow: 'hidden' 
-};
-
+const barcodeAreaStyle = { textAlign: 'center', backgroundColor: '#fff', padding: '20px 10px', border: '1px solid #e9ecef', borderRadius: '16px', marginBottom: '20px', overflow: 'hidden' };
 const serialNumberText = { marginTop: '10px', fontSize: '17px', fontWeight: 'bold', letterSpacing: '3px', color: '#495057' };
 const guideBoxStyle = { backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '12px', fontSize: '13px', color: '#868e96', lineHeight: '1.6' };
 
@@ -243,15 +201,15 @@ const secondaryBtnStyle = { ...primaryBtnStyle, backgroundColor: '#495057' };
 
 const printStyles = `
   @media print {
-    @page { margin: 10mm; } /* 인쇄 시 최소 여백 */
+    @page { margin: 10mm; }
     body { background: white !important; margin: 0 !important; }
     .no-print { display: none !important; }
     .ticket-card { 
-      width: 400px !important; /* 👈 PDF에서 잘리지 않도록 너비 고정 */
+      width: 400px !important; 
       margin: 0 auto !important; 
       box-shadow: none !important; 
       border: 1px solid #eee !important;
-      position: static !important; /* absolute 해제 */
+      position: static !important; 
     }
   }
 `;

@@ -32,46 +32,26 @@ public class ProductService {
 
   @Transactional
   public Long registerProduct(Long companyId, ProductRequestDto dto,
-                              MultipartFile file, List<String> serialNumbers) throws IOException {
-    String imageUrl = null;
-    if (file != null && !file.isEmpty()) {
-      imageUrl = s3Uploader.upload(file, "products");
-    }
-
-    int initialStock = 0;
-    if (dto.category() == Category.DONATION) {
-      initialStock = 999999; // 기부 상품은 재고 무제한 처리
-    } else if (serialNumbers != null) {
-      // 빈 줄을 제외한 실제 핀번호 개수만큼만 재고 산정
-      initialStock = (int) serialNumbers.stream().filter(s -> !s.trim().isEmpty()).count();
-    }
+                              MultipartFile file, List<String> vouchers) throws IOException {
+    String imageUrl = (file != null && !file.isEmpty()) ? s3Uploader.upload(file, "products") : dto.voucherUrl();
 
     Product product = Product.builder()
       .name(dto.name())
       .price(dto.price())
-      .stock(initialStock)
+      .stock(dto.stock() != null ? dto.stock() : 0)
       .category(dto.category())
       .companyId(companyId)
-      .status(ProductStatus.ON_SALE)
       .content(dto.content())
       .voucherUrl(imageUrl)
+      .targetAmount(dto.category() == Category.DONATION ? dto.targetAmount() : null)
+      .currentAmount(0L)
+      .status(ProductStatus.ON_SALE)
       .build();
 
     Product savedProduct = productRepository.save(product);
 
-    if (dto.category() == Category.GIFTICON && serialNumbers != null && !serialNumbers.isEmpty()) {
-      List<Voucher> vouchers = serialNumbers.stream()
-        .filter(serial -> !serial.trim().isEmpty())
-        .map(serial -> Voucher.builder()
-          .serialNumber(serial.trim())
-          .productId(savedProduct.getId())
-          .isUsed(false)
-          .build())
-        .toList();
-      voucherRepository.saveAll(vouchers);
-      log.info("기프티콘 등록 완료 - ID: {}, 핀번호 {}개 저장", savedProduct.getId(), vouchers.size());
-    } else {
-      log.info("기부 상품 등록 완료 - ID: {}, 초기 재고: {}", savedProduct.getId(), initialStock);
+    if (dto.category() == Category.GIFTICON && vouchers != null && !vouchers.isEmpty()) {
+      addVouchers(savedProduct.getId(), vouchers);
     }
 
     return savedProduct.getId();
@@ -143,6 +123,7 @@ public class ProductService {
       .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다."));
 
     List<Voucher> newVouchers = serialNumbers.stream()
+      .filter(s -> !s.trim().isEmpty())
       .map(serial -> Voucher.builder()
         .serialNumber(serial)
         .productId(productId)
@@ -152,7 +133,21 @@ public class ProductService {
 
     voucherRepository.saveAll(newVouchers);
 
-    product.addStock(newVouchers.size());
+    if (product.getCategory() == Category.GIFTICON) {
+      product.addStock(newVouchers.size());
+    }
     log.info("상품 ID {} 에 핀번호 {}개 추가 완료", productId, newVouchers.size());
+  }
+
+  @Transactional(readOnly = true)
+  public List<String> getUnusedVouchers(Long companyId, Long productId) {
+    // 1. 권한 검증 및 상품 확인
+    findActiveProduct(companyId, productId);
+
+    // 2. orderId가 null인(아직 안 팔린) 바우처들만 찾아서 핀번호 추출
+    return voucherRepository.findByProductIdAndOrderIdIsNull(productId)
+      .stream()
+      .map(Voucher::getSerialNumber)
+      .toList();
   }
 }
