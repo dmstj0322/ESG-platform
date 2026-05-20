@@ -5,7 +5,7 @@
   --color-surface:  #18181b;
   --color-elevated: #27272a;
   --color-muted:    #71717a;
-  --color-esg-e:    #22c55e;
+  --color-esg-e:    #059669;
   --color-esg-s:    #3b82f6;
   --color-esg-g:    #f59e0b;
 
@@ -26,44 +26,68 @@
 
 /* ── ESG 리포트 마크다운 타이포그래피 ─────────────────────────────── */
 .prose-esg h1, .prose-esg h2, .prose-esg h3, .prose-esg h4 {
-  color: #e4e4e7;
+  color: var(--gray-900);
+  font-family: 'Pretendard', sans-serif;
   font-weight: 700;
   margin-top: 1.4em;
   margin-bottom: 0.5em;
   line-height: 1.4;
 }
-.prose-esg h2 { font-size: 1em; border-bottom: 1px solid #27272a; padding-bottom: 0.4em; }
-.prose-esg h3 { font-size: 0.95em; }
-.prose-esg h4 { font-size: 0.875em; color: #a1a1aa; }
-.prose-esg p  { margin-top: 0.5em; margin-bottom: 0.5em; }
+.prose-esg h2 { font-size: 0.9375rem; border-bottom: 1px solid var(--gray-200); padding-bottom: 0.5em; color: var(--gray-900); }
+.prose-esg h3 { font-size: 0.875rem; color: var(--gray-700); }
+.prose-esg h4 { font-size: 0.8125rem; color: var(--gray-600); }
+.prose-esg p  { margin-top: 0.5em; margin-bottom: 0.5em; color: var(--gray-700); font-size: 0.8125rem; line-height: 1.7; }
 .prose-esg ul { padding-left: 1.25em; margin: 0.6em 0; list-style: disc; }
-.prose-esg li { margin: 0.35em 0; }
-.prose-esg strong { color: #f4f4f5; font-weight: 700; }
-.prose-esg em { color: #a1a1aa; font-style: italic; }
+.prose-esg li { margin: 0.35em 0; color: var(--gray-700); font-size: 0.8125rem; }
+.prose-esg strong { color: var(--gray-900); font-weight: 600; }
+.prose-esg em { color: var(--gray-600); font-style: italic; }
 
-/* ── CSS 변수 (기존 커뮤니티 페이지 호환) ─────────────────────────── */
+/* ── Design System Tokens ─────────────────────────────────────────── */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  /* Brand */
+  --primary:       #059669;
+  --primary-light: #D1FAE5;
+  --primary-dark:  #065F46;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  /* Grays */
+  --gray-900: #111827;
+  --gray-700: #374151;
+  --gray-600: #4B5563;
+  --gray-400: #9CA3AF;
+  --gray-200: #E5E7EB;
+  --gray-100: #F3F4F6;
+  --gray-50:  #F9FAFB;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
+  /* Semantic */
+  --danger:  #EF4444;
+  --warning: #F59E0B;
+  --success: #10B981;
+
+  /* Surface dark (hero sections) */
+  --surface-dark: #0F172A;
+
+  /* Legacy compat */
+  --text:         #6b6375;
+  --text-h:       #08060d;
+  --bg:           #fff;
+  --border:       #e5e4e7;
+  --code-bg:      #f4f3ec;
+  --accent:       #059669;
+  --accent-bg:    rgba(5, 150, 105, 0.1);
+  --accent-border:rgba(5, 150, 105, 0.4);
+  --social-bg:    rgba(244, 243, 236, 0.5);
+  --shadow:       rgba(0,0,0,0.06) 0 1px 2px, rgba(0,0,0,0.04) 0 4px 6px -1px;
+
+  --sans:    'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --heading: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --numeric: 'Inter', 'Pretendard', sans-serif;
+  --mono:    ui-monospace, Consolas, monospace;
+
+  font: 15px/155% var(--sans);
+  letter-spacing: -0.01em;
+  color-scheme: light;
+  color: var(--gray-700);
+  background: var(--gray-50);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -96,6 +120,198 @@
 
 body {
   margin: 0;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--gray-50);
+  color: var(--gray-700);
+}
+
+/* ── Numeric / KPI typography ────────────────────────────────────── */
+.font-numeric {
+  font-family: 'Inter', 'Pretendard', sans-serif;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: -0.02em;
+}
+
+/* ── SaaS Card baseline ──────────────────────────────────────────── */
+.saas-card {
+  background: #ffffff;
+  border: 1px solid var(--gray-200);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+.saas-card:hover {
+  box-shadow: 0 4px 16px rgba(15,23,42,0.08);
+  border-color: #D1D5DB;
+  transform: translateY(-1px);
+}
+.saas-card-key {
+  box-shadow: 0 8px 24px rgba(15,23,42,0.08) !important;
+}
+/* Hero dark card */
+.hero-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.hero-card:hover {
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(255,255,255,0.14);
+}
+
+/* ── Badge baseline ──────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid;
+  white-space: nowrap;
+  transition: opacity 0.15s ease;
+}
+.badge:hover { opacity: 0.85; }
+.badge-high   { background: #FEF2F2; color: #DC2626; border-color: #FECACA; }
+.badge-medium { background: #FFFBEB; color: #D97706; border-color: #FDE68A; }
+.badge-low    { background: #F0FDF4; color: #16A34A; border-color: #BBF7D0; }
+.badge-gray   { background: var(--gray-100); color: var(--gray-600); border-color: var(--gray-200); }
+
+/* ── KPI Number typography ───────────────────────────────────────── */
+.kpi-number {
+  font-family: 'Inter', 'Pretendard', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-feature-settings: "tnum" 1;
+  line-height: 1;
+}
+.kpi-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray-400);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.kpi-sublabel {
+  font-size: 12px;
+  color: var(--gray-500);
+}
+
+/* ── Section title ───────────────────────────────────────────────── */
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+/* ── Dark tooltip ────────────────────────────────────────────────── */
+.tooltip-dark {
+  background: #0F172A;
+  color: #f1f5f9;
+  border-radius: 10px;
+  padding: 6px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  pointer-events: none;
+  max-width: 240px;
+}
+
+/* ── Data Table ──────────────────────────────────────────────────── */
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--gray-400);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 10px 16px;
+  background: var(--gray-50);
+  border-bottom: 1px solid var(--gray-200);
+  text-align: left;
+}
+.data-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #F3F4F6;
+  font-size: 13px;
+  color: var(--gray-700);
+  vertical-align: middle;
+}
+.data-table td.numeric {
+  font-family: 'Inter', 'Pretendard', sans-serif;
+  font-feature-settings: "tnum" 1;
+}
+.data-table tbody tr:hover td { background: var(--gray-50); }
+.data-table tbody tr:nth-child(even) td { background: #FAFAFA; }
+.data-table tbody tr:nth-child(even):hover td { background: #F3F4F6; }
+
+/* ── Pipeline Timeline ───────────────────────────────────────────── */
+.pipeline-step {
+  position: relative;
+  transition: background 0.18s ease;
+}
+.pipeline-step-active {
+  background: linear-gradient(135deg, rgba(5,150,105,0.06) 0%, rgba(5,150,105,0.02) 100%);
+}
+.pipeline-step-warn {
+  background: linear-gradient(135deg, rgba(245,158,11,0.06) 0%, rgba(245,158,11,0.02) 100%);
+}
+.pipeline-step-error {
+  background: linear-gradient(135deg, rgba(239,68,68,0.06) 0%, rgba(239,68,68,0.02) 100%);
+}
+
+/* ── Chart container ─────────────────────────────────────────────── */
+.chart-container {
+  animation: chartFadeIn 0.7s ease-out;
+}
+@keyframes chartFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Empty state ─────────────────────────────────────────────────── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  gap: 12px;
+  text-align: center;
+}
+.empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: var(--gray-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Tab panel transition ────────────────────────────────────────── */
+.tab-panel {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* ── Progress bar animated ───────────────────────────────────────── */
+.progress-bar-fill {
+  transition: width 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Recharts custom overrides ───────────────────────────────────── */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: #F3F4F6 !important;
+  stroke-width: 1 !important;
+}
+.recharts-text.recharts-cartesian-axis-tick-value {
+  fill: #9CA3AF !important;
+  font-size: 11px !important;
+}
+.recharts-tooltip-wrapper {
+  filter: drop-shadow(0 4px 16px rgba(15,23,42,0.12));
 }
 
 /* #root: 너비·중앙정렬 제약 제거 — 각 레이아웃이 직접 관리 */

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  BarChart, Bar, XAxis, YAxis, Tooltip, Cell, ResponsiveContainer, LabelList,
+  BarChart, Bar, XAxis, YAxis, Tooltip, Cell, ResponsiveContainer, LabelList, CartesianGrid,
 } from 'recharts';
 import api from '../../api/api';
 import {
@@ -22,7 +22,7 @@ try { _marked = (await import('marked')).marked; } catch { /* fallback */ }
 // ── 상수 ─────────────────────────────────────────────────────────────────
 
 const GRADE_COLOR = {
-  S: '#a855f7', A: '#22c55e', B: '#3b82f6', C: '#f59e0b', D: '#ef4444',
+  S: '#a855f7', A: '#059669', B: '#3b82f6', C: '#f59e0b', D: '#ef4444',
 };
 
 const GRADE_CLS = {
@@ -34,7 +34,7 @@ const GRADE_CLS = {
   'N/A': 'bg-gray-100 text-gray-500 border-gray-200',
 };
 
-const ESG_COLOR = { E: '#22c55e', S: '#3b82f6', G: '#f59e0b' };
+const ESG_COLOR = { E: '#059669', S: '#3b82f6', G: '#f59e0b' };
 const ESG_LABEL = { E: '환경', S: '사회', G: '지배구조' };
 const ESG_ICON  = { E: Leaf, S: Users, G: Building2 };
 
@@ -95,7 +95,7 @@ const getVerificationStatus = (ev) => {
 // Evidence 품질 티어
 const getSimTier = (simPct) => {
   if (simPct == null) return null;
-  if (simPct >= 85) return { label: '높음',   color: '#22c55e' };
+  if (simPct >= 85) return { label: '높음',   color: '#059669' };
   if (simPct >= 70) return { label: '양호',   color: '#3b82f6' };
   if (simPct >= 55) return { label: '보통',   color: '#f59e0b' };
   return               { label: '낮음',   color: '#ef4444' };
@@ -223,7 +223,7 @@ const PIPELINE_STEPS = [
 // GPT 리포트 섹션 정의
 const REPORT_SECTION_DEFS = [
   { key: 'summary',      icon: FileText,      color: '#818cf8', keywords: ['종합 총평', '개요', '총평', 'ESG 종합', '분석 결과', '종합 평가'] },
-  { key: 'strengths',    icon: CheckCircle2,  color: '#22c55e', keywords: ['주요 강점', '강점', '우수', 'Strength'] },
+  { key: 'strengths',    icon: CheckCircle2,  color: '#059669', keywords: ['주요 강점', '강점', '우수', 'Strength'] },
   { key: 'risks',        icon: AlertTriangle, color: '#ef4444', keywords: ['위험', 'Risk', '리스크', '취약', '위험 요소', '위험요소'] },
   { key: 'improvements', icon: Zap,           color: '#f59e0b', keywords: ['개선', '권장', '권고', '향후', 'Improvement', '추진 과제'] },
   { key: 'benchmark',    icon: TrendingUp,    color: '#a855f7', keywords: ['업종', '평균 대비', '비교', 'Benchmark', '섹터', '동종'] },
@@ -319,12 +319,12 @@ const renderMd = (text) => {
 function GradeBadge({ grade, size = 'sm' }) {
   const cls = GRADE_CLS[grade] ?? GRADE_CLS['N/A'];
   const sz  = size === 'xl'
-    ? 'text-4xl font-black px-5 py-2 rounded-2xl tracking-wide'
+    ? 'text-4xl font-bold px-5 py-2 rounded-2xl tracking-tight'
     : size === 'lg'
-    ? 'text-2xl font-black px-4 py-1.5 rounded-xl'
-    : 'text-xs font-bold px-2.5 py-0.5 rounded-lg';
+    ? 'text-2xl font-bold px-4 py-1.5 rounded-xl'
+    : 'text-[11px] font-semibold px-2.5 py-0.5 rounded-lg';
   return (
-    <span className={`inline-flex items-center border font-mono ${cls} ${sz}`}>
+    <span className={`inline-flex items-center border ${cls} ${sz}`} style={{ fontFamily: "'Inter', sans-serif", letterSpacing: '-0.01em' }}>
       {grade ?? 'N/A'}
     </span>
   );
@@ -332,19 +332,19 @@ function GradeBadge({ grade, size = 'sm' }) {
 
 function SectionCard({ title, icon: Icon, iconColor, children, className = '', action }) {
   return (
-    <div className={`bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm ${className}`}>
+    <div className={`saas-card overflow-hidden ${className}`}>
       {title && (
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-3">
             {Icon && (
               <span
                 className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                style={{ background: `${iconColor ?? '#6366f1'}15` }}
+                style={{ background: `${iconColor ?? '#059669'}12` }}
               >
-                <Icon size={14} style={{ color: iconColor ?? '#6366f1' }} />
+                <Icon size={13} style={{ color: iconColor ?? '#059669' }} />
               </span>
             )}
-            <span className="text-sm font-semibold text-gray-700">{title}</span>
+            <span className="text-[13px] font-semibold text-gray-800">{title}</span>
           </div>
           {action}
         </div>
@@ -412,10 +412,10 @@ function AuditConsole({ data, analysisSummary, blockedIndicators, isBenchmarkFal
   };
 
   const SEV_STYLE = {
-    SUCCESS: { icon: '✔', color: '#16a34a', bg: 'bg-emerald-50 border-emerald-200', label: '정상' },
-    WARN:    { icon: '⚠', color: '#d97706', bg: 'bg-amber-50 border-amber-200',     label: '주의' },
-    ERROR:   { icon: '✖', color: '#dc2626', bg: 'bg-red-50 border-red-200',         label: '오류' },
-    INFO:    { icon: 'ℹ', color: '#6b7280', bg: 'bg-gray-50 border-gray-200',       label: '정보' },
+    SUCCESS: { icon: '✓', color: '#059669', bg: 'bg-emerald-50 border-emerald-100', label: '완료' },
+    WARN:    { icon: '!', color: '#d97706', bg: 'bg-amber-50 border-amber-100',     label: '주의' },
+    ERROR:   { icon: '✕', color: '#dc2626', bg: 'bg-red-50 border-red-100',         label: '오류' },
+    INFO:    { icon: '·', color: '#9ca3af', bg: 'bg-gray-50 border-gray-100',       label: '정보' },
   };
 
   const groups = React.useMemo(() => {
@@ -499,7 +499,7 @@ function AuditConsole({ data, analysisSummary, blockedIndicators, isBenchmarkFal
     FINAL.push({ sev: 'SUCCESS', msg: `분석 완료 — 분석 신뢰도 ${data?.overallConfidence ?? '?'}%`, latency: fmtMs(totalMs) });
 
     return [
-      { key: 'E',     label: '환경(E) 검증',  sublabel: '수치 데이터 교차 검증',          color: '#22c55e', elapsed: eElapsed > 0 ? fmtMs(eElapsed) : null, hasOcrFallback: !!data?.ocrFallback, hasBenchmarkFallback: isBenchmarkFallback, entries: E },
+      { key: 'E',     label: '환경(E) 검증',  sublabel: '수치 데이터 교차 검증',          color: '#059669', elapsed: eElapsed > 0 ? fmtMs(eElapsed) : null, hasOcrFallback: !!data?.ocrFallback, hasBenchmarkFallback: isBenchmarkFallback, entries: E },
       { key: 'S',     label: '사회(S) 분석',  sublabel: 'AI 문맥 분석 · 사회 지표',       color: '#3b82f6', elapsed: fmtMs(sElapsed), hasOcrFallback: false, hasBenchmarkFallback: false, entries: S },
       { key: 'G',     label: '지배구조(G) 분석', sublabel: 'AI 문맥 분석 · 지배구조 지표', color: '#f59e0b', elapsed: fmtMs(gElapsed), hasOcrFallback: false, hasBenchmarkFallback: false, entries: G },
       { key: 'FINAL', label: '최종 평가',      sublabel: '점수 산정 및 등급 결정',          color: '#a855f7', elapsed: fmtMs(fElapsed), hasOcrFallback: false, hasBenchmarkFallback: false, entries: FINAL },
@@ -507,61 +507,68 @@ function AuditConsole({ data, analysisSummary, blockedIndicators, isBenchmarkFal
   }, [data, analysisSummary, blockedIndicators, isBenchmarkFallback]);
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+    <div className="saas-card overflow-hidden">
       {/* 패널 토글 헤더 */}
       <button
         onClick={() => setPanelOpen(v => !v)}
-        className="w-full flex items-center gap-3 px-5 py-4 hover:bg-gray-50 transition-colors text-left"
+        className="w-full flex items-center gap-3 px-6 py-4 hover:bg-gray-50 transition-colors text-left"
       >
         <span className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-          <Activity size={14} className="text-gray-500" />
+          <Activity size={13} className="text-gray-500" />
         </span>
-        <span className="text-sm font-semibold text-gray-700">AI 상세 분석 로그 보기</span>
-        <span className="text-xs text-gray-400 ml-1">— 단계별 분석 처리 결과</span>
-        <span className="ml-auto text-gray-400">{panelOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</span>
+        <span className="text-[13px] font-semibold text-gray-700">AI 분석 파이프라인 로그</span>
+        <span className="text-[11px] text-gray-400 ml-1">단계별 처리 타임라인</span>
+        <span className="ml-auto text-gray-300">{panelOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</span>
       </button>
 
       {panelOpen && (
         <>
           <div className="border-t border-gray-100" />
-          <div ref={scrollRef} className="divide-y divide-gray-100 max-h-[460px] overflow-y-auto">
-            {groups.map(grp => {
+          <div ref={scrollRef} className="divide-y divide-gray-100 max-h-[480px] overflow-y-auto">
+            {groups.map((grp, gi) => {
               const open = openGroups[grp.key] ?? true;
               const hasWarn = grp.entries.some(e => e.sev === 'WARN' || e.sev === 'ERROR');
               const lastIdx = grp.entries.length - 1;
+              const allDone = grp.entries.every(e => e.sev === 'SUCCESS' || e.sev === 'INFO');
               return (
                 <div key={grp.key}>
                   <button
                     onClick={() => toggle(grp.key)}
-                    className="w-full flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors text-left"
+                    className="w-full flex items-center gap-3 px-6 py-3 hover:bg-gray-50 transition-colors text-left"
                   >
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: grp.color }} />
-                    <span className="text-sm font-semibold text-gray-700">{grp.label}</span>
-                    <span className="text-xs text-gray-400">{grp.sublabel}</span>
-                    {grp.hasOcrFallback && (
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700">OCR 제한</span>
+                    {/* Step indicator */}
+                    <span className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 text-[10px] font-bold"
+                      style={{
+                        borderColor: allDone ? '#059669' : hasWarn ? '#f59e0b' : grp.color,
+                        color: allDone ? '#059669' : hasWarn ? '#f59e0b' : grp.color,
+                        background: allDone ? '#ecfdf5' : hasWarn ? '#fffbeb' : 'white',
+                      }}>
+                      {gi + 1}
+                    </span>
+                    <span className="text-[13px] font-semibold text-gray-700">{grp.label}</span>
+                    <span className="text-[11px] text-gray-400">{grp.sublabel}</span>
+                    {grp.elapsed && (
+                      <span className="text-[10px] font-mono text-gray-400 ml-1" style={{ fontFamily: "'Inter', sans-serif" }}>{grp.elapsed}</span>
                     )}
-                    {grp.hasBenchmarkFallback && (
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700">업종 평균 적용</span>
-                    )}
+                    {grp.hasOcrFallback && <span className="badge badge-medium">OCR 제한</span>}
+                    {grp.hasBenchmarkFallback && <span className="badge badge-medium">업종 평균 적용</span>}
                     {hasWarn && !grp.hasOcrFallback && !grp.hasBenchmarkFallback && (
-                      <span className="text-xs font-bold text-amber-600">주의</span>
+                      <span className="badge badge-medium">주의</span>
                     )}
-                    <span className="ml-auto text-gray-400">{open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}</span>
+                    <span className="ml-auto text-gray-300">{open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}</span>
                   </button>
 
                   {open && (
-                    <div className="px-5 pb-4 space-y-2">
+                    <div className="px-6 pb-4 space-y-1.5">
                       {grp.entries.map((entry, i) => {
                         const st = SEV_STYLE[entry.sev] ?? SEV_STYLE.INFO;
                         const isLatest = grp.key === 'FINAL' && i === lastIdx;
                         return (
-                          <div key={i} className={`flex items-start gap-3 px-3 py-2.5 rounded-xl border ${st.bg} ${isLatest ? 'ring-1 ring-emerald-300' : ''}`}>
-                            <span className="shrink-0 mt-0.5 text-sm" style={{ color: st.color }}>{st.icon}</span>
-                            <span className="shrink-0 text-xs font-bold w-8" style={{ color: st.color }}>{st.label}</span>
-                            <span className="flex-1 text-sm text-gray-700 leading-relaxed">{entry.msg}</span>
+                          <div key={i} className={`flex items-start gap-3 px-3.5 py-2.5 rounded-xl border ${st.bg} ${isLatest ? 'ring-1 ring-emerald-200' : ''}`}>
+                            <span className="shrink-0 mt-0.5 text-[13px] font-bold w-4 text-center" style={{ color: st.color }}>{st.icon}</span>
+                            <span className="flex-1 text-[12px] text-gray-600 leading-relaxed">{entry.msg}</span>
                             {entry.latency && (
-                              <span className="shrink-0 text-xs text-gray-400 tabular-nums">{entry.latency}</span>
+                              <span className="shrink-0 text-[11px] text-gray-400 tabular-nums" style={{ fontFamily: "'Inter', sans-serif" }}>{entry.latency}</span>
                             )}
                           </div>
                         );
@@ -617,12 +624,12 @@ function EvidenceCard({ ev, onSelect }) {
 
   const diffPct    = ev.numericDiffPercent ?? 0;
   const diffBarW   = Math.min(100, (diffPct / 40) * 100);
-  const diffBarCol = diffPct <= 5 ? '#22c55e' : diffPct <= 20 ? '#f59e0b' : '#ef4444';
+  const diffBarCol = diffPct <= 5 ? '#059669' : diffPct <= 20 ? '#f59e0b' : '#ef4444';
 
   const similarityPct = toPct(ev.similarity);
   const finalScorePct = toPct(ev.finalScore);
-  const scoreColor    = finalScorePct >= 70 ? '#22c55e' : finalScorePct >= 50 ? '#f59e0b' : '#ef4444';
-  const simColor      = similarityPct >= 70 ? '#22c55e' : similarityPct >= 50 ? '#f59e0b' : '#ef4444';
+  const scoreColor    = finalScorePct >= 70 ? '#059669' : finalScorePct >= 50 ? '#f59e0b' : '#ef4444';
+  const simColor      = similarityPct >= 70 ? '#059669' : similarityPct >= 50 ? '#f59e0b' : '#ef4444';
 
   const sourceFile = ev.sourceFile ?? ev.sourceFileName;
   const shortFile  = sourceFile ? sourceFile.split(/[/\\]/).pop() : null;
@@ -924,7 +931,7 @@ function RetrievalTransparencyPanel({ evidences, isAutoSimulation }) {
               { label: '검색',   count: retrievedEst, color: '#3b82f6', desc: 'AI 유사도 검색' },
               { label: '필터',   count: withSim,      color: '#8b5cf6', desc: '유사도 기준 통과' },
               { label: '정리',   count: validated,    color: '#f59e0b', desc: '중복 제거' },
-              { label: '검증',   count: verified,     color: '#22c55e', desc: '최종 검증 근거' },
+              { label: '검증',   count: verified,     color: '#059669', desc: '최종 검증 근거' },
             ].map((s, i, arr) => (
               <React.Fragment key={s.label}>
                 <div className="flex flex-col items-center gap-0.5 shrink-0">
@@ -967,7 +974,7 @@ function AdvancedAnalysisPanel({ data, allIndicators, isAutoSimulation }) {
   const validated  = evs.filter(e => e.isValidEvidence === true || e.numericMatchLevel === 'HIGH' || e.numericMatchLevel === 'MEDIUM').length;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+    <div className="saas-card overflow-hidden">
       <button
         onClick={() => setOpen(v => !v)}
         className="w-full flex items-center gap-3 px-5 py-4 hover:bg-gray-50 transition-colors text-left"
@@ -1014,7 +1021,7 @@ function AdvancedAnalysisPanel({ data, allIndicators, isAutoSimulation }) {
                 { label: '검색된 문장', count: retrieved, color: '#3b82f6', desc: 'AI 유사도 검색' },
                 { label: '유사도 필터',  count: evs.filter(e => e.similarity != null || e.numericMatchLevel != null).length, color: '#8b5cf6', desc: '임계값 통과' },
                 { label: '중복 제거',   count: validated, color: '#f59e0b', desc: '지표별 정리' },
-                { label: '최종 검증',  count: verified,  color: '#22c55e', desc: '검증 완료' },
+                { label: '최종 검증',  count: verified,  color: '#059669', desc: '검증 완료' },
               ].map((s, i, arr) => (
                 <React.Fragment key={s.label}>
                   <div className="flex flex-col items-center gap-1 shrink-0">
@@ -1107,7 +1114,7 @@ function CalibrationDashboard({ data }) {
   // ── Score distribution (by 10-point bins) ────────────────────────────
   const scoreBins  = [0,10,20,30,40,50,60,70,80,90];
   const scoreData  = [data.eScore ?? 0, data.sScore ?? 0, data.gScore ?? 0];
-  const ESGC       = ['#22c55e','#3b82f6','#f59e0b'];
+  const ESGC       = ['#059669','#3b82f6','#f59e0b'];
   const ESGLabel   = ['E','S','G'];
 
   // ── Evidence stats ───────────────────────────────────────────────────
@@ -1125,7 +1132,7 @@ function CalibrationDashboard({ data }) {
 
   // ── Grade distribution ────────────────────────────────────────────────
   const grades     = ['S','A','B','C','D'];
-  const gradeColor = { S:'#a855f7', A:'#22c55e', B:'#3b82f6', C:'#f59e0b', D:'#ef4444' };
+  const gradeColor = { S:'#a855f7', A:'#059669', B:'#3b82f6', C:'#f59e0b', D:'#ef4444' };
 
   return (
     <div className="mt-6">
@@ -1149,7 +1156,7 @@ function CalibrationDashboard({ data }) {
               <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-3">
                 업종 가중치 — KSIC {ksicCode || 'N/A'} · {iw.label}
               </p>
-              {[['E','환경', iw.E, '#22c55e'], ['S','사회', iw.S, '#3b82f6'], ['G','지배구조', iw.G, '#f59e0b']].map(([cat, lbl, w, col]) => (
+              {[['E','환경', iw.E, '#059669'], ['S','사회', iw.S, '#3b82f6'], ['G','지배구조', iw.G, '#f59e0b']].map(([cat, lbl, w, col]) => (
                 <div key={cat} className="flex items-center gap-2 mb-2">
                   <span className="text-[9px] font-black font-mono w-4" style={{ color: col }}>{cat}</span>
                   <span className="text-[9px] text-gray-500 w-14">{lbl}</span>
@@ -1162,7 +1169,7 @@ function CalibrationDashboard({ data }) {
                 </div>
               ))}
               <div className="mt-3 pt-2 border-t border-gray-100 grid grid-cols-3 gap-2">
-                {[['E', data.eScore, '#22c55e'], ['S', data.sScore, '#3b82f6'], ['G', data.gScore, '#f59e0b']].map(([c, sc, col]) => (
+                {[['E', data.eScore, '#059669'], ['S', data.sScore, '#3b82f6'], ['G', data.gScore, '#f59e0b']].map(([c, sc, col]) => (
                   <div key={c} className="text-center">
                     <p className="text-[8px] text-gray-500 uppercase">{c} 점수</p>
                     <p className="text-base font-black tabular-nums font-mono" style={{ color: col }}>{sc ?? '—'}</p>
@@ -1176,7 +1183,7 @@ function CalibrationDashboard({ data }) {
               <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-3">근거 통계</p>
               {[
                 { label: '전체 근거 수',   value: totalEv,                         color: '#a1a1aa' },
-                { label: '유효 근거 수',   value: validEv,                         color: '#22c55e' },
+                { label: '유효 근거 수',   value: validEv,                         color: '#059669' },
                 { label: '불일치 건수',    value: contraEv,                        color: '#ef4444' },
                 { label: '평균 유사도',    value: `${(avgSim * 100).toFixed(1)}%`, color: '#3b82f6' },
                 { label: '전체 신뢰도',    value: `${data.overallConfidence ?? '?'}%`, color: '#f59e0b' },
@@ -1200,7 +1207,7 @@ function CalibrationDashboard({ data }) {
                 </div>
                 <div className="space-y-1">
                   <p className="text-[9px] text-gray-500">총점: <span className="font-black text-gray-800">{data.totalScore ?? '?'}</span></p>
-                  <p className="text-[9px] text-gray-500">신뢰도: <span className="font-black" style={{ color: (data.overallConfidence ?? 0) >= 70 ? '#22c55e' : '#f59e0b' }}>{data.overallConfidence ?? '?'}%</span></p>
+                  <p className="text-[9px] text-gray-500">신뢰도: <span className="font-black" style={{ color: (data.overallConfidence ?? 0) >= 70 ? '#059669' : '#f59e0b' }}>{data.overallConfidence ?? '?'}%</span></p>
                   {data.gradeCeilingApplied && (
                     <p className="text-[8px] font-bold text-amber-500">⚠ 등급 상한 적용됨</p>
                   )}
@@ -1248,7 +1255,7 @@ function CalibrationDashboard({ data }) {
                   {simBuckets.map((lo, i) => {
                     const cnt  = simCounts[i];
                     const h    = Math.max(2, (cnt / simMax) * 100);
-                    const col  = lo >= 0.80 ? '#22c55e' : lo >= 0.65 ? '#3b82f6' : lo >= 0.55 ? '#f59e0b' : '#ef4444';
+                    const col  = lo >= 0.80 ? '#059669' : lo >= 0.65 ? '#3b82f6' : lo >= 0.55 ? '#f59e0b' : '#ef4444';
                     return (
                       <div key={lo} className="flex-1 flex flex-col items-center gap-0.5">
                         <span className="text-[7px] text-gray-500 tabular-nums">{cnt > 0 ? cnt : ''}</span>
@@ -1264,7 +1271,7 @@ function CalibrationDashboard({ data }) {
                 <div className="flex items-center gap-3 mt-2 flex-wrap">
                   {[
                     { label:'SIM_LOW=55%', color:'#f59e0b' }, { label:'SIM_MED=70%', color:'#3b82f6' },
-                    { label:'SIM_HIGH=80%', color:'#22c55e' }, { label:'SIM_S_GATE=84%', color:'#a855f7' },
+                    { label:'SIM_HIGH=80%', color:'#059669' }, { label:'SIM_S_GATE=84%', color:'#a855f7' },
                   ].map(t => (
                     <span key={t.label} className="flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: t.color }} />
@@ -1403,9 +1410,9 @@ function GptReportCard({ section, defaultOpen = false }) {
   const Icon = section.icon;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+    <div className="saas-card overflow-hidden">
       <button
-        className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors group"
+        className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-all duration-150 group"
         onClick={() => setOpen(v => !v)}
       >
         <div className="flex items-center gap-3">
@@ -1442,10 +1449,10 @@ function GptReportCard({ section, defaultOpen = false }) {
 const DarkTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-xs shadow-lg">
-      {label && <p className="text-gray-500 mb-1.5 font-medium">{label}</p>}
+    <div className="tooltip-dark">
+      {label && <p className="text-white/60 mb-1.5 text-[10px] uppercase tracking-wide">{label}</p>}
       {payload.map((p, i) => (
-        <p key={i} style={{ color: p.color ?? p.fill ?? '#374151' }} className="tabular-nums">
+        <p key={i} className="tabular-nums text-xs" style={{ color: p.color ?? p.fill ?? '#e5e7eb' }}>
           {p.name}: <strong>{typeof p.value === 'number' ? p.value.toLocaleString() : p.value}</strong>
           {p.payload?.unit ? ` ${p.payload.unit}` : ''}
         </p>
@@ -1458,10 +1465,10 @@ const RadarTooltip = ({ active, payload }) => {
   if (!active || !payload?.length) return null;
   const d = payload[0];
   return (
-    <div className="bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-xs shadow-lg">
-      <p className="text-gray-600">
+    <div className="tooltip-dark">
+      <p className="text-white/70 text-xs">
         {d.payload?.subject}:{' '}
-        <strong className="text-gray-900 tabular-nums">{d.value}점</strong>
+        <strong className="text-white tabular-nums">{d.value}점</strong>
       </p>
     </div>
   );
@@ -1606,7 +1613,7 @@ function EvidenceDetailModal({ ev, onClose }) {
   const matchStyle = MATCH_STYLE[ev.numericMatchLevel] ?? null;
   const diffPct   = ev.numericDiffPercent ?? 0;
   const diffBarW  = Math.min(100, (diffPct / 40) * 100);
-  const diffBarCol = diffPct <= 5 ? '#22c55e' : diffPct <= 20 ? '#f59e0b' : '#ef4444';
+  const diffBarCol = diffPct <= 5 ? '#059669' : diffPct <= 20 ? '#f59e0b' : '#ef4444';
 
   return (
     <div
@@ -1717,7 +1724,7 @@ function EvidenceDetailModal({ ev, onClose }) {
                   const inpPct  = Math.round((Math.abs(inp)  / maxV) * 100);
                   const extrPct = Math.round((Math.abs(extr) / maxV) * 100);
                   const diffPctDisplay = ev.numericDiffPercent ?? 0;
-                  const barColor = diffPctDisplay <= 5 ? '#22c55e' : diffPctDisplay <= 20 ? '#f59e0b' : '#ef4444';
+                  const barColor = diffPctDisplay <= 5 ? '#059669' : diffPctDisplay <= 20 ? '#f59e0b' : '#ef4444';
                   const fmtV = (v) => {
                     const abs = Math.abs(v);
                     if (abs >= 1_000_000) return `${(v/1_000_000).toFixed(2)}M`;
@@ -1786,7 +1793,7 @@ function EvidenceDetailModal({ ev, onClose }) {
                   <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
                     <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">AI 유사도</p>
                     <p className="text-2xl font-black tabular-nums font-mono" style={{
-                      color: toPct(ev.similarity) >= 70 ? '#22c55e' : toPct(ev.similarity) >= 50 ? '#f59e0b' : '#ef4444'
+                      color: toPct(ev.similarity) >= 70 ? '#059669' : toPct(ev.similarity) >= 50 ? '#f59e0b' : '#ef4444'
                     }}>
                       {toPct(ev.similarity)}%
                     </p>
@@ -1796,7 +1803,7 @@ function EvidenceDetailModal({ ev, onClose }) {
                   <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
                     <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">최종 점수</p>
                     <p className="text-2xl font-black tabular-nums font-mono" style={{
-                      color: toPct(ev.finalScore) >= 70 ? '#22c55e' : toPct(ev.finalScore) >= 50 ? '#f59e0b' : '#ef4444'
+                      color: toPct(ev.finalScore) >= 70 ? '#059669' : toPct(ev.finalScore) >= 50 ? '#f59e0b' : '#ef4444'
                     }}>
                       {toPct(ev.finalScore)}%
                     </p>
@@ -1873,7 +1880,7 @@ function AIRetrievalTraceTable({ rows, onSelect }) {
 
   const getSimColor = (pct) => {
     if (pct == null) return '#9ca3af';
-    if (pct >= 85) return '#22c55e';
+    if (pct >= 85) return '#059669';
     if (pct >= 70) return '#3b82f6';
     if (pct >= 55) return '#f59e0b';
     return '#ef4444';
@@ -1882,11 +1889,11 @@ function AIRetrievalTraceTable({ rows, onSelect }) {
   if (!rows.length) return null;
 
   return (
-    <div className="rounded-xl border border-gray-200 overflow-hidden bg-white">
+    <div className="data-table rounded-xl overflow-hidden">
       {/* Table header — desktop only */}
-      <div className="hidden sm:grid sm:grid-cols-[148px_1fr_70px_96px_118px_44px] bg-gray-50/80 border-b border-gray-200 px-4 py-2.5 gap-3 items-center">
+      <div className="hidden sm:grid sm:grid-cols-[148px_1fr_70px_96px_118px_44px] bg-gray-50 border-b border-gray-200 px-4 py-3 gap-3 items-center">
         {['지표', '검색 근거', '유사도', '검증 상태', '출처', '페이지'].map(h => (
-          <span key={h} className="text-[9px] font-black text-gray-400 uppercase tracking-wider">{h}</span>
+          <span key={h} className="text-[9px] font-black text-gray-500 uppercase tracking-wider">{h}</span>
         ))}
       </div>
 
@@ -1897,7 +1904,7 @@ function AIRetrievalTraceTable({ rows, onSelect }) {
           const simPct   = toPct(ev.similarity);
           const simColor = getSimColor(simPct);
           const isECat   = ev.indicatorCode?.[0] === 'E';
-          const catColor = isECat ? '#22c55e' : ev.indicatorCode?.[0] === 'S' ? '#3b82f6' : '#f59e0b';
+          const catColor = isECat ? '#059669' : ev.indicatorCode?.[0] === 'S' ? '#3b82f6' : '#f59e0b';
           const snippet  = ev.evidenceText
             ? ev.evidenceText.slice(0, 95) + (ev.evidenceText.length > 95 ? '…' : '')
             : null;
@@ -1908,7 +1915,7 @@ function AIRetrievalTraceTable({ rows, onSelect }) {
             <React.Fragment key={ev.indicatorCode ?? idx}>
               {/* ── Main Row ── */}
               <button
-                className={`w-full text-left transition-colors duration-100 ${isOpen ? 'bg-gray-50' : 'hover:bg-gray-50/50'}`}
+                className={`w-full text-left transition-colors duration-150 ${isOpen ? 'bg-indigo-50/40' : 'hover:bg-gray-50'} ${idx % 2 === 1 ? 'bg-gray-50/30' : ''}`}
                 onClick={() => setExpandedCode(isOpen ? null : (ev.indicatorCode ?? idx))}
               >
                 {/* Desktop */}
@@ -2062,7 +2069,7 @@ function AIRetrievalTraceTable({ rows, onSelect }) {
                             {[
                               { lbl: '입력값', val: `${Number(ev.inputValue).toLocaleString()} ${ev.unit ?? ''}`, color: '#374151' },
                               ev.extractedValue != null && { lbl: '증빙값', val: `${Number(ev.extractedValue).toLocaleString()} ${ev.unit ?? ''}`, color: MATCH_STYLE[ev.numericMatchLevel]?.color ?? '#374151' },
-                              ev.numericDiffPercent != null && { lbl: '차이율', val: fmtDiff(ev.numericDiffPercent), color: ev.numericDiffPercent <= 5 ? '#22c55e' : ev.numericDiffPercent <= 20 ? '#f59e0b' : '#ef4444' },
+                              ev.numericDiffPercent != null && { lbl: '차이율', val: fmtDiff(ev.numericDiffPercent), color: ev.numericDiffPercent <= 5 ? '#059669' : ev.numericDiffPercent <= 20 ? '#f59e0b' : '#ef4444' },
                             ].filter(Boolean).map(item => (
                               <div key={item.lbl} className="flex justify-between text-[10px]">
                                 <span className="text-gray-400">{item.lbl}</span>
@@ -2483,34 +2490,34 @@ export default function AnalysisResultPage() {
 
   // ── 로딩 ──────────────────────────────────────────────────────────
   if (loading) return (
-    <div className="min-h-screen bg-[#F7F8FA] flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-14 h-14 rounded-full border-2 border-gray-200 flex items-center justify-center bg-white shadow-sm">
-          <Loader2 size={24} className="text-emerald-500 animate-spin" />
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center" style={{ fontFamily: "'Pretendard', sans-serif" }}>
+      <div className="flex flex-col items-center gap-5">
+        <div className="w-14 h-14 rounded-2xl border border-gray-200 flex items-center justify-center bg-white shadow-sm">
+          <Loader2 size={22} className="text-emerald-500 animate-spin" />
         </div>
         <div className="text-center">
-          <p className="text-gray-700 font-medium text-sm">분석 결과 로딩 중</p>
-          <p className="text-gray-400 text-xs mt-0.5">잠시만 기다려 주세요...</p>
+          <p className="text-[14px] font-semibold text-gray-700">분석 결과 로딩 중</p>
+          <p className="text-[12px] text-gray-400 mt-1">잠시만 기다려 주세요</p>
         </div>
       </div>
     </div>
   );
 
   if (error || !data) return (
-    <div className="min-h-screen bg-[#F7F8FA] flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4 text-center">
-        <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center border border-red-100">
-          <AlertCircle size={24} className="text-red-400" />
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center" style={{ fontFamily: "'Pretendard', sans-serif" }}>
+      <div className="flex flex-col items-center gap-5 text-center">
+        <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center border border-red-100">
+          <AlertCircle size={22} className="text-red-400" />
         </div>
         <div>
-          <p className="text-gray-700 font-medium text-sm">{error ?? '결과를 불러올 수 없습니다.'}</p>
-          <p className="text-gray-400 text-xs mt-0.5">분석 ID: {analysisId}</p>
+          <p className="text-[14px] font-semibold text-gray-700">{error ?? '결과를 불러올 수 없습니다.'}</p>
+          <p className="text-[12px] text-gray-400 mt-1">분석 ID: {analysisId}</p>
         </div>
         <button
           onClick={() => navigate(-1)}
-          className="text-xs text-gray-400 hover:text-gray-700 transition-colors flex items-center gap-1"
+          className="text-[12px] text-gray-400 hover:text-gray-700 transition-colors flex items-center gap-1.5"
         >
-          <ArrowLeft size={12} /> 돌아가기
+          <ArrowLeft size={13} /> 돌아가기
         </button>
       </div>
     </div>
@@ -2550,7 +2557,7 @@ export default function AnalysisResultPage() {
 
   return (
     <>
-    <div className="min-h-screen bg-[#F7F8FA] text-gray-900">
+    <div className="min-h-screen bg-gray-50 text-gray-900" style={{ fontFamily: "'Pretendard', sans-serif" }}>
       <div className="max-w-6xl mx-auto px-8 py-8 space-y-5">
 
         {/* ── 뒤로가기 + Demo + PDF ─────────────────────────── */}
@@ -2686,55 +2693,55 @@ export default function AnalysisResultPage() {
 
           {/* ── 4 KPI Metrics Row ── */}
           <div className="grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-gray-100 border-b border-gray-100">
-            <div className="px-6 py-5">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">ESG 등급</p>
+            <div className="px-6 py-6">
+              <p className="kpi-label mb-3">ESG 등급</p>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-black font-mono leading-none" style={{ color: gradeAccentColor }}>
+                <span className="kpi-number" style={{ color: gradeAccentColor, fontSize: '2.5rem' }}>
                   {d.finalGrade ?? '—'}
                 </span>
                 {d.gradeCeilingApplied && !isAutoSimulation && (
-                  <span className="text-[9px] font-bold text-red-400">제한</span>
+                  <span className="badge badge-high" style={{ fontSize: '10px' }}>제한</span>
                 )}
               </div>
-              <p className="text-[10px] text-gray-400 mt-1.5">{isAutoSimulation ? 'Simulation' : 'K-ESG 기준'}</p>
+              <p className="kpi-sublabel mt-2">{isAutoSimulation ? 'Simulation' : 'K-ESG 기준'}</p>
             </div>
-            <div className="px-6 py-5">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">종합 점수</p>
-              <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-black tabular-nums leading-none" style={{ color: (d.totalScore ?? 0) >= 70 ? '#22c55e' : (d.totalScore ?? 0) >= 50 ? '#f59e0b' : '#ef4444' }}>
+            <div className="px-6 py-6">
+              <p className="kpi-label mb-3">종합 점수</p>
+              <div className="flex items-baseline gap-1 mb-3">
+                <span className="kpi-number" style={{ color: (d.totalScore ?? 0) >= 70 ? '#059669' : (d.totalScore ?? 0) >= 50 ? '#f59e0b' : '#ef4444', fontSize: '2.5rem' }}>
                   {d.totalScore ?? 0}
                 </span>
-                <span className="text-sm text-gray-400">&nbsp;/ 100</span>
+                <span className="text-[13px] text-gray-400 font-medium mb-0.5">/ 100</span>
               </div>
-              <ScoreProgressBar score={d.totalScore ?? 0} color={(d.totalScore ?? 0) >= 70 ? '#22c55e' : (d.totalScore ?? 0) >= 50 ? '#f59e0b' : '#ef4444'} height="h-1.5" />
+              <ScoreProgressBar score={d.totalScore ?? 0} color={(d.totalScore ?? 0) >= 70 ? '#059669' : (d.totalScore ?? 0) >= 50 ? '#f59e0b' : '#ef4444'} height="h-1.5" />
             </div>
-            <div className="px-6 py-5">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">분석 신뢰도</p>
-              <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-black tabular-nums leading-none" style={{ color: adjustedConfidence >= 65 ? '#22c55e' : adjustedConfidence >= 50 ? '#f59e0b' : '#ef4444' }}>
+            <div className="px-6 py-6">
+              <p className="kpi-label mb-3">분석 신뢰도</p>
+              <div className="flex items-baseline gap-1 mb-3">
+                <span className="kpi-number" style={{ color: adjustedConfidence >= 65 ? '#059669' : adjustedConfidence >= 50 ? '#f59e0b' : '#ef4444', fontSize: '2.5rem' }}>
                   {adjustedConfidence}
                 </span>
-                <span className="text-sm text-gray-400">%</span>
+                <span className="text-[13px] text-gray-400 font-medium mb-0.5">%</span>
               </div>
-              <ScoreProgressBar score={adjustedConfidence} color={adjustedConfidence >= 65 ? '#22c55e' : adjustedConfidence >= 50 ? '#f59e0b' : '#ef4444'} height="h-1.5" />
+              <ScoreProgressBar score={adjustedConfidence} color={adjustedConfidence >= 65 ? '#059669' : adjustedConfidence >= 50 ? '#f59e0b' : '#ef4444'} height="h-1.5" />
             </div>
-            <div className="px-6 py-5">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">AI 검증 현황</p>
-              <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-black tabular-nums leading-none" style={{ color: evidenceCovPct >= 70 ? '#22c55e' : evidenceCovPct >= 50 ? '#f59e0b' : '#ef4444' }}>
+            <div className="px-6 py-6">
+              <p className="kpi-label mb-3">AI 검증 현황</p>
+              <div className="flex items-baseline gap-1 mb-3">
+                <span className="kpi-number" style={{ color: evidenceCovPct >= 70 ? '#059669' : evidenceCovPct >= 50 ? '#f59e0b' : '#ef4444', fontSize: '2.5rem' }}>
                   {evidenceCovPct}
                 </span>
-                <span className="text-sm text-gray-400">%</span>
+                <span className="text-[13px] text-gray-400 font-medium mb-0.5">%</span>
               </div>
               {(() => {
                 const verified = completeIndicatorList.filter(e => getVerificationStatus(e) === 'VERIFIED').length;
                 const detected = completeIndicatorList.filter(e => getVerificationStatus(e) !== 'NO_EVIDENCE').length;
                 const noEv     = completeIndicatorList.filter(e => getVerificationStatus(e) === 'NO_EVIDENCE').length;
                 return (
-                  <div className="mt-1.5 space-y-0.5">
-                    <p className="text-[10px] text-emerald-600 font-semibold">AI 검증 성공 {verified}건</p>
-                    <p className="text-[10px] text-gray-400">문서 근거 탐지 {detected}건</p>
-                    <p className="text-[10px] text-gray-400">근거 부족 항목 {noEv}건</p>
+                  <div className="mt-2 space-y-0.5">
+                    <p className="text-[11px] text-emerald-600 font-medium">검증 완료 {verified}건</p>
+                    <p className="text-[11px] text-gray-400">근거 탐지 {detected}건</p>
+                    <p className="text-[11px] text-gray-400">미검출 {noEv}건</p>
                   </div>
                 );
               })()}
@@ -2851,7 +2858,7 @@ export default function AnalysisResultPage() {
                   style={{ borderLeft: `3px solid ${
                     topIssue.tone === 'red'     ? '#ef4444' :
                     topIssue.tone === 'amber'   ? '#f59e0b' :
-                    topIssue.tone === 'emerald' ? '#22c55e' :
+                    topIssue.tone === 'emerald' ? '#059669' :
                                                   '#9ca3af'
                   }` }}
                 >
@@ -3007,7 +3014,7 @@ export default function AnalysisResultPage() {
                   <GradeBadge grade={radarPt?.grade} />
                 </div>
                 <div className="mb-3">
-                  <span className="text-4xl font-black tabular-nums leading-none" style={{ color: safe >= 70 ? color : safe >= 50 ? '#f59e0b' : '#ef4444' }}>{safe}</span>
+                  <span className="kpi-number" style={{ fontSize: '2.25rem', color: safe >= 70 ? color : safe >= 50 ? '#f59e0b' : '#ef4444' }}>{safe}</span>
                   <span className="text-sm text-gray-400 ml-1">점</span>
                 </div>
                 <ScoreProgressBar
@@ -3120,25 +3127,21 @@ export default function AnalysisResultPage() {
               id: 'summary',
               label: '요약',
               badge: auditRecommendations.filter(r => r.sev === 'HIGH').length > 0
-                ? { count: auditRecommendations.filter(r => r.sev === 'HIGH').length, cls: 'bg-red-100 text-red-700' }
+                ? { count: auditRecommendations.filter(r => r.sev === 'HIGH').length, cls: 'bg-red-50 text-red-600 border border-red-200' }
                 : null,
             },
             {
               id: 'evidence',
               label: '증빙 분석',
-              badge: { count: completeIndicatorList.filter(e => getVerificationStatus(e) === 'VERIFIED').length + '/' + completeIndicatorList.length, cls: 'bg-emerald-50 text-emerald-700' },
+              badge: { count: `${completeIndicatorList.filter(e => getVerificationStatus(e) === 'VERIFIED').length}/${completeIndicatorList.length}`, cls: 'bg-emerald-50 text-emerald-700 border border-emerald-200' },
             },
             {
               id: 'benchmark',
               label: '업종 비교',
-              badge: benchMetrics.length > 0 ? { count: benchMetrics.length, cls: 'bg-purple-50 text-purple-700' } : null,
+              badge: benchMetrics.length > 0 ? { count: benchMetrics.length, cls: 'bg-gray-100 text-gray-600 border border-gray-200' } : null,
             },
             { id: 'ai-report', label: 'AI 리포트' },
-            {
-              id: 'audit-log',
-              label: '분석 로그',
-              badge: { count: '7단계', cls: 'bg-gray-100 text-gray-500' },
-            },
+            { id: 'audit-log', label: '분석 로그' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -3147,15 +3150,15 @@ export default function AnalysisResultPage() {
                 setSearchParams({ tab: tab.id }, { replace: true });
               }}
               className={[
-                'flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium border-b-2 -mb-px transition-colors whitespace-nowrap',
+                'flex items-center gap-2 px-4 py-3.5 text-[13px] font-medium border-b-2 -mb-px transition-all duration-150 whitespace-nowrap',
                 activeTab === tab.id
-                  ? 'border-emerald-500 text-emerald-700'
+                  ? 'border-emerald-600 text-emerald-700'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
               ].join(' ')}
             >
               {tab.label}
               {tab.badge && (
-                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${tab.badge.cls}`}>
+                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border transition-opacity duration-150 ${tab.badge.cls}`}>
                   {tab.badge.count}
                 </span>
               )}
@@ -3229,7 +3232,7 @@ export default function AnalysisResultPage() {
                 <tbody>
                   {numericRows.map((ev, i) => {
                     const diff = ev.numericDiffPercent ?? 0;
-                    const diffColor = diff <= 5 ? '#22c55e' : diff <= 20 ? '#f59e0b' : '#ef4444';
+                    const diffColor = diff <= 5 ? '#059669' : diff <= 20 ? '#f59e0b' : '#ef4444';
                     const ms = MATCH_STYLE[ev.numericMatchLevel] ?? MATCH_STYLE.LOW;
                     return (
                       <tr key={i} className={`border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${i % 2 === 1 ? 'bg-gray-50/50' : ''}`}
@@ -3334,14 +3337,14 @@ export default function AnalysisResultPage() {
                 {/* ── E 환경 패널 ── */}
                 {(() => {
                   const e = analysisSummary.e;
-                  const toneColor = e.tone === 'red' ? '#ef4444' : e.tone === 'amber' ? '#f59e0b' : '#22c55e';
+                  const toneColor = e.tone === 'red' ? '#ef4444' : e.tone === 'amber' ? '#f59e0b' : '#059669';
                   const toneBorder = e.tone === 'red' ? 'border-red-200' : e.tone === 'amber' ? 'border-amber-200' : 'border-emerald-200';
                   const summaryColor = e.tone === 'red' ? 'text-red-600' : e.tone === 'amber' ? 'text-amber-700' : 'text-gray-600';
                   const diffStr = fmtDiff(e.avgDiff);
                   const diffColor = e.avgDiff == null ? '#71717a'
-                    : e.avgDiff <= 5 ? '#22c55e' : e.avgDiff <= 20 ? '#f59e0b' : '#ef4444';
+                    : e.avgDiff <= 5 ? '#059669' : e.avgDiff <= 20 ? '#f59e0b' : '#ef4444';
                   const bullets = [
-                    { label: 'HIGH 검증', value: `${e.high}건`, color: '#22c55e' },
+                    { label: 'HIGH 검증', value: `${e.high}건`, color: '#059669' },
                     { label: 'MEDIUM 검증', value: `${e.medium}건`, color: '#f59e0b' },
                     { label: 'LOW 불일치', value: `${e.low}건`, color: e.low > 0 ? '#ef4444' : '#52525b' },
                     ...(e.failed > 0 ? [{ label: '추출 실패', value: `${e.failed}건`, color: '#71717a' }] : []),
@@ -3390,11 +3393,11 @@ export default function AnalysisResultPage() {
                 {/* ── S 사회 패널 ── */}
                 {(() => {
                   const s = analysisSummary.s;
-                  const toneColor = s.tone === 'red' ? '#ef4444' : s.tone === 'amber' ? '#f59e0b' : '#22c55e';
+                  const toneColor = s.tone === 'red' ? '#ef4444' : s.tone === 'amber' ? '#f59e0b' : '#059669';
                   const toneBorder = s.tone === 'red' ? 'border-red-200' : s.tone === 'amber' ? 'border-amber-200' : 'border-gray-200';
                   const summaryColor = s.tone === 'red' ? 'text-red-600' : s.tone === 'amber' ? 'text-amber-700' : 'text-gray-600';
                   const bullets = [
-                    { label: '증빙 검출 지표', value: `${s.withEvidence} / ${s.total}개`, color: s.withEvidence === s.total ? '#22c55e' : '#f59e0b' },
+                    { label: '증빙 검출 지표', value: `${s.withEvidence} / ${s.total}개`, color: s.withEvidence === s.total ? '#059669' : '#f59e0b' },
                     { label: '미검출 지표', value: `${s.missing}개`, color: s.missing > 0 ? '#ef4444' : '#52525b' },
                     { label: '낮은 신뢰 근거', value: `${s.lowConf}건`, color: s.lowConf > 0 ? '#f59e0b' : '#52525b' },
                     { label: '분석 방식', value: 'AI 문맥 분석', color: '#38bdf8' },
@@ -3437,7 +3440,7 @@ export default function AnalysisResultPage() {
                   const toneBorder = g.tone === 'red' ? 'border-red-200' : g.tone === 'amber' ? 'border-amber-200' : 'border-gray-200';
                   const summaryColor = g.tone === 'red' ? 'text-red-600' : g.tone === 'amber' ? 'text-amber-700' : 'text-gray-600';
                   const bullets = [
-                    { label: '증빙 검출 지표', value: `${g.withEvidence} / ${g.total}개`, color: g.withEvidence === g.total ? '#22c55e' : '#f59e0b' },
+                    { label: '증빙 검출 지표', value: `${g.withEvidence} / ${g.total}개`, color: g.withEvidence === g.total ? '#059669' : '#f59e0b' },
                     { label: '미검출 지표', value: `${g.missing}개`, color: g.missing > 0 ? '#ef4444' : '#52525b' },
                     { label: '낮은 신뢰 근거', value: `${g.lowConf}건`, color: g.lowConf > 0 ? '#f59e0b' : '#52525b' },
                     { label: '분석 방식', value: 'AI 문맥 분석', color: '#38bdf8' },
@@ -3717,7 +3720,7 @@ export default function AnalysisResultPage() {
         {/* ── AI 검증 신뢰도 카드 (MANUAL only, summary 탭 전용) ── */}
         {activeTab === 'summary' && !isAutoSimulation && d.overallConfidence != null && (() => {
           const confLevel = adjustedConfidence < 40 ? 'LOW' : adjustedConfidence < 65 ? 'MEDIUM' : 'HIGH';
-          const confColor = confLevel === 'HIGH' ? '#22c55e' : confLevel === 'MEDIUM' ? '#f59e0b' : '#ef4444';
+          const confColor = confLevel === 'HIGH' ? '#059669' : confLevel === 'MEDIUM' ? '#f59e0b' : '#ef4444';
           return (
             <SectionCard title="AI 검증 신뢰도" icon={Shield} iconColor="#a855f7">
               <div className="flex flex-col sm:flex-row gap-6">
@@ -3786,10 +3789,10 @@ export default function AnalysisResultPage() {
                 const covPct   = totalEv > 0 ? Math.round((validEv / totalEv) * 100) : 0;
                 const blkPct   = totalSG > 0 ? Math.round((blocked  / totalSG) * 100) : 0;
                 const metrics  = [
-                  { label: 'AI 검증 성공',   value: `${validEv}건`,             color: validEv === totalEv ? '#22c55e' : validEv >= Math.ceil(totalEv * 0.7) ? '#f59e0b' : '#ef4444' },
-                  { label: '문서 근거 탐지', value: `${totalEv}건`,             color: covPct >= 70 ? '#22c55e' : covPct >= 50 ? '#f59e0b' : '#ef4444' },
-                  { label: '근거 부족 항목', value: `${blocked}건`,             color: blocked === 0 ? '#22c55e' : blocked <= 2 ? '#f59e0b' : '#ef4444' },
-                  { label: '신뢰도 낮음',    value: `${lowConf}건`,            color: lowConf === 0 ? '#22c55e' : lowConf <= 1 ? '#f59e0b' : '#ef4444' },
+                  { label: 'AI 검증 성공',   value: `${validEv}건`,             color: validEv === totalEv ? '#059669' : validEv >= Math.ceil(totalEv * 0.7) ? '#f59e0b' : '#ef4444' },
+                  { label: '문서 근거 탐지', value: `${totalEv}건`,             color: covPct >= 70 ? '#059669' : covPct >= 50 ? '#f59e0b' : '#ef4444' },
+                  { label: '근거 부족 항목', value: `${blocked}건`,             color: blocked === 0 ? '#059669' : blocked <= 2 ? '#f59e0b' : '#ef4444' },
+                  { label: '신뢰도 낮음',    value: `${lowConf}건`,            color: lowConf === 0 ? '#059669' : lowConf <= 1 ? '#f59e0b' : '#ef4444' },
                 ];
                 return (
                   <div className="mt-3">
@@ -3821,15 +3824,15 @@ export default function AnalysisResultPage() {
                 const extractPts = eTotal5  > 0 && eFailed  > 0 ? -Math.round((eFailed  / eTotal5)  * 40) : 0;
                 const benchPts   = isBenchmarkFallback ? -10 : 0;
                 const rows = [
-                  { label: '수치 일치 (E)',      pts: eMatchPts,  color: '#22c55e' },
-                  { label: 'AI 문맥 분석 근거',   pts: sgMatchPts, color: '#22c55e' },
+                  { label: '수치 일치 (E)',      pts: eMatchPts,  color: '#059669' },
+                  { label: 'AI 문맥 분석 근거',   pts: sgMatchPts, color: '#059669' },
                   ...(missingPts < 0 ? [{ label: '검증 근거 부족',   pts: missingPts, color: '#ef4444' }] : []),
                   ...(extractPts < 0 ? [{ label: '수치 추출 실패', pts: extractPts, color: '#ef4444' }] : []),
                   ...(benchPts   < 0 ? [{ label: '업종 평균 추정 적용', pts: benchPts,   color: '#f59e0b' }] : []),
                 ];
 
                 const sevLabel = adjustedConfidence >= 80 ? 'HIGH' : adjustedConfidence >= 50 ? 'MEDIUM' : 'LOW';
-                const sevColor = sevLabel === 'HIGH' ? '#22c55e' : sevLabel === 'MEDIUM' ? '#f59e0b' : '#ef4444';
+                const sevColor = sevLabel === 'HIGH' ? '#059669' : sevLabel === 'MEDIUM' ? '#f59e0b' : '#ef4444';
                 const sevBg    = sevLabel === 'HIGH' ? 'bg-emerald-50 border-emerald-200' : sevLabel === 'MEDIUM' ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200';
 
                 const reasons = [];
@@ -3892,20 +3895,25 @@ export default function AnalysisResultPage() {
         {/* ── 레이더 차트 + 카테고리 상세 ──────────────────── */}
         {activeTab === 'summary' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <SectionCard title="ESG 카테고리 점수" icon={TrendingUp} iconColor="#22c55e">
+          <SectionCard title="ESG 카테고리 점수" icon={TrendingUp} iconColor="#059669">
             {radarData.length > 0 ? (
+              <div className="chart-container">
               <ResponsiveContainer width="100%" height={280}>
                 <RadarChart data={radarData} cx="50%" cy="50%" outerRadius={95}>
-                  <PolarGrid stroke="#e5e7eb" />
-                  <PolarAngleAxis dataKey="subject" tick={{ fill: '#6b7280', fontSize: 12, fontWeight: 600 }} />
-                  <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: '#9ca3af', fontSize: 9 }} tickCount={5} />
-                  <Radar name="점수" dataKey="score" stroke="#22c55e" fill="#22c55e" fillOpacity={0.15} strokeWidth={2.5} />
+                  <PolarGrid stroke="#F3F4F6" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fill: '#9CA3AF', fontSize: 12, fontWeight: 600 }} />
+                  <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: '#9CA3AF', fontSize: 9 }} tickCount={5} />
+                  <Radar name="점수" dataKey="score" stroke="#059669" fill="#059669" fillOpacity={0.12} strokeWidth={2.5} isAnimationActive={true} animationDuration={700} />
                   <Tooltip content={<RadarTooltip />} />
                 </RadarChart>
               </ResponsiveContainer>
+              </div>
             ) : (
-              <div className="flex items-center justify-center h-[280px]">
-                <p className="text-gray-400 text-sm">차트 데이터가 없습니다</p>
+              <div className="flex flex-col items-center justify-center h-[280px] gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center">
+                  <TrendingUp size={20} className="text-gray-400" />
+                </div>
+                <p className="text-[13px] text-gray-400 font-medium">차트 데이터 없음</p>
               </div>
             )}
           </SectionCard>
@@ -3950,33 +3958,35 @@ export default function AnalysisResultPage() {
                 검증 결과 기반 추정 점수
               </span>
             )}
+            <div className="chart-container">
             <ResponsiveContainer width="100%" height={Math.max(340, breakdownData.length * 36)}>
               <BarChart data={breakdownData} layout="vertical" margin={{ left: 8, right: 72, top: 4, bottom: 4 }}>
-                <XAxis type="number" domain={[0, 100]} tick={{ fill: '#9ca3af', fontSize: 10 }} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} />
+                <XAxis type="number" domain={[0, 100]} tick={{ fill: '#9CA3AF', fontSize: 10, fontFamily: 'Inter, sans-serif' }} tickLine={false} axisLine={{ stroke: '#F3F4F6' }} />
                 <YAxis
                   type="category"
                   dataKey="title"
                   width={170}
                   interval={0}
-                  tick={{ fill: '#6b7280', fontSize: 11 }}
+                  tick={{ fill: '#9CA3AF', fontSize: 11 }}
                   tickLine={false}
                   axisLine={false}
                 />
+                <CartesianGrid horizontal={false} stroke="#F3F4F6" />
                 <Tooltip
                   content={({ active, payload }) => {
                     if (!active || !payload?.length) return null;
                     const p = payload[0].payload;
                     return (
-                      <div className="bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-xs shadow-lg">
-                        <p className="text-gray-800 font-semibold mb-1">{p.title}</p>
-                        <p className="text-gray-500 font-mono">{p.kesgCode}</p>
-                        <p className="text-gray-900 font-bold mt-1">{p.score}점 · <span style={{ color: gradeBarColor(p.grade) }}>{p.grade}등급</span></p>
-                        {p.confidence != null && <p className="text-gray-400 mt-0.5">신뢰도 {p.confidence}%</p>}
+                      <div className="tooltip-dark">
+                        <p className="text-white font-semibold mb-1 text-xs">{p.title}</p>
+                        <p className="text-white/50 font-mono text-[10px]">{p.kesgCode}</p>
+                        <p className="text-white font-bold mt-1 text-xs tabular-nums">{p.score}점 · <span style={{ color: gradeBarColor(p.grade) }}>{p.grade}등급</span></p>
+                        {p.confidence != null && <p className="text-white/50 mt-0.5 text-[10px]">신뢰도 {p.confidence}%</p>}
                       </div>
                     );
                   }}
                 />
-                <Bar dataKey="score" radius={[0, 4, 4, 0]} maxBarSize={20}>
+                <Bar dataKey="score" radius={[0, 4, 4, 0]} maxBarSize={20} isAnimationActive={true} animationDuration={600}>
                   {breakdownData.map((entry, idx) => (
                     <Cell key={idx} fill={gradeBarColor(entry.grade)} fillOpacity={0.85} />
                   ))}
@@ -3984,11 +3994,12 @@ export default function AnalysisResultPage() {
                     dataKey="score"
                     position="right"
                     formatter={(v) => `${v}점`}
-                    style={{ fontSize: 11, fontWeight: 700, fill: '#374151' }}
+                    style={{ fontSize: 11, fontWeight: 700, fill: '#374151', fontFamily: 'Inter, Pretendard, sans-serif' }}
                   />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
+            </div>
             <div className="flex flex-wrap gap-4 mt-3 pt-3 border-t border-gray-100">
               {['S', 'A', 'B', 'C', 'D'].map(g => (
                 <span key={g} className="flex items-center gap-1.5 text-xs text-gray-500">
@@ -4046,21 +4057,21 @@ export default function AnalysisResultPage() {
 
               <div className="px-6 py-5 flex flex-col sm:flex-row gap-6 items-center">
                 {/* Radar Chart */}
-                <div className="w-full sm:w-64 shrink-0">
+                <div className="w-full sm:w-64 shrink-0 chart-container">
                   <ResponsiveContainer width="100%" height={220}>
                     <RadarChart data={radarBenchData} cx="50%" cy="50%" outerRadius={80}>
-                      <PolarGrid stroke="#e5e7eb" />
-                      <PolarAngleAxis dataKey="subject" tick={{ fill: '#6b7280', fontSize: 10, fontWeight: 600 }} />
+                      <PolarGrid stroke="#F3F4F6" />
+                      <PolarAngleAxis dataKey="subject" tick={{ fill: '#9CA3AF', fontSize: 10, fontWeight: 600 }} />
                       <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                      <Radar name="우리 기업" dataKey="company" stroke="#6366f1" fill="#6366f1" fillOpacity={0.18} strokeWidth={2.5} />
-                      <Radar name="업종 평균(참조)" dataKey="industry" stroke="#d1d5db" fill="#d1d5db" fillOpacity={0.10} strokeWidth={1.5} strokeDasharray="4 3" />
+                      <Radar name="우리 기업" dataKey="company" stroke="#6366f1" fill="#6366f1" fillOpacity={0.18} strokeWidth={2.5} isAnimationActive={true} animationDuration={700} />
+                      <Radar name="업종 평균(참조)" dataKey="industry" stroke="#d1d5db" fill="#d1d5db" fillOpacity={0.10} strokeWidth={1.5} strokeDasharray="4 3" isAnimationActive={false} />
                       <Tooltip content={({ active, payload }) => {
                         if (!active || !payload?.length) return null;
                         return (
-                          <div className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs shadow-lg">
-                            <p className="text-gray-500 mb-1 font-medium">{payload[0]?.payload?.subject}</p>
+                          <div className="tooltip-dark">
+                            <p className="text-white/60 mb-1.5 text-[10px] uppercase tracking-wide">{payload[0]?.payload?.subject}</p>
                             {payload.map((p, i) => (
-                              <p key={i} style={{ color: p.stroke }} className="tabular-nums">
+                              <p key={i} className="tabular-nums text-xs" style={{ color: p.stroke === '#d1d5db' ? '#9ca3af' : '#a5b4fc' }}>
                                 {p.name}: <strong>{p.value}점</strong>
                               </p>
                             ))}
@@ -4082,7 +4093,7 @@ export default function AnalysisResultPage() {
                 {/* E/S/G Delta Grid */}
                 <div className="flex-1 w-full space-y-3">
                   {[
-                    { cat: 'E', label: '환경 (E)', score: eScore, ref: refE, delta: deltaE, color: '#22c55e', Icon: Leaf },
+                    { cat: 'E', label: '환경 (E)', score: eScore, ref: refE, delta: deltaE, color: '#059669', Icon: Leaf },
                     { cat: 'S', label: '사회 (S)', score: sScore, ref: refS, delta: deltaS, color: '#3b82f6', Icon: Users },
                     { cat: 'G', label: '지배구조 (G)', score: gScore, ref: refG, delta: deltaG, color: '#f59e0b', Icon: Building2 },
                   ].map(({ cat, label, score, ref, delta, color, Icon }) => {
@@ -4212,26 +4223,28 @@ export default function AnalysisResultPage() {
                           </div>
                         );
                       })()}
+                      <div className="chart-container">
                       <ResponsiveContainer width="100%" height={110}>
                         <BarChart data={chartData} margin={{ top: 4, right: 8, bottom: 4, left: 4 }}>
                           <XAxis dataKey="name" hide />
-                          <YAxis domain={yDomain} tickFormatter={fmtBenchNum} tick={{ fill: '#9ca3af', fontSize: 9 }} tickLine={false} axisLine={false} width={42} />
+                          <YAxis domain={yDomain} tickFormatter={fmtBenchNum} tick={{ fill: '#9CA3AF', fontSize: 9 }} tickLine={false} axisLine={false} width={42} />
+                          <CartesianGrid vertical={false} stroke="#F3F4F6" />
                           <Tooltip
                             content={({ active, payload }) => {
                               if (!active || !payload?.length) return null;
                               return (
-                                <div className="bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-xs shadow-lg">
-                                  <p className="text-gray-500 mb-1 font-medium">{metric.name}</p>
+                                <div className="tooltip-dark">
+                                  <p className="text-white/60 mb-1.5 text-[10px] uppercase tracking-wide">{metric.name}</p>
                                   {payload.map((p, i) => (
                                     <div key={i} className="flex items-center gap-2">
                                       <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: p.fill }} />
-                                      <span style={{ color: p.fill }} className="tabular-nums">
+                                      <span className="tabular-nums text-xs" style={{ color: p.fill === '#9ca3af' ? '#9ca3af' : '#fff' }}>
                                         {p.name}: <strong>{fmtBenchNum(p.value)} {metric.unit}</strong>
                                       </span>
                                     </div>
                                   ))}
                                   {diff != null && (
-                                    <p className={`mt-1.5 font-semibold ${better ? 'text-emerald-600' : 'text-red-600'}`}>
+                                    <p className={`mt-1.5 text-[10px] font-semibold ${better ? 'text-emerald-400' : 'text-red-400'}`}>
                                       {better ? '✓ 업종 평균 대비 양호' : '! 업종 평균 대비 개선 필요'}
                                     </p>
                                   )}
@@ -4242,14 +4255,17 @@ export default function AnalysisResultPage() {
                           <Bar
                             dataKey="company"
                             name="우리 기업"
-                            fill={better ? '#22c55e' : '#3b82f6'}
+                            fill={better ? '#059669' : '#3b82f6'}
                             fillOpacity={0.85}
                             radius={[4, 4, 0, 0]}
                             maxBarSize={56}
+                            isAnimationActive={true}
+                            animationDuration={600}
                           />
-                          <Bar dataKey="industryAvg" name="업종 평균" fill="#9ca3af" fillOpacity={0.8} radius={[4, 4, 0, 0]} maxBarSize={56} />
+                          <Bar dataKey="industryAvg" name="업종 평균" fill="#9ca3af" fillOpacity={0.8} radius={[4, 4, 0, 0]} maxBarSize={56} isAnimationActive={false} />
                         </BarChart>
                       </ResponsiveContainer>
+                      </div>
                       <div className="flex justify-between mt-2 text-[10px] tabular-nums text-gray-400">
                         <span>
                           <span className={`font-semibold ${better ? 'text-emerald-600' : 'text-blue-600'}`}>
@@ -4412,10 +4428,10 @@ export default function AnalysisResultPage() {
                     <p className="text-[9px] font-bold text-amber-600/70 uppercase tracking-widest mb-2">수치 추출 지표</p>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {[
-                        { label: '추출 성공',      value: `${parsed}`,   color: parsed > 0 ? '#22c55e' : '#71717a' },
-                        { label: '추출 실패',      value: `${failed}`,   color: failed === 0 ? '#22c55e' : failed >= 3 ? '#ef4444' : '#f59e0b' },
-                        { label: '업종 평균 적용', value: bmark ? '적용' : '미적용', color: bmark ? '#f59e0b' : '#22c55e' },
-                        { label: '수치 충족률',    value: eTotal5 > 0 ? `${Math.round((parsed / eTotal5) * 100)}%` : '0%', color: parsed >= eTotal5 ? '#22c55e' : parsed > 0 ? '#f59e0b' : '#ef4444' },
+                        { label: '추출 성공',      value: `${parsed}`,   color: parsed > 0 ? '#059669' : '#71717a' },
+                        { label: '추출 실패',      value: `${failed}`,   color: failed === 0 ? '#059669' : failed >= 3 ? '#ef4444' : '#f59e0b' },
+                        { label: '업종 평균 적용', value: bmark ? '적용' : '미적용', color: bmark ? '#f59e0b' : '#059669' },
+                        { label: '수치 충족률',    value: eTotal5 > 0 ? `${Math.round((parsed / eTotal5) * 100)}%` : '0%', color: parsed >= eTotal5 ? '#059669' : parsed > 0 ? '#f59e0b' : '#ef4444' },
                       ].map(m => (
                         <div key={m.label} className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
                           <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-1 leading-none">{m.label}</p>
@@ -4621,7 +4637,7 @@ export default function AnalysisResultPage() {
                       { label: '검색됨',    count: retrieved,  color: '#3b82f6', desc: '벡터 검색' },
                       { label: '필터링',    count: total,      color: '#8b5cf6', desc: '유사도 기준' },
                       { label: '검증',      count: validEv,    color: '#f59e0b', desc: '키워드+유사도' },
-                      { label: '최종 검증', count: verified,   color: '#22c55e', desc: '최종' },
+                      { label: '최종 검증', count: verified,   color: '#059669', desc: '최종' },
                     ];
                     return (
                       <div className="mt-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
@@ -4930,32 +4946,36 @@ export default function AnalysisResultPage() {
               </div>
 
               {/* pipeline stages */}
-              <div className="px-6 py-5 space-y-0">
+              <div className="py-2">
                 {stages.map((stage, idx) => {
                   const ss = statusStyle[stage.status];
                   const isLast = idx === stages.length - 1;
+                  const stepCls = stage.status === 'success' ? 'pipeline-step-active'
+                    : stage.status === 'warn' ? 'pipeline-step-warn'
+                    : stage.status === 'error' ? 'pipeline-step-error'
+                    : '';
                   return (
-                    <div key={stage.id} className="flex gap-4">
+                    <div key={stage.id} className={`pipeline-step ${stepCls} flex gap-4 px-6 py-3.5 rounded-xl mx-2 mb-0.5`}>
                       {/* left: connector */}
-                      <div className="flex flex-col items-center">
-                        <div className={`w-3 h-3 rounded-full mt-1 shrink-0 ring-2 ring-white ${ss.dot}`} />
-                        {!isLast && <div className="w-px flex-1 bg-gray-200 my-1" />}
+                      <div className="flex flex-col items-center shrink-0">
+                        <div className={`w-3 h-3 rounded-full mt-1 shrink-0 ring-2 ring-white shadow-sm ${ss.dot}`} />
+                        {!isLast && <div className="w-px flex-1 bg-gray-200 my-1.5 min-h-[20px]" />}
                       </div>
                       {/* right: content */}
-                      <div className={`pb-5 flex-1 min-w-0 ${isLast ? '' : ''}`}>
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest w-5">{String(idx+1).padStart(2,'0')}</span>
+                          <span className="text-[10px] font-mono text-gray-300 tabular-nums w-5">{String(idx+1).padStart(2,'0')}</span>
                           <span className="text-xs font-semibold text-gray-800">{stage.label}</span>
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wide ${ss.badge}`}>
+                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wide ${ss.badge}`}>
                             {ss.label}
                           </span>
                           {stage.time !== '—' && (
-                            <span className="text-[10px] font-mono text-gray-400 ml-auto">{stage.time}</span>
+                            <span className="text-[10px] font-mono text-gray-400 ml-auto tabular-nums">{stage.time}</span>
                           )}
                         </div>
-                        <p className="text-[11px] text-gray-400 mt-0.5 pl-7">{stage.desc}</p>
-                        <div className="pl-7 mt-1">
-                          <span className="text-[10px] font-mono text-gray-500 bg-gray-50 border border-gray-100 rounded px-2 py-0.5">{stage.tag}</span>
+                        <p className="text-[11px] text-gray-400 mt-0.5 pl-7 leading-relaxed">{stage.desc}</p>
+                        <div className="pl-7 mt-1.5">
+                          <span className="text-[10px] font-mono text-gray-500 bg-white border border-gray-200 rounded-lg px-2.5 py-0.5 shadow-sm">{stage.tag}</span>
                         </div>
                       </div>
                     </div>
@@ -5088,7 +5108,7 @@ export default function AnalysisResultPage() {
                     <div className="flex flex-col items-center gap-1.5 min-w-[80px] flex-shrink-0">
                       <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
                         isActive
-                          ? 'bg-emerald-100 border-2 border-emerald-400 shadow-[0_0_10px_#22c55e30]'
+                          ? 'bg-emerald-100 border-2 border-emerald-400 shadow-[0_0_10px_#05966930]'
                           : 'bg-emerald-50 border-2 border-emerald-200'
                       }`}>
                         <span className={`text-[10px] font-black ${isActive ? 'text-emerald-600' : 'text-emerald-500'}`}>{i + 1}</span>
@@ -5118,7 +5138,7 @@ export default function AnalysisResultPage() {
                 { label: 'ChromaDB',    color: '#f59e0b' },
                 { label: 'LangChain4j', color: '#3b82f6' },
                 { label: 'GPT-4o',      color: '#a855f7' },
-                { label: 'Upstage OCR', color: '#22c55e' },
+                { label: 'Upstage OCR', color: '#059669' },
               ].map(s => (
                 <span key={s.label} className="text-[9px] font-bold px-2 py-0.5 rounded border font-mono"
                   style={{ color: s.color, borderColor: `${s.color}40`, background: `${s.color}10` }}>
@@ -5131,7 +5151,7 @@ export default function AnalysisResultPage() {
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[9px] text-gray-400 font-mono uppercase tracking-wider shrink-0">처리 시간:</span>
               {[
-                { label: 'OCR',    value: d.ocrTimeMs    ? `${d.ocrTimeMs}ms`    : '—', color: '#22c55e' },
+                { label: 'OCR',    value: d.ocrTimeMs    ? `${d.ocrTimeMs}ms`    : '—', color: '#059669' },
                 { label: '임베딩', value: d.ragTimeMs    ? `${Math.round(d.ragTimeMs * 0.35)}ms` : '—', color: '#3b82f6' },
                 { label: '검색',   value: d.ragTimeMs    ? `${Math.round(d.ragTimeMs * 0.65)}ms` : '—', color: '#a855f7' },
                 { label: '검증',   value: d.verifyTimeMs ? `${d.verifyTimeMs}ms` : '—', color: '#f59e0b' },
@@ -5185,7 +5205,7 @@ export default function AnalysisResultPage() {
             recs.push('현재 분석 결과는 신뢰도가 높습니다. 정기적 ESG 데이터 갱신을 유지하세요.');
 
           const tone = lowCount >= 3 ? 'red' : (eFailed >= eTotal5 || sgBlocked >= 3) ? 'amber' : 'emerald';
-          const toneColor = tone === 'red' ? '#ef4444' : tone === 'amber' ? '#f59e0b' : '#22c55e';
+          const toneColor = tone === 'red' ? '#ef4444' : tone === 'amber' ? '#f59e0b' : '#059669';
 
           const summaryText = isBenchmarkFallback
             ? '본 결과는 환경(E) 실측 데이터 부족으로 업종 평균 기반 추정 평가가 적용되었습니다. S/G 지표는 AI 문맥 분석 기반으로 평가되었습니다.'

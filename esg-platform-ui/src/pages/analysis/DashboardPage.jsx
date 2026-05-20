@@ -13,7 +13,7 @@ import api from '../../api/api';
 import { useAnalysis } from '../../context/AnalysisContext';
 
 // ── 상수 ────────────────────────────────────────────────────────────
-const GRADE_COLOR = { S: '#a855f7', A: '#22c55e', B: '#3b82f6', C: '#f59e0b', D: '#ef4444' };
+const GRADE_COLOR = { S: '#a855f7', A: '#059669', B: '#3b82f6', C: '#f59e0b', D: '#ef4444' };
 const GRADE_CLS = {
   S: 'bg-purple-50 text-purple-700 border-purple-200',
   A: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -111,12 +111,16 @@ const buildInsights = (report, scores, risks) => {
 // ── 로딩 Skeleton ────────────────────────────────────────────────────
 function KPISkeleton() {
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm animate-pulse">
-      <div className="h-3 w-24 bg-gray-200 rounded mb-4" />
-      <div className="h-8 w-16 bg-gray-200 rounded mb-2" />
-      <div className="h-2 w-full bg-gray-100 rounded" />
+    <div className="bg-white border border-gray-200 rounded-2xl p-6 animate-pulse">
+      <div className="h-2 w-16 bg-gray-100 rounded mb-4" />
+      <div className="h-10 w-14 bg-gray-100 rounded mb-3" />
+      <div className="h-1.5 w-full bg-gray-100 rounded" />
     </div>
   );
+}
+
+function HeroStatSkeleton() {
+  return <div className="flex-1 h-24 rounded-2xl bg-white/5 animate-pulse" />;
 }
 
 // ── 메인 컴포넌트 ───────────────────────────────────────────────────
@@ -201,7 +205,7 @@ export default function DashboardPage() {
       extra: (
         <div className="flex items-end gap-3 mt-1">
           {[
-            { cat: 'E', v: scores.E, color: '#22c55e', Icon: Leaf },
+            { cat: 'E', v: scores.E, color: '#059669', Icon: Leaf },
             { cat: 'S', v: scores.S, color: '#3b82f6', Icon: Users },
             { cat: 'G', v: scores.G, color: '#f59e0b', Icon: Building2 },
           ].map(({ cat, v, color, Icon }) => (
@@ -276,64 +280,202 @@ export default function DashboardPage() {
     },
   ];
 
+  // ── derived for hero
+  const verifiedCount = (() => {
+    const em = latestReport?.evidenceMapping ?? [];
+    return em.filter(e => (e.confidenceScore ?? e.confidence ?? 0) >= 65).length;
+  })();
+  const totalIndicators = (latestReport?.evidenceMapping ?? []).length;
+  const auditStatus = !latestReport ? null
+    : highCount > 0 ? { label: '즉시 조치 필요', cls: 'text-red-400', dot: 'bg-red-400' }
+    : medCount  > 0 ? { label: '개선 권장',     cls: 'text-amber-400', dot: 'bg-amber-400' }
+    : { label: '양호',              cls: 'text-emerald-400', dot: 'bg-emerald-400' };
+
   return (
-    <div className="min-h-screen bg-[#F7F8FA] text-gray-900">
+    <div className="min-h-screen bg-gray-50 text-gray-900" style={{ fontFamily: "'Pretendard', sans-serif" }}>
+
+      {/* ══════════════════════════════════════════════════════════════
+           HERO — Dark surface, Vercel/Linear/Palantir style
+      ══════════════════════════════════════════════════════════════ */}
+      <div style={{ background: '#0F172A' }} className="w-full">
+        <div className="max-w-7xl mx-auto px-8 pt-7 pb-8">
+
+          {/* Top bar */}
+          <div className="flex items-center justify-between mb-7">
+            <div className="flex items-center gap-3">
+              <span className="w-8 h-8 rounded-xl bg-emerald-600/90 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-900/40">
+                <Cpu size={14} className="text-white" />
+              </span>
+              <div>
+                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.14em]">AI ESG Audit Command Center</p>
+                <p className="text-[14px] font-semibold text-white leading-snug tracking-tight">
+                  {latestReport?.companyName ?? '기업 ESG 현황'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={loadAll}
+                disabled={loading}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/8 text-[12px] font-medium text-slate-400 hover:text-white transition-all duration-150 disabled:opacity-40"
+              >
+                <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+                새로고침
+              </button>
+              <button
+                onClick={() => navigate('/analysis')}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-[12px] font-semibold text-white transition-all duration-150 shadow-sm shadow-emerald-900/30"
+              >
+                <Plus size={12} />
+                신규 분석
+              </button>
+            </div>
+          </div>
+
+          {/* Hero KPI strip */}
+          {loading && !latestReport ? (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {[1,2,3,4].map(i => <HeroStatSkeleton key={i} />)}
+            </div>
+          ) : latestReport ? (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+
+              {/* ESG Grade */}
+              <div className="hero-card px-6 py-5 cursor-pointer" onClick={() => navigate('/analysis/report')}>
+                <p className="kpi-label text-slate-500 mb-3">ESG 종합 등급</p>
+                <div className="flex items-end gap-3 mb-3">
+                  <span className="kpi-number text-5xl" style={{ color: gradeAccent }}>
+                    {latestReport.finalGrade ?? '—'}
+                  </span>
+                  {totalScore != null && (
+                    <span className="text-slate-400 text-sm font-mono mb-0.5 tabular-nums">
+                      {totalScore}점
+                    </span>
+                  )}
+                </div>
+                {totalScore != null && (
+                  <div className="h-0.5 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full progress-bar-fill" style={{ width: `${totalScore}%`, background: gradeAccent }} />
+                  </div>
+                )}
+                <p className="text-[10px] text-slate-600 mt-2">K-ESG 기준 · 클릭해서 상세 보기</p>
+              </div>
+
+              {/* E/S/G scores */}
+              <div className="hero-card px-6 py-5">
+                <p className="kpi-label text-slate-500 mb-3">카테고리 점수</p>
+                <div className="flex items-end gap-5">
+                  {[
+                    { cat: 'E', v: scores.E, color: '#34d399' },
+                    { cat: 'S', v: scores.S, color: '#60a5fa' },
+                    { cat: 'G', v: scores.G, color: '#fbbf24' },
+                  ].map(({ cat, v, color }) => (
+                    <div key={cat}>
+                      <p className="text-[9px] font-bold uppercase mb-1.5 tracking-widest" style={{ color }}>{cat}</p>
+                      <span className="kpi-number text-3xl" style={{ color: v != null ? color : '#334155' }}>
+                        {v != null ? Math.round(v) : '—'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Verified indicators */}
+              <div className="hero-card px-6 py-5">
+                <p className="kpi-label text-slate-500 mb-3">검증 완료 지표</p>
+                <div className="flex items-end gap-2 mb-2">
+                  <span className="kpi-number text-4xl text-white">
+                    {verifiedCount}
+                  </span>
+                  {totalIndicators > 0 && (
+                    <span className="text-slate-500 text-base mb-0.5 tabular-nums font-mono">
+                      / {totalIndicators}
+                    </span>
+                  )}
+                </div>
+                {totalIndicators > 0 && (
+                  <div className="h-0.5 bg-white/10 rounded-full overflow-hidden mb-2">
+                    <div className="h-full rounded-full bg-emerald-400 progress-bar-fill"
+                      style={{ width: `${Math.round((verifiedCount / totalIndicators) * 100)}%` }} />
+                  </div>
+                )}
+                <p className="text-[10px] text-slate-600">신뢰도 65%+ 근거 확인</p>
+              </div>
+
+              {/* Audit status */}
+              <div className="hero-card px-6 py-5">
+                <p className="kpi-label text-slate-500 mb-3">Audit 상태</p>
+                {auditStatus ? (
+                  <>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${auditStatus.dot}`}
+                        style={{ boxShadow: `0 0 6px currentColor` }} />
+                      <span className={`text-[15px] font-semibold ${auditStatus.cls}`}>{auditStatus.label}</span>
+                    </div>
+                    {risks.length > 0 ? (
+                      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                        {highCount > 0 && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 border border-red-500/25">
+                            HIGH {highCount}
+                          </span>
+                        )}
+                        {medCount > 0 && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25">
+                            MED {medCount}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-emerald-400/80 mt-1 flex items-center gap-1">
+                        <CheckCircle size={10} /> 조치 항목 없음
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-slate-600 text-sm">분석 결과 없음</p>
+                )}
+              </div>
+
+            </div>
+          ) : (
+            /* No report state */
+            <div className="hero-card px-8 py-12 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/8 flex items-center justify-center mx-auto mb-4">
+                <BarChart2 size={22} className="text-slate-500" />
+              </div>
+              <p className="text-slate-300 font-semibold mb-1.5">아직 분석 결과가 없습니다</p>
+              <p className="text-slate-500 text-[13px] mb-6">첫 번째 AI ESG Audit를 시작해보세요.</p>
+              <button
+                onClick={() => navigate('/analysis')}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold text-white transition-all duration-150 shadow-sm shadow-emerald-900/30"
+              >
+                <Plus size={14} /> 분석 시작
+              </button>
+            </div>
+          )}
+
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════
+           CONTENT AREA
+      ══════════════════════════════════════════════════════════════ */}
       <div className="max-w-7xl mx-auto px-8 py-8 space-y-6">
 
-        {/* ── Header ──────────────────────────────────────────── */}
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="w-7 h-7 rounded-xl bg-gray-900 flex items-center justify-center shrink-0">
-                <Cpu size={13} className="text-white" />
-              </span>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.15em]">
-                AI ESG Audit Dashboard
-              </p>
-            </div>
-            <h1 className="text-2xl font-black text-gray-900 tracking-tight">
-              {latestReport?.companyName
-                ? `안녕하세요, ${latestReport.companyName}님! 오늘의 ESG 현황을 확인해보세요.`
-                : '오늘의 ESG 현황을 확인해보세요.'}
-            </h1>
-            <p className="text-xs text-gray-400 mt-1">
-              최신 ESG 분석 결과와 주요 리스크를 확인할 수 있습니다.
-              {latestReport ? ` · 최종 업데이트 ${fmtDate(new Date().toISOString())}` : ''}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={loadAll}
-              disabled={loading}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-gray-200 hover:border-gray-300 text-xs font-semibold text-gray-600 hover:text-gray-800 shadow-sm transition-all disabled:opacity-50"
-            >
-              <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-              새로고침
-            </button>
-            <button
-              onClick={() => navigate('/analysis')}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 hover:bg-gray-800 text-xs font-semibold text-white shadow-sm transition-all"
-            >
-              <Plus size={13} />
-              신규 분석 시작
-            </button>
-          </div>
-        </div>
-
-        {/* ── Top KPI Cards ────────────────────────────────── */}
+        {/* ── Secondary KPI Cards ───────────────────────────── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {loading && !latestReport
             ? Array.from({ length: 4 }).map((_, i) => <KPISkeleton key={i} />)
             : kpiCards.map((card) => (
                 <div
                   key={card.id}
-                  className={`bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-200 group ${card.onClick ? 'cursor-pointer' : ''}`}
+                  className={`saas-card p-6 group ${card.onClick ? 'cursor-pointer' : ''}`}
                   onClick={card.onClick}
                 >
-                  <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-start justify-between mb-4">
                     <div>
-                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{card.label}</p>
-                      <p className="text-[10px] text-gray-400 mt-0.5">{card.sub}</p>
+                      <p className="kpi-label">{card.label}</p>
+                      <p className="text-[11px] text-gray-400 mt-1">{card.sub}</p>
                     </div>
                     <span className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: card.iconBg }}>
                       {card.icon}
@@ -341,10 +483,10 @@ export default function DashboardPage() {
                   </div>
 
                   {card.value !== null && (
-                    <div className="mb-1">
+                    <div className="mb-2">
                       <span
-                        className={card.valueClass ?? 'text-4xl font-black leading-none'}
-                        style={card.valueColor ? { color: card.valueColor } : {}}
+                        className={card.valueClass ?? 'kpi-number text-3xl'}
+                        style={{ ...(card.valueColor ? { color: card.valueColor } : {}), fontFamily: "'Inter', sans-serif", letterSpacing: '-0.03em' }}
                       >
                         {card.value}
                       </span>
@@ -352,9 +494,9 @@ export default function DashboardPage() {
                   )}
 
                   {card.bar && (
-                    <div className="h-1 bg-gray-100 rounded-full overflow-hidden mt-2 mb-1">
+                    <div className="h-1 bg-gray-100 rounded-full overflow-hidden mt-2 mb-2">
                       <div
-                        className="h-full rounded-full transition-all duration-700"
+                        className="h-full rounded-full progress-bar-fill"
                         style={{ width: `${Math.min(100, card.bar.value)}%`, background: card.bar.color }}
                       />
                     </div>
@@ -363,7 +505,7 @@ export default function DashboardPage() {
                   {card.extra}
 
                   {card.onClick && (
-                    <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-1 text-[10px] text-gray-400 group-hover:text-emerald-600 transition-colors">
+                    <div className="mt-4 pt-3 border-t border-gray-100 flex items-center gap-1 text-[11px] text-gray-400 group-hover:text-emerald-600 transition-colors duration-150">
                       <span>상세 결과 보기</span>
                       <ChevronRight size={10} />
                     </div>
@@ -373,92 +515,83 @@ export default function DashboardPage() {
         </div>
 
         {/* ── Middle: History + Risk ───────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
 
           {/* Left: 최근 분석 기록 */}
-          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-            <div className="flex items-center gap-2.5 px-6 py-4 border-b border-gray-100">
+          <div className="saas-card overflow-hidden">
+            <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-100">
               <span className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-                <Clock size={14} className="text-gray-500" />
+                <Clock size={13} className="text-gray-500" />
               </span>
-              <span className="text-sm font-semibold text-gray-800">최근 ESG 분석 기록</span>
-              <span className="ml-auto text-[10px] text-gray-400">Analysis History</span>
+              <span className="section-title">최근 ESG 분석 기록</span>
+              <span className="ml-auto text-[11px] text-gray-400 font-medium">Analysis History</span>
             </div>
 
             {!latestReport ? (
-              <div className="flex flex-col items-center justify-center py-12 gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center">
-                  <FileText size={20} className="text-gray-400" />
+              <div className="empty-state">
+                <div className="empty-icon">
+                  <FileText size={18} className="text-gray-400" />
                 </div>
-                <p className="text-sm text-gray-500 font-medium">분석 기록 없음</p>
-                <p className="text-xs text-gray-400">신규 분석을 시작하면 결과가 여기 표시됩니다.</p>
+                <p className="text-[13px] font-medium text-gray-600">분석 기록이 없습니다</p>
+                <p className="text-[12px] text-gray-400">신규 분석을 시작하면 결과가 여기 표시됩니다.</p>
                 <button
                   onClick={() => navigate('/analysis')}
-                  className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors"
+                  className="flex items-center gap-1.5 text-[12px] font-semibold text-emerald-600 hover:text-emerald-700 transition-colors duration-150"
                 >
                   <Plus size={12} /> 첫 분석 시작하기
                 </button>
               </div>
             ) : (
               <>
-                {/* Table header */}
-                <div className="grid grid-cols-[1fr_70px_60px_70px_80px_80px] px-6 py-2.5 bg-gray-50 border-b border-gray-100 gap-3">
-                  {['날짜/기업', '점수', '등급', '신뢰도', 'E/S/G', ''].map(h => (
-                    <span key={h} className="text-[9px] font-black text-gray-400 uppercase tracking-wider">{h}</span>
+                <div className="grid grid-cols-[1fr_64px_60px_68px_80px_76px] px-6 py-2.5 bg-gray-50/80 border-b border-gray-100 gap-3">
+                  {['날짜 / 기업', '점수', '등급', '신뢰도', 'E / S / G', ''].map(h => (
+                    <span key={h} className="text-[10px] font-semibold text-gray-400 uppercase tracking-[0.08em]">{h}</span>
                   ))}
                 </div>
 
-                {/* Latest report row */}
                 <div
-                  className="grid grid-cols-[1fr_70px_60px_70px_80px_80px] px-6 py-4 gap-3 items-center hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-100"
+                  className="grid grid-cols-[1fr_64px_60px_68px_80px_76px] px-6 py-4 gap-3 items-center hover:bg-gray-50/60 transition-colors duration-150 cursor-pointer border-b border-gray-100 group/row"
                   onClick={() => navigate('/analysis/report')}
                 >
-                  {/* 날짜/기업 */}
                   <div>
-                    <p className="text-xs font-semibold text-gray-800">
+                    <p className="text-[13px] font-semibold text-gray-800">
                       {latestReport.companyName ?? '기업 분석'}
                     </p>
-                    <p className="text-[10px] text-gray-400 font-mono mt-0.5">
-                      {fmtDate(new Date().toISOString())} (최신)
+                    <p className="text-[11px] text-gray-400 mt-0.5 tabular-nums" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      {fmtDate(new Date().toISOString())} · 최신
                     </p>
                   </div>
-                  {/* 점수 */}
-                  <span className="text-sm font-black font-mono tabular-nums" style={{ color: gradeAccent }}>
+                  <span className="text-[15px] font-bold tabular-nums" style={{ color: gradeAccent, fontFamily: "'Inter', sans-serif", letterSpacing: '-0.02em' }}>
                     {totalScore ?? '—'}
                   </span>
-                  {/* 등급 */}
-                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg border font-mono w-fit ${gradeCls}`}>
+                  <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-lg border w-fit ${gradeCls}`} style={{ fontFamily: "'Inter', sans-serif" }}>
                     {latestReport.finalGrade ?? '—'}
                   </span>
-                  {/* Confidence — 상단 섹션에서 추론 */}
-                  <span className="text-[11px] font-mono text-gray-500">
+                  <span className="text-[12px] text-gray-500 tabular-nums" style={{ fontFamily: "'Inter', sans-serif" }}>
                     {totalScore != null ? `~${Math.min(95, totalScore + 5)}%` : '—'}
                   </span>
-                  {/* E/S/G */}
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-2">
                     {[
-                      { c: 'E', v: scores.E, col: '#22c55e' },
+                      { c: 'E', v: scores.E, col: '#059669' },
                       { c: 'S', v: scores.S, col: '#3b82f6' },
                       { c: 'G', v: scores.G, col: '#f59e0b' },
                     ].map(({ c, v, col }) => (
-                      <span key={c} className="text-[10px] font-black font-mono tabular-nums" style={{ color: v != null ? col : '#d1d5db' }}>
+                      <span key={c} className="text-[12px] font-bold tabular-nums" style={{ color: v != null ? col : '#d1d5db', fontFamily: "'Inter', sans-serif" }}>
                         {fmtScore(v)}
                       </span>
                     ))}
                   </div>
-                  {/* 상세 보기 */}
-                  <button className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-emerald-600 transition-colors font-semibold">
+                  <button className="flex items-center gap-1 text-[11px] text-gray-400 group-hover/row:text-emerald-600 transition-colors duration-150 font-medium">
                     상세 <ChevronRight size={10} />
                   </button>
                 </div>
 
-
-                <div className="px-6 py-3 border-t border-gray-100">
+                <div className="px-6 py-3">
                   <button
                     onClick={() => navigate('/analysis/report')}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-emerald-600 transition-colors"
+                    className="flex items-center gap-1.5 text-[12px] font-medium text-gray-400 hover:text-emerald-600 transition-colors duration-150"
                   >
-                    <ArrowUpRight size={12} /> 전체 분석 결과 보기
+                    <ArrowUpRight size={13} /> 전체 분석 결과 보기
                   </button>
                 </div>
               </>
@@ -466,66 +599,59 @@ export default function DashboardPage() {
           </div>
 
           {/* Right: 즉시 조치 필요 */}
-          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm flex flex-col">
-            <div className="flex items-center gap-2.5 px-5 py-4 border-b border-gray-100">
+          <div className="saas-card overflow-hidden flex flex-col">
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
               <span className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
-                <AlertTriangle size={14} className="text-red-500" />
+                <AlertTriangle size={13} className="text-red-500" />
               </span>
               <div>
-                <p className="text-sm font-semibold text-gray-800">즉시 조치 필요</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">Audit Recommendations</p>
+                <p className="section-title">즉시 조치 필요</p>
+                <p className="text-[11px] text-gray-400 mt-0.5">Audit Recommendations</p>
               </div>
               {risks.length > 0 && (
                 <div className="ml-auto flex items-center gap-1.5">
-                  {highCount > 0 && (
-                    <span className="text-[9px] font-black px-2 py-0.5 rounded-full border bg-red-50 border-red-300 text-red-700">
-                      HIGH {highCount}
-                    </span>
-                  )}
-                  {medCount > 0 && (
-                    <span className="text-[9px] font-black px-2 py-0.5 rounded-full border bg-amber-50 border-amber-300 text-amber-700">
-                      MED {medCount}
-                    </span>
-                  )}
+                  {highCount > 0 && <span className="badge badge-high">HIGH {highCount}</span>}
+                  {medCount  > 0 && <span className="badge badge-medium">MED {medCount}</span>}
                 </div>
               )}
             </div>
 
             <div className="flex-1">
               {!latestReport ? (
-                <div className="flex items-center justify-center py-10 text-gray-400 text-xs">
-                  분석 결과 로드 후 표시됩니다.
+                <div className="empty-state py-10 gap-2">
+                  <div className="empty-icon w-9 h-9 rounded-xl">
+                    <AlertCircle size={16} className="text-gray-400" />
+                  </div>
+                  <p className="text-[12px] text-gray-400">분석 결과 로드 후 표시됩니다.</p>
                 </div>
               ) : risks.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 gap-2">
-                  <CheckCircle2 size={24} className="text-emerald-500" />
-                  <p className="text-sm font-semibold text-emerald-700">조치 필요 항목 없음</p>
-                  <p className="text-[11px] text-gray-400">현재 분석 결과에서 즉각 조치가 필요한 항목이 없습니다.</p>
+                <div className="empty-state py-10 gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center">
+                    <CheckCircle2 size={18} className="text-emerald-500" />
+                  </div>
+                  <p className="text-[13px] font-semibold text-emerald-700">조치 필요 항목 없음</p>
+                  <p className="text-[11px] text-gray-400">현재 분석에서 즉각 조치가<br/>필요한 항목이 없습니다.</p>
                 </div>
               ) : (
                 <div className="divide-y divide-gray-100">
                   {risks.map((rec, i) => {
                     const SEV = {
-                      HIGH: { bar: 'bg-red-500', badge: 'bg-red-50 border-red-300 text-red-700', action: '즉시 수정' },
-                      MED:  { bar: 'bg-amber-400', badge: 'bg-amber-50 border-amber-300 text-amber-700', action: '개선 권장' },
-                      LOW:  { bar: 'bg-gray-300', badge: 'bg-gray-50 border-gray-200 text-gray-500', action: '참고' },
+                      HIGH: { bar: 'bg-red-400',    badge: 'badge badge-high',   action: '즉시 수정' },
+                      MED:  { bar: 'bg-amber-400',  badge: 'badge badge-medium', action: '개선 권장' },
+                      LOW:  { bar: 'bg-gray-200',   badge: 'badge badge-gray',   action: '참고' },
                     };
                     const s = SEV[rec.sev] ?? SEV.LOW;
                     return (
-                      <div key={i} className="flex items-stretch">
-                        <div className={`w-1 shrink-0 ${s.bar}`} />
-                        <div className="px-4 py-3.5 flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border tracking-wider ${s.badge}`}>
-                              {rec.sev}
-                            </span>
-                            <span className="text-[9px] font-mono text-gray-300">{rec.code}</span>
+                      <div key={i} className="flex items-stretch hover:bg-gray-50/50 transition-colors duration-150">
+                        <div className={`w-1 shrink-0 ${s.bar} rounded-r-full`} />
+                        <div className="px-5 py-4 flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <span className={s.badge}>{rec.sev}</span>
+                            <span className="text-[10px] font-mono text-gray-300 tracking-wider">{rec.code}</span>
                             <span className="text-[12px] font-semibold text-gray-800">{rec.title}</span>
                           </div>
-                          <p className="text-[10px] text-gray-500 leading-relaxed mb-1.5">{rec.desc}</p>
-                          <span className={`inline-flex items-center text-[8px] font-bold px-1.5 py-0.5 rounded border ${s.badge}`}>
-                            {s.action}
-                          </span>
+                          <p className="text-[11px] text-gray-500 leading-relaxed mb-2.5">{rec.desc}</p>
+                          <span className={s.badge}>{s.action}</span>
                         </div>
                       </div>
                     );
@@ -537,7 +663,7 @@ export default function DashboardPage() {
             <div className="px-5 py-3 border-t border-gray-100">
               <button
                 onClick={() => navigate('/analysis/report')}
-                className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-emerald-600 transition-colors"
+                className="flex items-center gap-1.5 text-[12px] font-medium text-gray-400 hover:text-emerald-600 transition-colors duration-150"
               >
                 <ArrowUpRight size={12} /> 전체 Evidence 확인
               </button>
@@ -546,68 +672,73 @@ export default function DashboardPage() {
         </div>
 
         {/* ── Bottom: AI 인사이트 ─────────────────────────────── */}
-        <div className="grid grid-cols-1 gap-5">
-
-          {/* AI 추천 인사이트 */}
-          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm flex flex-col">
-            <div className="flex items-center gap-2.5 px-5 py-4 border-b border-gray-100">
-              <span className="w-7 h-7 rounded-lg bg-violet-50 flex items-center justify-center shrink-0">
-                <Cpu size={14} className="text-violet-500" />
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-gray-800">AI 추천 인사이트</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">분석 결과 기반 자동 생성</p>
-              </div>
+        <div className="saas-card overflow-hidden">
+          <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-100">
+            <span className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+              <Cpu size={13} className="text-emerald-600" />
+            </span>
+            <div>
+              <p className="section-title">AI 추천 인사이트</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">분석 결과 기반 자동 생성</p>
             </div>
-            <div className="flex-1 px-5 py-4 space-y-3">
-              {!latestReport ? (
-                <p className="text-xs text-gray-400 py-6 text-center">분석 결과 로드 후 인사이트가 표시됩니다.</p>
-              ) : (
-                insights.map((ins, i) => {
+          </div>
+          <div className="px-6 py-5">
+            {!latestReport ? (
+              <div className="empty-state py-8">
+                <div className="empty-icon">
+                  <Cpu size={18} className="text-gray-400" />
+                </div>
+                <p className="text-[12px] text-gray-500 font-medium">분석 결과 없음</p>
+                <p className="text-[12px] text-gray-400">분석 결과 로드 후 인사이트가 표시됩니다.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {insights.map((ins, i) => {
                   const styles = {
-                    strength: { bg: 'bg-emerald-50 border-emerald-100', text: 'text-emerald-700', icon: <CheckCircle size={12} className="text-emerald-500 shrink-0 mt-0.5" />, label: 'STRENGTH' },
-                    risk:     { bg: 'bg-red-50 border-red-100',         text: 'text-red-700',     icon: <AlertCircle size={12} className="text-red-500 shrink-0 mt-0.5" />,   label: 'RISK' },
-                    action:   { bg: 'bg-amber-50 border-amber-100',     text: 'text-amber-700',   icon: <Zap size={12} className="text-amber-500 shrink-0 mt-0.5" />,         label: 'ACTION' },
-                    info:     { bg: 'bg-gray-50 border-gray-200',       text: 'text-gray-600',    icon: <Shield size={12} className="text-gray-400 shrink-0 mt-0.5" />,       label: 'INFO' },
+                    strength: { bg: 'bg-emerald-50/80 border-emerald-100', text: 'text-emerald-700', iconCls: 'text-emerald-500', label: 'STRENGTH', Icon: CheckCircle },
+                    risk:     { bg: 'bg-red-50/80 border-red-100',         text: 'text-red-700',     iconCls: 'text-red-500',     label: 'RISK',     Icon: AlertCircle },
+                    action:   { bg: 'bg-amber-50/80 border-amber-100',     text: 'text-amber-700',   iconCls: 'text-amber-500',   label: 'ACTION',   Icon: Zap },
+                    info:     { bg: 'bg-gray-50 border-gray-200',          text: 'text-gray-600',    iconCls: 'text-gray-400',    label: 'INFO',     Icon: Shield },
                   };
                   const s = styles[ins.type] ?? styles.info;
                   return (
-                    <div key={i} className={`flex items-start gap-2.5 px-3.5 py-3 rounded-xl border ${s.bg}`}>
-                      {s.icon}
-                      <div className="flex-1 min-w-0">
-                        <span className={`text-[8px] font-black uppercase tracking-wider block mb-0.5 ${s.text}`}>{s.label}</span>
-                        <p className={`text-[11px] leading-relaxed ${s.text}`}>{ins.text}</p>
+                    <div key={i} className={`flex items-start gap-3 px-4 py-4 rounded-xl border ${s.bg} transition-all duration-150 hover:shadow-sm`}>
+                      <s.Icon size={14} className={`${s.iconCls} shrink-0 mt-0.5`} />
+                      <div>
+                        <span className={`text-[10px] font-semibold uppercase tracking-[0.08em] block mb-1.5 ${s.text}`}>{s.label}</span>
+                        <p className={`text-[12px] leading-relaxed ${s.text}`}>{ins.text}</p>
                       </div>
                     </div>
                   );
-                })
-              )}
-            </div>
+                })}
+              </div>
+            )}
+          </div>
 
-            {/* E/S/G 점수 요약 */}
-            {latestReport && (
-              <div className="px-5 py-4 border-t border-gray-100 space-y-2">
-                <p className="text-[9px] font-black text-gray-400 uppercase tracking-wider">점수 요약</p>
+          {latestReport && (
+            <div className="px-6 py-5 border-t border-gray-100">
+              <p className="kpi-label mb-4">카테고리 점수 요약</p>
+              <div className="grid grid-cols-3 gap-8">
                 {[
-                  { label: '환경 (E)', value: scores.E, color: '#22c55e' },
+                  { label: '환경 (E)', value: scores.E, color: '#059669' },
                   { label: '사회 (S)', value: scores.S, color: '#3b82f6' },
                   { label: '지배구조 (G)', value: scores.G, color: '#f59e0b' },
                 ].map(({ label, value, color }) => (
                   <div key={label}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] text-gray-500">{label}</span>
-                      <span className="text-[11px] font-black font-mono tabular-nums" style={{ color: value != null ? color : '#d1d5db' }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[12px] text-gray-600">{label}</span>
+                      <span className="text-[14px] font-bold tabular-nums" style={{ color: value != null ? color : '#d1d5db', fontFamily: "'Inter', sans-serif", letterSpacing: '-0.02em' }}>
                         {fmtScore(value)}
                       </span>
                     </div>
-                    <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${value ?? 0}%`, background: color }} />
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full progress-bar-fill" style={{ width: `${value ?? 0}%`, background: color }} />
                     </div>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
       </div>

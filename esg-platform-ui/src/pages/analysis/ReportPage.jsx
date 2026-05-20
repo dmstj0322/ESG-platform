@@ -9,7 +9,7 @@ import api from '../../api/api';
 import { useAnalysis } from '../../context/AnalysisContext';
 
 // ── 상수 ─────────────────────────────────────────────────────────
-const GRADE_COLOR = { S: '#a855f7', A: '#22c55e', B: '#3b82f6', C: '#f59e0b', D: '#ef4444' };
+const GRADE_COLOR = { S: '#a855f7', A: '#059669', B: '#3b82f6', C: '#f59e0b', D: '#ef4444' };
 const GRADE_CLS = {
   S: 'bg-purple-50 text-purple-700 border-purple-200',
   A: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -64,7 +64,7 @@ function AuditRow({ report, analysisId, isLatest, onClick }) {
   return (
     <div
       className="group grid grid-cols-[1fr_52px_64px_64px_110px_40px] items-center gap-4
-        px-6 py-4 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-100 last:border-b-0"
+        px-6 py-4 hover:bg-gray-50/80 transition-all duration-150 cursor-pointer border-b border-gray-100 last:border-b-0"
       onClick={onClick}
     >
       {/* 날짜/기업 */}
@@ -93,7 +93,7 @@ function AuditRow({ report, analysisId, isLatest, onClick }) {
 
       {/* 종합 점수 */}
       <div className="text-center">
-        <span className="text-base font-black font-mono tabular-nums leading-none" style={{ color: gc }}>
+        <span className="kpi-number text-lg leading-none" style={{ color: gc }}>
           {total ?? '—'}
         </span>
         <p className="text-[9px] text-gray-400 mt-0.5">/ 100</p>
@@ -112,8 +112,8 @@ function AuditRow({ report, analysisId, isLatest, onClick }) {
         const isEst = conf == null && displayConf != null;
         return (
           <div className="text-center">
-            <span className="text-sm font-black font-mono tabular-nums" style={{
-              color: displayConf == null ? '#d1d5db' : displayConf >= 65 ? '#22c55e' : displayConf >= 50 ? '#f59e0b' : '#ef4444',
+            <span className="kpi-number text-sm leading-none" style={{
+              color: displayConf == null ? '#d1d5db' : displayConf >= 65 ? '#059669' : displayConf >= 50 ? '#f59e0b' : '#ef4444',
             }}>
               {displayConf != null ? `${isEst ? '~' : ''}${displayConf}%` : '—'}
             </span>
@@ -124,7 +124,7 @@ function AuditRow({ report, analysisId, isLatest, onClick }) {
 
       {/* E/S/G 미니 바 */}
       <div className="flex flex-col gap-1">
-        <EsgMiniBar label="E" value={scores.E} color="#22c55e" />
+        <EsgMiniBar label="E" value={scores.E} color="#059669" />
         <EsgMiniBar label="S" value={scores.S} color="#3b82f6" />
         <EsgMiniBar label="G" value={scores.G} color="#f59e0b" />
       </div>
@@ -189,7 +189,7 @@ export default function ReportPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F8FA] text-gray-900">
+    <div className="min-h-screen bg-gray-50 text-gray-900" style={{ fontFamily: "'Pretendard', sans-serif" }}>
       <div className="max-w-7xl mx-auto px-8 py-8 space-y-6">
 
         {/* ── 헤더 ─────────────────────────────────────────── */}
@@ -203,9 +203,9 @@ export default function ReportPage() {
                 Audit History
               </p>
             </div>
-            <h1 className="text-2xl font-black text-gray-900 tracking-tight">Audit 기록</h1>
+            <h1 className="text-2xl font-black text-gray-900 tracking-tight" style={{ letterSpacing: '-0.02em' }}>Audit 기록</h1>
             <p className="text-xs text-gray-400 mt-1">
-              완료된 ESG 분석 목록 · 행 클릭 시 상세 결과 페이지로 이동
+              완료된 ESG 분석 목록 — 행 클릭 시 상세 결과 페이지로 이동
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -228,7 +228,7 @@ export default function ReportPage() {
         </div>
 
         {/* ── 분석 기록 테이블 ──────────────────────────────── */}
-        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+        <div className="saas-card overflow-hidden">
 
           {/* 테이블 헤더 */}
           <div className="flex items-center gap-2.5 px-6 py-4 border-b border-gray-100">
@@ -240,9 +240,9 @@ export default function ReportPage() {
           </div>
 
           {/* 컬럼 헤더 */}
-          <div className="grid grid-cols-[1fr_52px_64px_64px_110px_40px] px-6 py-2.5 bg-gray-50 border-b border-gray-100 gap-4">
+          <div className="grid grid-cols-[1fr_52px_64px_64px_110px_40px] px-6 py-3 bg-gray-50 border-b border-gray-200 gap-4">
             {['기업/날짜', '점수', '등급', '신뢰도', 'E / S / G', ''].map(h => (
-              <span key={h} className="text-[9px] font-black text-gray-400 uppercase tracking-wider">{h}</span>
+              <span key={h} className="text-[9px] font-black text-gray-500 uppercase tracking-wider">{h}</span>
             ))}
           </div>
 
@@ -254,14 +254,12 @@ export default function ReportPage() {
               ))}
             </div>
           ) : analysisList.length === 0 && !latestReport ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center">
-                <FileText size={28} className="text-gray-400" />
+            <div className="empty-state">
+              <div className="empty-icon">
+                <FileText size={22} className="text-gray-400" />
               </div>
-              <div className="text-center">
-                <p className="text-sm font-semibold text-gray-700">분석 기록 없음</p>
-                <p className="text-xs text-gray-400 mt-1">AI ESG Audit을 실행하면 결과가 여기에 표시됩니다.</p>
-              </div>
+              <p className="text-sm font-semibold text-gray-700">분석 기록 없음</p>
+              <p className="text-xs text-gray-400">AI ESG Audit을 실행하면 결과가 여기에 표시됩니다.</p>
               <button
                 onClick={() => navigate('/analysis')}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-900 text-white text-xs font-semibold hover:bg-gray-800 transition-colors shadow-sm"
@@ -323,7 +321,7 @@ export default function ReportPage() {
               <button
                 key={i}
                 onClick={card.action}
-                className="flex items-center gap-3 px-5 py-4 bg-white border border-gray-200 rounded-2xl hover:border-gray-300 hover:shadow-md transition-all text-left group"
+                className="saas-card flex items-center gap-3 px-5 py-4 text-left group"
               >
                 <span className={`w-9 h-9 rounded-xl ${card.bg} flex items-center justify-center shrink-0`}>
                   {card.icon}
@@ -345,7 +343,7 @@ export default function ReportPage() {
           const gc     = GRADE_COLOR[grade] ?? '#6b7280';
           const total  = latestReport.totalScore ?? computeTotal(scores);
           return (
-            <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+            <div className="saas-card overflow-hidden">
               <div className="flex items-center gap-2.5 px-6 py-4 border-b border-gray-100">
                 <span className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
                   <CheckCircle2 size={14} className="text-emerald-500" />
@@ -356,12 +354,12 @@ export default function ReportPage() {
                 {[
                   { label: 'ESG 등급',    value: grade,                      color: gc,       sub: 'K-ESG 기준' },
                   { label: '종합 점수',   value: total != null ? `${total}점` : '—', color: gc, sub: '/ 100점' },
-                  { label: '환경 (E)',    value: scores.E != null ? `${Math.round(scores.E)}점` : '—', color: '#22c55e', sub: 'Environment' },
+                  { label: '환경 (E)',    value: scores.E != null ? `${Math.round(scores.E)}점` : '—', color: '#059669', sub: 'Environment' },
                   { label: '사회 (S)',    value: scores.S != null ? `${Math.round(scores.S)}점` : '—', color: '#3b82f6', sub: 'Social' },
                 ].map(item => (
-                  <div key={item.label} className="px-6 py-4">
-                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">{item.label}</p>
-                    <p className="text-2xl font-black font-mono leading-none tabular-nums" style={{ color: item.color }}>
+                  <div key={item.label} className="px-6 py-5">
+                    <p className="kpi-label mb-2">{item.label}</p>
+                    <p className="kpi-number text-2xl" style={{ color: item.color }}>
                       {item.value}
                     </p>
                     <p className="text-[10px] text-gray-400 mt-1">{item.sub}</p>

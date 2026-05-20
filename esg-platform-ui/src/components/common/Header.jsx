@@ -63,19 +63,27 @@ export default function Header() {
     : '/';
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
+    <header
+      className="sticky top-0 z-50 border-b border-gray-100"
+      style={{
+        fontFamily: "'Pretendard', sans-serif",
+        background: 'rgba(255,255,255,0.95)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+      }}
+    >
       <div className="flex items-center justify-between px-6 h-14 max-w-screen-2xl mx-auto">
 
         {/* ── Left: logo + nav ─────────────────────────────────── */}
         <div className="flex items-center gap-2">
           <Link
             to={logoTo}
-            className="flex items-center gap-2 no-underline mr-4"
+            className="flex items-center gap-2 no-underline mr-4 group"
           >
-            <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
+            <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm group-hover:bg-emerald-500 transition-colors duration-150">
               <Leaf size={15} color="#fff" />
             </div>
-            <span className="font-bold text-[15px] text-gray-900 tracking-tight">
+            <span className="font-bold text-[15px] text-gray-900 tracking-tight group-hover:text-gray-700 transition-colors duration-150">
               GreenTrace
             </span>
           </Link>
@@ -89,14 +97,17 @@ export default function Header() {
                     key={to}
                     to={to}
                     className={[
-                      'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors no-underline',
+                      'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-150 no-underline relative',
                       active
                         ? 'bg-emerald-50 text-emerald-700'
-                        : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100',
+                        : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100/70',
                     ].join(' ')}
                   >
-                    <Icon size={13} />
+                    <Icon size={13} className={active ? 'text-emerald-600' : ''} />
                     {label}
+                    {active && (
+                      <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 bg-emerald-500 rounded-full" />
+                    )}
                   </Link>
                 );
               })}
@@ -108,14 +119,13 @@ export default function Header() {
         <div className="flex items-center gap-2">
           {isLoggedIn ? (
             <>
-
               {!isAdmin && (
                 <Link
                   to="/points/history"
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 rounded-lg text-[13px] no-underline hover:bg-gray-200 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-[13px] no-underline transition-all duration-150 font-medium"
                 >
                   <span className="text-gray-500">포인트</span>
-                  <span className="font-bold text-emerald-600">{points}P</span>
+                  <span className="font-bold text-emerald-600 tabular-nums" style={{ fontFamily: "'Inter', sans-serif" }}>{points}P</span>
                 </Link>
               )}
 
@@ -124,42 +134,42 @@ export default function Header() {
                 className="relative"
                 onClick={e => { e.stopPropagation(); setUserMenuOpen(v => !v); }}
               >
-                <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] text-gray-600 hover:bg-gray-100 transition-colors">
+                <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] text-gray-600 hover:bg-gray-100 transition-all duration-150">
                   <div className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center">
                     <User size={12} color="#059669" />
                   </div>
                   <span className="hidden sm:block text-gray-700 font-medium">
                     {user?.name || '내 계정'}
                   </span>
-                  <ChevronDown size={13} className="text-gray-400" />
+                  <ChevronDown size={12} className={`text-gray-400 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {userMenuOpen && (
-                  <div className="absolute right-0 top-[calc(100%+6px)] w-44 bg-white rounded-xl border border-gray-200 shadow-xl py-1 z-50 animate-fade-in">
+                  <div className="absolute right-0 top-[calc(100%+6px)] w-44 bg-white rounded-xl border border-gray-200 shadow-lg shadow-gray-200/50 py-1.5 z-50 animate-fade-in">
                     {!isAdmin && (
                       <Link
                         to="/mypage"
-                        className="flex items-center gap-2 px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 no-underline"
+                        className="flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 no-underline transition-colors duration-100"
                         onClick={() => setUserMenuOpen(false)}
                       >
-                        <User size={13} />
+                        <User size={13} className="text-gray-400" />
                         마이페이지
                       </Link>
                     )}
                     {isAdmin && (
                       <Link
                         to="/admin"
-                        className="flex items-center gap-2 px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 no-underline"
+                        className="flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 no-underline transition-colors duration-100"
                         onClick={() => setUserMenuOpen(false)}
                       >
-                        <Settings size={13} />
+                        <Settings size={13} className="text-gray-400" />
                         Admin Dashboard
                       </Link>
                     )}
                     <div className="my-1 border-t border-gray-100" />
                     <button
                       onClick={() => { setUserMenuOpen(false); handleLogout(); }}
-                      className="w-full flex items-center gap-2 px-3.5 py-2 text-[13px] text-red-500 hover:bg-red-50 transition-colors"
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-red-500 hover:bg-red-50 transition-colors duration-100"
                     >
                       <LogOut size={13} />
                       로그아웃
@@ -172,13 +182,13 @@ export default function Header() {
             <div className="flex items-center gap-2">
               <Link
                 to="/login"
-                className="px-3.5 py-1.5 text-[13px] text-gray-600 hover:text-gray-900 no-underline font-medium"
+                className="px-3.5 py-1.5 text-[13px] text-gray-600 hover:text-gray-900 no-underline font-medium transition-colors duration-150"
               >
                 로그인
               </Link>
               <Link
                 to="/signup"
-                className="px-3.5 py-1.5 bg-emerald-600 text-white text-[13px] font-semibold rounded-lg hover:bg-emerald-700 no-underline transition-colors"
+                className="px-3.5 py-1.5 bg-emerald-600 text-white text-[13px] font-semibold rounded-lg hover:bg-emerald-500 no-underline transition-all duration-150 shadow-sm shadow-emerald-200"
               >
                 회원가입
               </Link>

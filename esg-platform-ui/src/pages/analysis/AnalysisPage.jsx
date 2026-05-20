@@ -71,11 +71,11 @@ const ENV_FIELDS = [
 // ── 위저드 스텝 정의 ──────────────────────────────────────────────────────
 const WIZARD_STEPS = [
   { key: 'company', label: '기업 정보',   shortLabel: '기업', Icon: Building2,  color: '#6366f1' },
-  { key: 'env',     label: 'Environment', shortLabel: 'E',    Icon: Leaf,       color: '#22c55e' },
+  { key: 'env',     label: 'Environment', shortLabel: 'E',    Icon: Leaf,       color: '#059669' },
   { key: 'social',  label: 'Social',      shortLabel: 'S',    Icon: Users,      color: '#3b82f6' },
   { key: 'gov',     label: 'Governance',  shortLabel: 'G',    Icon: Building2,  color: '#f59e0b' },
-  { key: 'eco',     label: 'EcoPoint',    shortLabel: 'Eco',  Icon: Zap,        color: '#10b981' },
-  { key: 'run',     label: '최종 결과',   shortLabel: '결과', Icon: ArrowRight, color: '#22c55e' },
+  { key: 'eco',     label: 'EcoPoint',    shortLabel: 'Eco',  Icon: Zap,        color: '#059669' },
+  { key: 'run',     label: '최종 결과',   shortLabel: '결과', Icon: ArrowRight, color: '#059669' },
 ];
 
 const MOCK_ECO = { ecoPoints: 3240, carbonReductionKg: 12500, equivalentTrees: 47 };
@@ -127,23 +127,25 @@ function WizardStepper({ currentStep }) {
         const StepIcon = step.Icon;
         return (
           <React.Fragment key={step.key}>
-            <div className="flex flex-col items-center gap-1.5 shrink-0">
-              <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
-                isDone   ? 'border-emerald-500 bg-emerald-50'
-                : isActive ? 'border-emerald-500 bg-white shadow-md'
-                : 'border-gray-200 bg-white'
+            <div className="flex flex-col items-center gap-2 shrink-0">
+              <div className={`w-8 h-8 rounded-xl border-2 flex items-center justify-center transition-all duration-300 ${
+                isDone
+                  ? 'border-emerald-500 bg-emerald-500 shadow-sm shadow-emerald-200'
+                  : isActive
+                  ? 'border-emerald-500 bg-white shadow-md shadow-emerald-100'
+                  : 'border-gray-200 bg-white'
               }`}>
                 {isDone
-                  ? <CheckCircle2 size={15} className="text-emerald-500" />
-                  : <StepIcon size={14} className={isActive ? 'text-emerald-600' : 'text-gray-300'} />
+                  ? <CheckCircle2 size={14} className="text-white" />
+                  : <StepIcon size={13} className={isActive ? 'text-emerald-600' : 'text-gray-300'} />
                 }
               </div>
-              <span className={`text-[9px] font-bold uppercase tracking-widest transition-colors duration-200 ${
-                isActive ? 'text-emerald-600' : isDone ? 'text-gray-400' : 'text-gray-300'
+              <span className={`text-[10px] font-semibold transition-colors duration-200 ${
+                isActive ? 'text-emerald-600' : isDone ? 'text-emerald-400' : 'text-gray-300'
               }`}>{step.shortLabel}</span>
             </div>
             {idx < WIZARD_STEPS.length - 1 && (
-              <div className={`flex-1 h-px mx-2 mb-5 transition-colors duration-500 ${
+              <div className={`flex-1 h-0.5 mx-2 mb-6 transition-all duration-500 rounded-full ${
                 idx < currentStep ? 'bg-emerald-300' : 'bg-gray-200'
               }`} />
             )}
@@ -163,11 +165,11 @@ function ChecklistStep({ items, answers, setAnswers, accentColor, disabled }) {
         return (
           <div
             key={item.key}
-            className={`flex items-center justify-between py-4 transition-colors duration-150 ${
+            className={`flex items-center justify-between py-3.5 transition-colors duration-150 ${
               idx < items.length - 1 ? 'border-b border-gray-100' : ''
             }`}
           >
-            <span className={`text-sm select-none transition-colors duration-150 ${checked ? 'text-gray-900' : 'text-gray-500'}`}>
+            <span className={`text-[13px] select-none transition-colors duration-150 ${checked ? 'text-gray-800 font-medium' : 'text-gray-500'}`}>
               {item.label}
             </span>
             <button
@@ -326,12 +328,12 @@ function IndicatorEvidenceSection({ breakdowns }) {
 // ── IntegratedEsgSummary ──────────────────────────────────────────────────
 function IntegratedEsgSummary({ finalSummary, eResult, sResult, gResult }) {
   const { totalScore, finalGrade, confidence, adjSScore, ecoBonus } = finalSummary;
-  const GRADE_COLOR = { S: '#10b981', A: '#22c55e', B: '#3b82f6', C: '#f59e0b', D: '#ef4444' };
+  const GRADE_COLOR = { S: '#10b981', A: '#059669', B: '#3b82f6', C: '#f59e0b', D: '#ef4444' };
   const gc = GRADE_COLOR[finalGrade] ?? '#6366f1';
 
   const iw = getIndustryWeights(localStorage.getItem('esg_ksicCode') ?? '');
   const categories = [
-    { label: 'Environment', code: 'E', result: eResult,                         weight: Math.round(iw.E * 100), color: '#22c55e' },
+    { label: 'Environment', code: 'E', result: eResult,                         weight: Math.round(iw.E * 100), color: '#059669' },
     { label: 'Social',      code: 'S', result: { ...sResult, score: adjSScore }, weight: Math.round(iw.S * 100), color: '#3b82f6' },
     { label: 'Governance',  code: 'G', result: gResult,                          weight: Math.round(iw.G * 100), color: '#a855f7' },
   ];
@@ -392,7 +394,7 @@ function IntegratedEsgSummary({ finalSummary, eResult, sResult, gResult }) {
             <div className="flex items-center gap-2 justify-end">
               <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                 <div className="h-full rounded-full transition-all duration-700"
-                  style={{ width: `${confidence}%`, background: confidence >= 70 ? '#22c55e' : confidence >= 50 ? '#f59e0b' : '#ef4444' }} />
+                  style={{ width: `${confidence}%`, background: confidence >= 70 ? '#059669' : confidence >= 50 ? '#f59e0b' : '#ef4444' }} />
               </div>
               <span className="text-sm font-bold text-gray-700 tabular-nums">{confidence}%</span>
             </div>
@@ -479,12 +481,12 @@ function IntegratedEsgSummary({ finalSummary, eResult, sResult, gResult }) {
 function MiniScoreCard({ result, label, color }) {
   const [showEvidence, setShowEvidence] = useState(false);
 
-  const gc           = { S: '#10b981', A: '#22c55e', B: '#3b82f6', C: '#f59e0b', D: '#ef4444' }[result.grade] ?? color;
+  const gc           = { S: '#059669', A: '#059669', B: '#3b82f6', C: '#f59e0b', D: '#ef4444' }[result.grade] ?? color;
   const hasWarning   = !!result.warning || result.lowMismatchCount > 0;
   const isSimulation = result.isSimulation === true;
 
   // confidence 색상: 90+ 강조, 70~89 정상, 50~69 주의, ~49 경고
-  const confColor = result.confidence >= 90 ? '#22c55e'
+  const confColor = result.confidence >= 90 ? '#059669'
                   : result.confidence >= 70 ? '#3b82f6'
                   : result.confidence >= 50 ? '#f59e0b'
                   : '#ef4444';
@@ -493,65 +495,53 @@ function MiniScoreCard({ result, label, color }) {
   const hasBreakdown  = result.indicatorBreakdowns?.length > 0;
 
   return (
-    <div className="rounded-xl border p-4 mt-4 bg-white" style={{ borderColor: `${color}30` }}>
+    <div className="rounded-xl border border-gray-200 p-4 mt-4 bg-white">
 
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <CheckCircle2 size={14} style={{ color }} />
-          <span className="text-xs font-bold uppercase tracking-wider" style={{ color }}>
-            {isSimulation ? `${label} 사전 진단 완료` : `${label} 분석 완료`}
+          <CheckCircle2 size={13} style={{ color }} />
+          <span className="text-[12px] font-semibold" style={{ color }}>
+            {label} 분석 완료
           </span>
         </div>
         <div className="flex items-center gap-1.5">
           {result.gradeCeilingApplied && (
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-200">
-              등급제한
-            </span>
+            <span className="badge badge-medium" style={{ fontSize: '10px' }}>등급제한</span>
           )}
           {result.lowMismatchCount > 0 && (
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-50 text-red-600 border border-red-200">
-              LOW {result.lowMismatchCount}건
-            </span>
+            <span className="badge badge-high" style={{ fontSize: '10px' }}>LOW {result.lowMismatchCount}건</span>
           )}
-          {isSimulation ? (
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-200">
-              SIMULATION
-            </span>
-          ) : result.ragBased && (
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-200">
-              RAG
-            </span>
+          {result.ragBased && (
+            <span className="badge badge-low" style={{ fontSize: '10px' }}>RAG</span>
           )}
         </div>
       </div>
 
       {/* 수치 불일치 경고 */}
       {hasWarning && (
-        <div className="flex items-start gap-1.5 mb-3 bg-red-50 border border-red-200 rounded-lg px-2.5 py-2">
+        <div className="flex items-start gap-2 mb-3 bg-red-50 border border-red-100 rounded-lg px-3 py-2.5">
           <AlertTriangle size={11} className="text-red-500 shrink-0 mt-0.5" />
-          <p className="text-[10px] text-red-600 leading-relaxed">
-            {result.warning ?? '[경고] 입력 수치와 증빙자료 간 수치 불일치가 감지되었습니다.'}
+          <p className="text-[11px] text-red-600 leading-relaxed">
+            {result.warning ?? '입력 수치와 증빙자료 간 불일치가 감지되었습니다.'}
             {result.gradeCeilingApplied && (
-              <span className="ml-1 font-semibold text-amber-600">등급 제한 적용됨.</span>
+              <span className="ml-1 font-semibold text-amber-600">등급 제한 적용.</span>
             )}
           </p>
         </div>
       )}
 
       {/* 핵심 지표 그리드 */}
-      <div className={`grid gap-2 ${isSimulation ? 'grid-cols-2' : 'grid-cols-4'}`}>
+      <div className="grid grid-cols-4 gap-2">
         {[
-          { label: '점수',     value: `${result.score}점`,           color: gc        },
-          { label: '등급',     value: result.grade,                  color: gc        },
-          ...(!isSimulation ? [
-            { label: '신뢰도',   value: `${result.confidence}%`,      color: confColor },
-            { label: 'Evidence', value: `${result.evidenceCount}건`,  color: '#6366f1' },
-          ] : []),
+          { label: '점수',     value: `${result.score}점`,          color: gc        },
+          { label: '등급',     value: result.grade,                 color: gc        },
+          { label: '신뢰도',   value: `${result.confidence ?? '—'}%`, color: confColor },
+          { label: 'Evidence', value: `${result.evidenceCount ?? 0}건`, color: '#059669' },
         ].map(c => (
           <div key={c.label} className="text-center">
-            <p className="text-[9px] text-gray-400 mb-1">{c.label}</p>
-            <p className="text-lg font-black leading-none" style={{ color: c.color }}>{c.value}</p>
+            <p className="text-[10px] text-gray-400 mb-1">{c.label}</p>
+            <p className="text-[16px] font-bold leading-none" style={{ color: c.color, fontFamily: "'Inter', sans-serif" }}>{c.value}</p>
           </div>
         ))}
       </div>
@@ -629,23 +619,29 @@ function MiniUpload({ file, onFile, label, allowCsv = false }) {
 
   return (
     <div className="mt-4">
-      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">{label}</p>
+      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.08em] mb-2">{label}</p>
       {file ? (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-100">
-          <FileText size={13} className="text-blue-500 shrink-0" />
-          <span className="text-xs text-gray-700 flex-1 truncate">{file.name}</span>
-          <button type="button" onClick={() => { onFile(null); setCsvError(null); }} className="text-gray-400 hover:text-gray-600">
-            <X size={13} />
+        <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-emerald-50 border border-emerald-100">
+          <FileText size={13} className="text-emerald-500 shrink-0" />
+          <span className="text-[12px] text-gray-700 font-medium flex-1 truncate">{file.name}</span>
+          <button
+            type="button"
+            onClick={() => { onFile(null); setCsvError(null); }}
+            className="text-gray-300 hover:text-gray-500 transition-colors duration-150 p-0.5 rounded-md hover:bg-gray-100"
+          >
+            <X size={12} />
           </button>
         </div>
       ) : (
         <label
           htmlFor={uid}
-          className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-gray-50 border border-dashed
-            border-gray-200 hover:border-gray-400 hover:bg-gray-100 cursor-pointer transition-colors duration-150"
+          className="flex items-center gap-2.5 px-3.5 py-3 rounded-xl bg-gray-50 border border-dashed
+            border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/30 cursor-pointer transition-all duration-150 group"
         >
-          <Upload size={13} className="text-gray-400" />
-          <span className="text-xs text-gray-400">{allowCsv ? 'PDF 또는 CSV 선택' : 'PDF 파일 선택'}</span>
+          <Upload size={13} className="text-gray-300 group-hover:text-emerald-400 transition-colors duration-150" />
+          <span className="text-[12px] text-gray-400 group-hover:text-gray-600 transition-colors duration-150">
+            {allowCsv ? 'PDF 또는 CSV 선택' : 'PDF 파일 선택'}
+          </span>
           <input
             id={uid}
             type="file"
@@ -656,9 +652,9 @@ function MiniUpload({ file, onFile, label, allowCsv = false }) {
         </label>
       )}
       {csvError && (
-        <div className="flex items-center gap-1.5 mt-1.5 px-2 py-1.5 rounded-lg bg-red-50 border border-red-200">
+        <div className="flex items-center gap-1.5 mt-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200">
           <AlertCircle size={11} className="text-red-500 shrink-0" />
-          <p className="text-[10px] text-red-600">{csvError}</p>
+          <p className="text-[11px] text-red-600">{csvError}</p>
         </div>
       )}
     </div>
@@ -1017,12 +1013,13 @@ export default function AnalysisPage() {
 
 
   return (
-    <div className="min-h-screen bg-[#f5f7fb] text-gray-900">
+    <div className="min-h-screen bg-gray-50 text-gray-900" style={{ fontFamily: "'Pretendard', sans-serif" }}>
       <div className="max-w-6xl mx-auto px-8 py-10">
 
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">ESG AI 분석</h1>
-          <p className="text-gray-500 text-sm mt-1">
+        <div className="mb-8">
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] mb-1.5">AI ESG Audit</p>
+          <h1 className="text-[22px] font-bold text-gray-900 tracking-tight leading-none">ESG AI 분석</h1>
+          <p className="text-[13px] text-gray-500 mt-2">
             환경(E) · 사회(S) · 지배구조(G) 핵심 ESG 지표를 기반으로 AI 분석을 수행합니다
           </p>
         </div>
@@ -1030,26 +1027,25 @@ export default function AnalysisPage() {
         <WizardStepper currentStep={wizardStep} />
 
         <div className="max-w-xl">
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-5">
 
-            <div className="bg-white border border-gray-100 shadow-sm rounded-2xl overflow-hidden">
+            <div className="saas-card overflow-hidden">
 
               {/* 카드 헤더 */}
               <div
                 className="px-6 py-4 border-b border-gray-100 flex items-center gap-3"
-                style={{ background: `${stepDef.color}07` }}
               >
                 <span
                   className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ background: `${stepDef.color}15` }}
+                  style={{ background: `${stepDef.color}12` }}
                 >
-                  <StepIcon size={14} style={{ color: stepDef.color }} />
+                  <StepIcon size={13} style={{ color: stepDef.color }} />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: stepDef.color }}>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: stepDef.color }}>
                     Step {wizardStep + 1} / {WIZARD_STEPS.length}
                   </p>
-                  <p className="text-sm font-semibold text-gray-800 leading-tight mt-0.5">{stepDef.label}</p>
+                  <p className="text-[13px] font-semibold text-gray-800 leading-tight mt-0.5">{stepDef.label}</p>
                 </div>
               </div>
 
@@ -1059,34 +1055,33 @@ export default function AnalysisPage() {
                 {/* ── Step 0: 기업 정보 ─────────────────────────── */}
                 {wizardStep === 0 && (
                   <div className="space-y-4">
-                    <p className="text-xs text-gray-500 leading-relaxed">
+                    <p className="text-[12px] text-gray-500 leading-relaxed">
                       회원가입 시 등록된 기업 정보입니다. 수정이 필요하면 마이페이지를 이용해주세요.
                     </p>
                     <div className="grid grid-cols-2 gap-3">
                       {[
-                        { Icon: Building2, label: '회사명',  value: companyName,   color: '#6366f1' },
-                        { Icon: Briefcase, label: '업종',    value: industryLabel || '미등록', color: '#22c55e' },
-                        { Icon: MapPin,    label: '지역',    value: regionLabel,   color: '#3b82f6' },
-                        { Icon: Users,     label: '임직원 수', value: employeeLabel !== '미등록' ? `${employeeLabel}명` : '미등록', color: '#f59e0b' },
+                        { Icon: Building2, label: '회사명',   value: companyName,   color: '#059669' },
+                        { Icon: Briefcase, label: '업종',     value: industryLabel || '미등록', color: '#059669' },
+                        { Icon: MapPin,    label: '지역',     value: regionLabel,   color: '#059669' },
+                        { Icon: Users,     label: '임직원 수', value: employeeLabel !== '미등록' ? `${employeeLabel}명` : '미등록', color: '#059669' },
                       ].map(card => (
                         <div
                           key={card.label}
-                          className="rounded-xl border p-3.5 bg-white"
-                          style={{ borderColor: `${card.color}25` }}
+                          className="rounded-xl border border-gray-200 p-4 bg-white"
                         >
-                          <div className="flex items-center gap-1.5 mb-2">
-                            <card.Icon size={12} style={{ color: card.color }} />
-                            <p className="text-[9px] font-bold uppercase tracking-wider" style={{ color: card.color }}>
+                          <div className="flex items-center gap-1.5 mb-2.5">
+                            <card.Icon size={11} className="text-gray-400" />
+                            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
                               {card.label}
                             </p>
                           </div>
-                          <p className="text-sm font-semibold text-gray-800 truncate">{card.value}</p>
+                          <p className="text-[13px] font-semibold text-gray-800 truncate">{card.value}</p>
                         </div>
                       ))}
                     </div>
-                    <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-indigo-50 border border-indigo-100">
-                      <CheckCircle2 size={13} className="text-indigo-500 shrink-0" />
-                      <p className="text-xs text-indigo-600">
+                    <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-100">
+                      <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+                      <p className="text-[12px] text-emerald-700">
                         기업 정보가 확인되었습니다. 아래 <span className="font-semibold">다음</span> 버튼으로 분석을 시작하세요.
                       </p>
                     </div>
@@ -1145,7 +1140,7 @@ export default function AnalysisPage() {
                         </>
                       ) : (
                         <>
-                          <MiniScoreCard result={eResult} label="Environment" color="#22c55e" />
+                          <MiniScoreCard result={eResult} label="Environment" color="#059669" />
                           <button
                             type="button"
                             onClick={() => { setECompleted(false); setEResult(null); setEValidationError(null); }}
@@ -1274,7 +1269,7 @@ export default function AnalysisPage() {
                     </p>
                     <div className="grid grid-cols-3 gap-3">
                       {[
-                        { label: '에코 포인트', value: MOCK_ECO.ecoPoints.toLocaleString(),            unit: 'P',    color: '#22c55e' },
+                        { label: '에코 포인트', value: MOCK_ECO.ecoPoints.toLocaleString(),            unit: 'P',    color: '#059669' },
                         { label: '탄소 절감',   value: (MOCK_ECO.carbonReductionKg / 1000).toFixed(1), unit: 'tCO₂', color: '#3b82f6' },
                         { label: '나무 환산',   value: MOCK_ECO.equivalentTrees.toLocaleString(),      unit: '그루', color: '#f59e0b' },
                       ].map(card => (
