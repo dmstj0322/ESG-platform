@@ -3,10 +3,7 @@ package com.esg.analysis.service;
 import com.esg.analysis.dto.EvidenceResult;
 import com.esg.analysis.service.domain.ESGIndicator;
 import org.jsoup.Jsoup;
-import dev.langchain4j.data.document.Document;
-import dev.langchain4j.data.document.DocumentSplitter;
 import dev.langchain4j.data.document.Metadata;
-import dev.langchain4j.data.document.splitter.DocumentSplitters;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
@@ -23,6 +20,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -40,6 +38,7 @@ public class ReportRagService {
 
     private final EmbeddingModel embeddingModel;
     private final RestTemplate restTemplate;
+    private final IndicatorKeywordGate keywordGate;
 
     @Value("${chroma.base-url:http://127.0.0.1:8000}")
     private String chromaBaseUrl;
@@ -52,7 +51,32 @@ public class ReportRagService {
      * 이 값 미만은 low-confidence로 분류되며 isValidEvidence=false로 반환됩니다.
      * Confidence 계산·UI 필터링 시 이 상수를 참조하세요.
      */
-    public static final double EVIDENCE_THRESHOLD = 0.6;
+    public static final double EVIDENCE_THRESHOLD   = 0.6;
+
+    /**
+     * E 카테고리 전용 완화 임계값.
+     * CSV/마크다운 테이블 데이터는 서술형 텍스트보다 semantic similarity 가 낮게 산출되므로
+     * E-101~E-105 지표에 한해 0.5로 완화합니다. S/G 카테고리는 기존 0.6 유지.
+     */
+    public static final double EVIDENCE_THRESHOLD_E = 0.5;
+
+    /** S 카테고리 finalScore 최소 임계값 — 노동·안전·인적자원 지표에 표준 기준 적용. */
+    public static final double EVIDENCE_THRESHOLD_S = 0.60;
+
+    /** G 카테고리 finalScore 최소 임계값 — 지배구조 지표는 더 엄격한 증빙 기준 요구. */
+    public static final double EVIDENCE_THRESHOLD_G = 0.62;
+
+    /**
+     * Weak-semantic-only (keyword 0개) 후보 최소 rawSim 임계값.
+     * 0.83 → 0.85 상향: keyword 불일치 + 낮은 sim 조합은 false positive 위험이 높음.
+     */
+    public static final double PRE_FILTER_WEAK_SIM = 0.85;
+
+    /**
+     * kwScore 계산 시 가중치를 0.3배로 줄이는 일반·범용 키워드 목록.
+     * "교육", "정책" 등이 단독으로 매칭되어 관련 없는 증거의 점수를 부풀리는 것을 방지합니다.
+     */
+    private static final Set<String> GENERIC_WEAK_KEYWORDS = Set.of("교육", "정책", "운영", "체계", "관리");
 
     /**
      * K-ESG 18개 핵심 지표 코드 → 일반 벡터 검색 키워드 (개념·전략 중심).
@@ -64,6 +88,12 @@ public class ReportRagService {
      * 이중 쿼리 검색(Query Expansion)에 사용됩니다.
      */
     public static final Map<String, String> INDICATOR_TABLE_QUERIES = new LinkedHashMap<>();
+
+    /**
+     * 지표 코드별 문서 실제 표현 기반 추가 쿼리 목록.
+     * sliding-window 생성 쿼리가 커버하지 못하는 zero-count·부재 표현을 보완합니다.
+     */
+    public static final Map<String, List<String>> INDICATOR_EXTRA_QUERIES = new LinkedHashMap<>();
 
     static {
         // ■ 환경(E) — 일반 키워드
@@ -109,6 +139,40 @@ public class ReportRagService {
         INDICATOR_TABLE_QUERIES.put("G4_주주권리",        "배당 주당 원 배당성향 % 주주총회 의결권 참석률");
         INDICATOR_TABLE_QUERIES.put("G5_윤리반부패",      "부패 위반 건수 신고 제보 교육 이수율 % 0건 처리");
         INDICATOR_TABLE_QUERIES.put("G6_정보보안",        "보안 사고 건수 ISMS 인증 개인정보 침해 0건 취약점 점검");
+
+        // ── 지표별 문서 실제 표현 추가 쿼리 ────────────────────────────────────
+        // S-201: 산업안전 교육 핵심 keyword 직접 쿼리
+        INDICATOR_EXTRA_QUERIES.put("S-201", List.of(
+                "안전교육",
+                "교육시간",
+                "이수율",
+                "재해예방 교육",
+                "안전보건 교육"
+        ));
+        // S-202: 재해 zero-count / 부재 표현 — sliding-window에서 생성 불가
+        INDICATOR_EXTRA_QUERIES.put("S-202", List.of(
+                "산업재해 없음",
+                "사고 없음",
+                "무재해",
+                "LTIR 0",
+                "재해 발생 없음"
+        ));
+        // G-301: 윤리경영 정책 핵심 keyword 직접 쿼리
+        INDICATOR_EXTRA_QUERIES.put("G-301", List.of(
+                "윤리경영",
+                "윤리방침",
+                "준법",
+                "컴플라이언스",
+                "반부패"
+        ));
+        // G-302: 내부 신고 시스템 실제 문서 표현
+        INDICATOR_EXTRA_QUERIES.put("G-302", List.of(
+                "내부 신고 시스템 운영",
+                "신고 시스템 운영",
+                "내부제보 시스템",
+                "whistleblowing",
+                "compliance hotline"
+        ));
     }
 
     /**
@@ -124,10 +188,16 @@ public class ReportRagService {
         }
         try {
             String cleaned = sanitizeHtml(reportContent);
-            // 500~800자 단위 청킹, 150자 오버랩으로 문맥 연속성 보장
-            DocumentSplitter splitter = DocumentSplitters.recursive(700, 150);
-            List<TextSegment> segments = splitter.split(Document.from(cleaned));
-            log.info("[ReportRAG] 청킹 완료 sessionId={} → {}개 세그먼트", sessionId, segments.size());
+            // 섹션(heading/단락) 기반 청킹 + overlap 적용
+            // 1973자 → 목표 8~15 세그먼트 (SECTION_MAX=350, OVERLAP=60)
+            List<TextSegment> segments = chunkBySectionWithOverlap(cleaned, "uploaded-report");
+            log.info("[ReportRAG] 청킹 완료 sessionId={} → {}개 세그먼트 (입력 {}자)",
+                    sessionId, segments.size(), cleaned.length());
+
+            if (segments.isEmpty()) {
+                log.warn("[ReportRAG] 세그먼트 없음 sessionId={} — 인덱싱 건너뜀", sessionId);
+                return;
+            }
 
             ChromaEmbeddingStore sessionStore = getOrCreateStore(sessionId);
 
@@ -142,10 +212,15 @@ public class ReportRagService {
         }
     }
 
-    // ──────────────────────────────────────────────────────────────────────────
-    // 테스트 전용 청킹 인덱서 (문단 우선, 최대 450자 기준)
-    // ──────────────────────────────────────────────────────────────────────────
+    // ── 섹션 기반 청킹 상수 ────────────────────────────────────────────────────
+    // target chunk: 140~180자 / overlap: 60자 / min: 40자
+    // 1973자 입력 기준 10~14 세그먼트 목표
 
+    private static final int SECTION_MAX   = 180;   // 청크 최대 크기 (350→180)
+    private static final int SECTION_MIN   = 40;    // 병합 기준 최소 크기 (80→40)
+    private static final int OVERLAP_CHARS = 60;    // 이전 청크 tail prepend 크기
+
+    // ── 레거시 (indexTestReport / chunkByParagraph) ───────────────────────────
     private static final int CHUNK_MAX_CHARS = 450;
     private static final int CHARS_PER_PAGE  = 1000;
 
@@ -176,6 +251,129 @@ public class ReportRagService {
         }
     }
 
+    // ── 섹션 기반 청킹 (indexReport 메인 경로) ──────────────────────────────────
+
+    /**
+     * Heading(#) / 빈 줄 기준 1차 단락 분리 → SECTION_MAX 초과 시 문장 경계 세분화
+     * → OVERLAP_CHARS 크기 이전 청크 tail을 다음 청크 앞에 prepend.
+     *
+     * <pre>
+     * 1973자 입력 예상:
+     *   rawBlocks ≈ heading 수 + 빈줄 경계 수  →  10~20개
+     *   최종 세그먼트 ≈  8~15개  (overlap 포함)
+     * </pre>
+     */
+    /**
+     * Accumulator 방식 섹션 청킹: 라인을 한 줄씩 읽으며 SECTION_MAX 도달 시 즉시 flush.
+     * Heading/빈 줄은 경계점, 단일 라인이 SECTION_MAX 초과하면 splitByLength 처리.
+     *
+     * <pre>
+     * 1973자 기준:
+     *   SECTION_MAX=180 → rawChunks ≈ 10~14 → finalChunks(with overlap) ≈ 10~14
+     * </pre>
+     */
+    private List<TextSegment> chunkBySectionWithOverlap(String text, String sourceFile) {
+        String src = (sourceFile != null && !sourceFile.isBlank()) ? sourceFile : "report";
+        List<String> rawChunks = new ArrayList<>();
+        StringBuilder buf = new StringBuilder();
+
+        for (String line : text.split("\n")) {
+            String t = line.trim();
+
+            // heading → 현재 버퍼 flush 후 heading을 새 버퍼 시작점으로
+            boolean isHeading = t.matches("^#{1,4}\\s+.+")
+                    || t.matches("^-{3,}$")
+                    || t.matches("^={3,}$");
+            if (isHeading) {
+                flushSectionBuffer(buf, rawChunks);
+                buf.append(t);
+                continue;
+            }
+
+            // 빈 줄 → 버퍼가 최소 크기 이상이면 flush
+            if (t.isEmpty()) {
+                if (buf.length() >= SECTION_MIN) flushSectionBuffer(buf, rawChunks);
+                continue;
+            }
+
+            // 단일 라인이 SECTION_MAX 초과 → 버퍼 flush 후 즉시 splitByLength
+            if (t.length() > SECTION_MAX) {
+                flushSectionBuffer(buf, rawChunks);
+                rawChunks.addAll(splitByLength(t, SECTION_MAX));
+                continue;
+            }
+
+            // 이 라인 추가 시 SECTION_MAX 초과 → 먼저 flush
+            if (buf.length() > 0 && buf.length() + 1 + t.length() > SECTION_MAX) {
+                flushSectionBuffer(buf, rawChunks);
+            }
+
+            if (buf.length() > 0) buf.append(" ");
+            buf.append(t);
+        }
+        flushSectionBuffer(buf, rawChunks);
+
+        // 마지막 청크가 너무 짧으면 바로 앞 청크에 병합
+        if (rawChunks.size() >= 2) {
+            String last = rawChunks.get(rawChunks.size() - 1);
+            if (last.length() < SECTION_MIN) {
+                rawChunks.remove(rawChunks.size() - 1);
+                rawChunks.set(rawChunks.size() - 1,
+                        rawChunks.get(rawChunks.size() - 1) + " " + last);
+            }
+        }
+
+        log.info("[ChunkSplit] src={} inputLen={} rawChunks={} sectionMax={}",
+                src, text.length(), rawChunks.size(), SECTION_MAX);
+
+        // ── overlap 적용 + TextSegment 생성 ──────────────────────────────────
+        // page_number 는 String.valueOf 로 저장 — Metadata.getString() 이 String만 반환하기 때문
+        List<TextSegment> segments = new ArrayList<>();
+        String prevTail = "";
+        int idx = 0;
+        int charOffset = 0;
+
+        for (String chunk : rawChunks) {
+            String content = prevTail.isBlank() ? chunk : prevTail + "\n" + chunk;
+            int pageNum = charOffset / CHARS_PER_PAGE + 1;
+
+            segments.add(TextSegment.from(content.trim(),
+                    Metadata.from("chunk_index", String.valueOf(idx))
+                            .put("page_number", String.valueOf(pageNum))
+                            .put("file_name", src)));
+
+            prevTail = tailWithBoundary(chunk, OVERLAP_CHARS);
+            charOffset += chunk.length();
+            idx++;
+        }
+
+        if (!segments.isEmpty()) {
+            int avgLen = (int) segments.stream().mapToInt(s -> s.text().length()).average().orElse(0);
+            log.info("[ChunkStats] src={} inputLen={} finalChunks={} avgChunkLen={} overlap={}",
+                    src, text.length(), segments.size(), avgLen, OVERLAP_CHARS);
+        }
+        return segments;
+    }
+
+    /** StringBuilder 내용을 blocks에 추가하고 초기화합니다. */
+    private void flushSectionBuffer(StringBuilder buf, List<String> blocks) {
+        String s = buf.toString().trim();
+        if (!s.isBlank()) blocks.add(s);
+        buf.setLength(0);
+    }
+
+    /**
+     * chunk 끝에서 maxLen 이하의 overlap tail을 단어 경계에서 추출합니다.
+     */
+    private String tailWithBoundary(String text, int maxLen) {
+        if (text.length() <= maxLen) return text;
+        String tail = text.substring(text.length() - maxLen);
+        int spaceIdx = tail.indexOf(' ');
+        return (spaceIdx > 0 && spaceIdx < maxLen / 2) ? tail.substring(spaceIdx + 1) : tail;
+    }
+
+    // ── 레거시 청킹 (indexTestReport 전용) ──────────────────────────────────────
+
     private List<TextSegment> chunkByParagraph(String text, String sourceFile) {
         List<TextSegment> result = new ArrayList<>();
 
@@ -202,8 +400,8 @@ public class ReportRagService {
             for (String chunk : subChunks) {
                 int pageNum = charOffset / CHARS_PER_PAGE + 1;
                 result.add(TextSegment.from(chunk,
-                        Metadata.from("chunk_index", chunkIndex)
-                                .put("page_number", pageNum)
+                        Metadata.from("chunk_index", String.valueOf(chunkIndex))
+                                .put("page_number", String.valueOf(pageNum))
                                 .put("file_name", sourceFile)));
                 chunkIndex++;
                 charOffset += chunk.length();
@@ -300,7 +498,7 @@ public class ReportRagService {
      * 2. 수집된 후보 전체에 finalScore = similarity×0.7 + keywordMatchScore×0.3 계산
      * 3. 텍스트 기준 중복 제거 (같은 청크는 finalScore가 높은 쪽 보존)
      * 4. finalScore 기준 내림차순 정렬
-     * 5. validEvidence 필터 (finalScore >= EVIDENCE_THRESHOLD)
+     * 5. validEvidence 필터 (finalScore >= EVIDENCE_THRESHOLD / EVIDENCE_THRESHOLD_E)
      * 6. topK 제한
      * 7. retrievalRank(1-based) 부여
      * </pre>
@@ -321,73 +519,266 @@ public class ReportRagService {
             EmbeddingMatch<TextSegment> match,
             double rawSim,
             double kwScore,
-            double finalScore
+            double finalScore,
+            List<String> matchedKws   // keyword gate 통과 여부와 무관하게 hit된 indicator keywords
     ) {}
 
+    /** keyword gate 통과 candidate — gate 결과(matchedCluster)를 함께 보유합니다. */
+    private record AcceptedEntry(MatchData data, String matchedCluster) {}
+
+    /** 카테고리별 임계값 적용 — E: 완화(0.50) / S: 표준(0.60) / G: 강화(0.62) / 기타: 기본(0.60) */
+    public List<EvidenceResult> retrieveEvidenceForIndicator(String sessionId, ESGIndicator indicator, int topK, String category) {
+        double threshold = "E".equalsIgnoreCase(category) ? EVIDENCE_THRESHOLD_E
+                         : "G".equalsIgnoreCase(category) ? EVIDENCE_THRESHOLD_G
+                         : "S".equalsIgnoreCase(category) ? EVIDENCE_THRESHOLD_S
+                         : EVIDENCE_THRESHOLD;
+        log.info("[QUALITY-GATE] indicator={} category={} effectiveThreshold={}",
+                indicator.getCode(), category, threshold);
+        return retrieveEvidenceForIndicatorInternal(sessionId, indicator, topK, threshold, category);
+    }
+
+    /** 기존 호출 호환 유지 (AnalysisConsumer 등 — category 미지정 시 기본 임계값 적용) */
     public List<EvidenceResult> retrieveEvidenceForIndicator(String sessionId, ESGIndicator indicator, int topK) {
+        return retrieveEvidenceForIndicatorInternal(sessionId, indicator, topK, EVIDENCE_THRESHOLD, null);
+    }
+
+    private List<EvidenceResult> retrieveEvidenceForIndicatorInternal(String sessionId, ESGIndicator indicator, int topK, double effectiveThreshold, String category) {
         List<String> queries       = buildRetrievalQueries(indicator);
         List<String> keywords      = extractKeywords(indicator);
         // similarity 기준 topK만 수집하면 keyword 우세 청크가 조기 탈락하므로 더 넓은 후보를 수집
         int          candidatePool = Math.max(topK * CANDIDATE_MULTIPLIER, 20);
+        long         startMs       = System.currentTimeMillis();
 
         try {
             ChromaEmbeddingStore store = getOrCreateStore(sessionId);
 
-            // ── step 1·2·3: 후보 수집 + finalScore 계산 + 텍스트 기준 중복 제거 ──────
+            log.info("[RAG-QUERY] indicator={} queries={} candidatePool={}",
+                    indicator.getCode(), queries, candidatePool);
+
+            // ── step 1·2·3: 후보 수집 + finalScore 계산 + normalized text 기준 중복 제거 ──────
             Map<String, MatchData> best = new LinkedHashMap<>();
+            int rawCount = 0; // pre-filter 통과 candidate 수 (dedup 전)
 
             for (String query : queries) {
                 for (EmbeddingMatch<TextSegment> match : searchStore(store, query, candidatePool)) {
-                    String text       = match.embedded().text().trim();
-                    double rawSim     = match.score();
-                    double kwScore    = computeKeywordScore(text, keywords);
+                    String text    = match.embedded().text().trim();
+                    double rawSim  = match.score();
+
+                    // ── keyword match 인라인 계산 (matchedKeywords + kwScore 동시 추출) ──
+                    String textLower = text.toLowerCase();
+                    List<String> matchedKws = keywords.stream()
+                            .filter(kw -> textLower.contains(kw.toLowerCase()))
+                            .collect(Collectors.toList());
+                    // 일반 키워드(교육/정책/운영 등)는 0.3x 가중치로 계산 — false positive 억제
+                    double kwScore;
+                    if (keywords.isEmpty()) {
+                        kwScore = 0.0;
+                    } else {
+                        double weightedMatched = matchedKws.stream()
+                                .mapToDouble(kw -> GENERIC_WEAK_KEYWORDS.contains(kw.toLowerCase()) ? 0.3 : 1.0)
+                                .sum();
+                        kwScore = Math.min(1.0, weightedMatched / keywords.size());
+                    }
+                    boolean isWeakSemanticOnly = matchedKws.isEmpty();
+
+                    // Pre-filter: kw=0 AND rawSim < PRE_FILTER_WEAK_SIM → semantic-only noise 제거 (0.85 강화 임계값)
+                    if (isWeakSemanticOnly && rawSim < PRE_FILTER_WEAK_SIM) {
+                        log.debug("[RAG-PREFILTER] indicator={} category={} sim={} SKIPPED(weak-semantic-noise) text='{}'",
+                                indicator.getCode(), category != null ? category : "?",
+                                String.format("%.3f", rawSim),
+                                text.substring(0, Math.min(60, text.length())).replace("\n", " "));
+                        continue;
+                    }
+
+                    // sim >= 0.82 이고 kw=0 인 경우: vocabulary mismatch 보완 floor 적용 (S-202/G-302 한정)
+                    if (isWeakSemanticOnly && rawSim >= 0.82
+                            && ("S-202".equals(indicator.getCode()) || "G-302".equals(indicator.getCode()))) {
+                        log.info("[RAG-KWFLOOR] indicator={} sim={} kwScore 0.000→0.150 text='{}'",
+                                indicator.getCode(), String.format("%.3f", rawSim),
+                                text.substring(0, Math.min(60, text.length())).replace("\n", " "));
+                        kwScore = 0.15;
+                    }
                     double finalScore = rawSim * 0.7 + kwScore * 0.3;
 
-                    log.debug("[ReportRAG] candidate indicator={} sim={} kw={} final={} text='{}'",
+                    List<String> logKws = matchedKws.size() <= 3
+                            ? matchedKws : matchedKws.subList(0, 3);
+                    log.info("[RAG-CANDIDATE] indicator={} sim={} kw={} final={}" +
+                                    " matchedKeywords={} isWeakSemanticOnly={} text='{}'",
                             indicator.getCode(),
                             String.format("%.3f", rawSim),
                             String.format("%.3f", kwScore),
                             String.format("%.3f", finalScore),
-                            text.substring(0, Math.min(40, text.length())));
+                            logKws, isWeakSemanticOnly,
+                            text.substring(0, Math.min(80, text.length())).replace("\n", " "));
 
-                    MatchData existing = best.get(text);
+                    // normalized key: trim(source) + lowercase(textLower) + 내부 공백 정규화
+                    String normalizedKey = textLower.replaceAll("\\s+", " ");
+                    rawCount++;
+                    MatchData existing = best.get(normalizedKey);
                     if (existing == null || finalScore > existing.finalScore()) {
-                        best.put(text, new MatchData(match, rawSim, kwScore, finalScore));
+                        best.put(normalizedKey, new MatchData(match, rawSim, kwScore, finalScore, matchedKws));
                     }
                 }
             }
 
+            log.info("[RAG-DEDUPE] indicator={} before={} after={} removed={}",
+                    indicator.getCode(), rawCount, best.size(), rawCount - best.size());
             log.info("[ReportRAG] 후보 수집 완료 indicator={} pool={}개 (쿼리×{}, candidatePerQuery={})",
                     indicator.getCode(), best.size(), queries.size(), candidatePool);
 
-            // ── step 4·5·6·7: finalScore 정렬 → validEvidence 필터 → topK 제한 → rank ──
+            // ── step 4·5·6·7: staged filtering — per-step drop logging ─────────────
+            int blocked = 0;
             List<EvidenceResult> results = new ArrayList<>();
             int rank = 1;
-            List<MatchData> sorted = best.values().stream()
-                    .sorted((a, b) -> Double.compare(b.finalScore(), a.finalScore()))
-                    .filter(d -> d.finalScore() >= EVIDENCE_THRESHOLD)   // validEvidence filter
-                    .limit(topK)
-                    .collect(Collectors.toList());
 
-            for (MatchData d : sorted) {
+            // stage 0: sort by finalScore desc
+            List<MatchData> allCandidates = new ArrayList<>(best.values());
+            allCandidates.sort((a, b) -> Double.compare(b.finalScore(), a.finalScore()));
+
+            // stage 1: finalScore threshold filter (E category uses relaxed threshold 0.5)
+            List<MatchData> aboveThreshold = new ArrayList<>();
+            for (MatchData d : allCandidates) {
+                if (d.finalScore() >= effectiveThreshold) {
+                    aboveThreshold.add(d);
+                }
+            }
+            {
+                String top = aboveThreshold.isEmpty() ? "N/A"
+                        : aboveThreshold.get(0).match().embedded().text().trim()
+                                .substring(0, Math.min(60,
+                                        aboveThreshold.get(0).match().embedded().text().trim().length()))
+                                .replace("\n", " ");
+                log.info("[FILTER-1-THRESHOLD] indicator={} before={} after={} dropped={} threshold={} topPreview='{}'",
+                        indicator.getCode(), allCandidates.size(), aboveThreshold.size(),
+                        allCandidates.size() - aboveThreshold.size(), effectiveThreshold, top);
+            }
+
+            // stage 2: keyword gate filter — per-candidate [GATE-CHECK] log
+            List<AcceptedEntry> passedGate = new ArrayList<>();
+            for (MatchData d : aboveThreshold) {
+                String chunkText   = d.match().embedded().text().trim();
+                String preview     = chunkText.substring(0, Math.min(80, chunkText.length())).replace("\n", " ");
+                // describeMatch() 내부에서 [KeywordGate] BLOCKED detail 로그 출력
+                String matchResult = keywordGate.describeMatch(indicator.getCode(), chunkText, d.rawSim());
+                boolean gatePass   = !"BLOCKED".equals(matchResult);
+                if (gatePass) {
+                    passedGate.add(new AcceptedEntry(d, matchResult));
+                    log.info("[GATE-CHECK] indicator={} finalScore={} sim={} kw={}" +
+                                    " matchedCluster=[{}] gateResult=PASS preview='{}'",
+                            indicator.getCode(),
+                            String.format("%.3f", d.finalScore()),
+                            String.format("%.3f", d.rawSim()),
+                            String.format("%.3f", d.kwScore()),
+                            matchResult, preview);
+                } else {
+                    blocked++;
+                    log.info("[GATE-CHECK] indicator={} finalScore={} sim={} kw={}" +
+                                    " gateResult=BLOCKED preview='{}'",
+                            indicator.getCode(),
+                            String.format("%.3f", d.finalScore()),
+                            String.format("%.3f", d.rawSim()),
+                            String.format("%.3f", d.kwScore()),
+                            preview);
+                }
+            }
+            log.info("[FILTER-2-GATE] indicator={} before={} after={} dropped={}",
+                    indicator.getCode(), aboveThreshold.size(), passedGate.size(),
+                    aboveThreshold.size() - passedGate.size());
+
+            // stage 3: page-diversity 우선 topK 선택
+            // 동일 페이지 중복 청크 → page당 최고 finalScore만 보존 → 다양한 페이지 우선 선택
+            Map<Integer, AcceptedEntry> bestPerPage = new LinkedHashMap<>();
+            List<AcceptedEntry> noPageEntries = new ArrayList<>();
+            for (AcceptedEntry e : passedGate) {
+                int pg = resolvePageNumber(e.data().match().embedded());
+                if (pg <= 0) {
+                    noPageEntries.add(e);
+                } else {
+                    bestPerPage.merge(pg, e, (a, b) ->
+                            a.data().finalScore() >= b.data().finalScore() ? a : b);
+                }
+            }
+            List<AcceptedEntry> diversified = new ArrayList<>();
+            bestPerPage.values().stream()
+                    .sorted((a, b) -> Double.compare(b.data().finalScore(), a.data().finalScore()))
+                    .forEach(diversified::add);
+            noPageEntries.stream()
+                    .sorted((a, b) -> Double.compare(b.data().finalScore(), a.data().finalScore()))
+                    .forEach(diversified::add);
+            List<AcceptedEntry> sorted = diversified.stream().limit(topK).collect(Collectors.toList());
+            log.info("[FILTER-3-DIVERSITY] indicator={} gatePass={} uniquePages={} noPage={} final={} topK={}",
+                    indicator.getCode(), passedGate.size(), bestPerPage.size(),
+                    noPageEntries.size(), sorted.size(), topK);
+
+            for (AcceptedEntry entry : sorted) {
+                MatchData d      = entry.data();
                 String rawChunk  = d.match().embedded().text().trim();
                 String bestSent  = extractBestSentence(rawChunk, keywords);
+                String cluster   = "NO_GATE".equals(entry.matchedCluster()) ? null : entry.matchedCluster();
                 results.add(EvidenceResult.builder()
                         .evidenceText(bestSent)
                         .pageNumber(resolvePageNumber(d.match().embedded()))
                         .similarity(d.rawSim())
                         .keywordMatchScore(d.kwScore())
                         .finalScore(d.finalScore())
-                        .isValidEvidence(true)       // filter 통과 = 항상 true
+                        .isValidEvidence(true)
                         .retrievalRank(rank)
                         .indicatorCode(indicator.getCode())
                         .sourceFile(resolveSourceFile(d.match().embedded()))
+                        .matchedKeywords(d.matchedKws().isEmpty() ? null : d.matchedKws())
+                        .matchedCluster(cluster)
                         .build());
                 rank++;
             }
 
-            log.info("[ReportRAG] Re-ranking 완료 indicator={} valid={}건/pool={}개 (threshold={}, topK={})",
-                    indicator.getCode(), results.size(), best.size(), EVIDENCE_THRESHOLD, topK);
+            long latencyMs  = System.currentTimeMillis() - startMs;
+            int  poolSize   = best.size();
+            int  blockedCount = blocked;
+            long eligibleCount = best.values().stream()
+                    .filter(d -> d.finalScore() >= effectiveThreshold).count();
+            double blockedRatio  = eligibleCount > 0 ? (double) blockedCount / eligibleCount : 0.0;
+            double coverageRatio = eligibleCount > 0
+                    ? (double) results.size() / Math.min(topK, eligibleCount)
+                    : 0.0;
+
+            // top-k similarity 요약
+            if (!results.isEmpty()) {
+                String topKSims = results.stream()
+                        .map(r -> String.format("%.3f", r.getSimilarity()))
+                        .collect(Collectors.joining(", "));
+                log.info("[RAG-TOPK] indicator={} valid={} similarities=[{}]",
+                        indicator.getCode(), results.size(), topKSims);
+            } else {
+                String topFinalScores = best.values().stream()
+                        .sorted((a, b) -> Double.compare(b.finalScore(), a.finalScore()))
+                        .limit(5)
+                        .map(d -> String.format("%.3f(sim=%.3f)", d.finalScore(), d.rawSim()))
+                        .collect(Collectors.joining(", "));
+                log.info("[RAG-EMPTY] indicator={} pool={} top5finalScores=[{}]",
+                        indicator.getCode(), best.size(), topFinalScores);
+            }
+
+            log.info("[RetrievalMetrics] indicator={} pool={} valid={} blocked={}" +
+                            " blockedRatio={} coverage={} latency={}ms",
+                    indicator.getCode(), poolSize, results.size(), blockedCount,
+                    String.format("%.2f", blockedRatio),
+                    String.format("%.2f", coverageRatio),
+                    latencyMs);
+
+            // ── [RETRIEVAL-QUALITY] 종합 품질 요약 로그 ──────────────────────────────
+            int uniqueResultPages = (int) results.stream()
+                    .mapToInt(EvidenceResult::getPageNumber)
+                    .filter(p -> p > 0)
+                    .distinct()
+                    .count();
+            String qualityLabel = results.isEmpty() ? "NO_EVIDENCE"
+                    : results.stream().anyMatch(r -> r.getFinalScore() >= 0.80) ? "HIGH"
+                    : results.stream().anyMatch(r -> r.getFinalScore() >= 0.70) ? "MEDIUM" : "LOW";
+            log.info("[RETRIEVAL-QUALITY] indicator={} category={} threshold={} pool={}" +
+                            " gatePassed={} final={} uniquePages={} quality={}",
+                    indicator.getCode(), category != null ? category : "?",
+                    effectiveThreshold, poolSize, passedGate.size(),
+                    results.size(), uniqueResultPages, qualityLabel);
 
             return results;
 
@@ -419,12 +810,22 @@ public class ReportRagService {
      * 한국어 부분 문자열 포함 여부를 기준으로 하며, 대소문자를 무시합니다.
      */
     private double computeKeywordScore(String chunkText, List<String> keywords) {
+        return computeKeywordScore(chunkText, keywords, null);
+    }
+
+    private double computeKeywordScore(String chunkText, List<String> keywords, String indicatorCode) {
         if (keywords.isEmpty()) return 0.0;
         String lower = chunkText.toLowerCase();
-        long hits = keywords.stream()
+        List<String> matched = keywords.stream()
                 .filter(kw -> lower.contains(kw.toLowerCase()))
-                .count();
-        return (double) hits / keywords.size();
+                .collect(Collectors.toList());
+        double score = (double) matched.size() / keywords.size();
+        if (score == 0.0 && indicatorCode != null) {
+            log.info("[KW-SCORE] indicator={} score=0.000 queryTokens={} matched=[] preview='{}'",
+                    indicatorCode, keywords,
+                    lower.substring(0, Math.min(80, lower.length())).replace("\n", " "));
+        }
+        return score;
     }
 
     /**
@@ -442,18 +843,23 @@ public class ReportRagService {
         List<String> queries = new ArrayList<>();
         queries.add(indicator.getTitle()); // 지표명 우선 쿼리
 
-        if (indicator.getKeywords() == null || indicator.getKeywords().isBlank()) {
-            return queries;
+        if (indicator.getKeywords() != null && !indicator.getKeywords().isBlank()) {
+            String[] tokens = indicator.getKeywords().split("\\s+");
+            for (int i = 0; i + 1 < tokens.length; i += 2) {
+                queries.add(tokens[i] + " " + tokens[i + 1]);
+                if (queries.size() >= 4) break;
+            }
+            if (queries.size() < 4 && tokens.length % 2 == 1) {
+                queries.add(tokens[tokens.length - 1]);
+            }
         }
 
-        String[] tokens = indicator.getKeywords().split("\\s+");
-        for (int i = 0; i + 1 < tokens.length; i += 2) {
-            queries.add(tokens[i] + " " + tokens[i + 1]);
-            if (queries.size() >= 4) break;
-        }
-        // 홀수 개 토큰인 경우 마지막 단일 토큰 추가 (4개 미만일 때)
-        if (queries.size() < 4 && tokens.length % 2 == 1) {
-            queries.add(tokens[tokens.length - 1]);
+        // 지표 코드별 문서 실제 표현 추가 쿼리 병합 (중복 제거)
+        List<String> extras = INDICATOR_EXTRA_QUERIES.get(indicator.getCode());
+        if (extras != null) {
+            for (String eq : extras) {
+                if (!queries.contains(eq)) queries.add(eq);
+            }
         }
         return queries;
     }
@@ -520,13 +926,27 @@ public class ReportRagService {
     }
 
     /**
-     * HTML 태그와 속성을 제거하고 순수 텍스트를 반환합니다.
-     * PDF → HTML 파싱 후 저장된 chunk의 style/tag 오염을 방지합니다.
+     * HTML 태그를 제거하되 문단/heading 구조(개행)는 보존합니다.
+     *
+     * <p>Upstage OCR은 Markdown을 반환합니다. {@code Jsoup.parse().text()}를 그대로 쓰면
+     * 모든 개행이 단일 공백으로 압축되어 청크 수가 2~3개로 급감합니다.
+     * HTML 태그 포함 여부를 판별하고, Markdown이면 개행 구조를 유지한 채 태그만 제거합니다.
      */
     private String sanitizeHtml(String text) {
         if (text == null) return "";
-        String parsed = Jsoup.parse(text).text();
-        return parsed.isBlank() ? text : parsed;
+        boolean hasHtmlTags = text.contains("</") || text.contains("/>");
+        if (hasHtmlTags) {
+            // block-level 태그를 개행으로 치환한 뒤 나머지 태그 제거
+            String nl = text
+                    .replaceAll("(?i)<br[^>]*>", "\n")
+                    .replaceAll("(?i)</(p|div|h[1-6]|li|td|tr|section|article)>", "\n")
+                    .replaceAll("<[^>]+>", "")
+                    .replaceAll("[ \\t]+", " ")
+                    .replaceAll("\\n{3,}", "\n\n");
+            return nl.isBlank() ? text : nl.trim();
+        }
+        // Markdown: stray HTML 태그만 제거, 개행 구조 보존
+        return text.replaceAll("<[^>]+>", "").trim();
     }
 
     /**

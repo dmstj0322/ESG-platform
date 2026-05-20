@@ -64,7 +64,32 @@
       "Bash(Select-Object -Property FullName, PSIsContainer)",
       "Bash(Get-Content \"C:\\\\SW_Academy\\\\final project\\\\ESG-platform\\\\esg-platform-ui\\\\src\\\\pages\\\\analysis\\\\AnalysisPage.jsx\")",
       "Bash(Measure-Object -Line)",
-      "Bash(xargs grep -l -i \"csv\\\\|opencsv\\\\|commons-csv\")"
+      "Bash(xargs grep -l -i \"csv\\\\|opencsv\\\\|commons-csv\")",
+      "Bash(node --input-type=module)",
+      "Bash(npx --yes acorn --ecma2020 --module src/pages/analysis/AnalysisResultPage.jsx)",
+      "Bash(./gradlew :analysis-service:compileJava)",
+      "Bash(Get-ChildItem -Path \"C:\\\\SW_Academy\\\\final project\\\\ESG-platform\" -Depth 1)",
+      "Bash(Select-Object FullName, Mode)",
+      "PowerShell(\\(Get-Content \"C:\\\\SW_Academy\\\\final project\\\\ESG-platform\\\\esg-platform-ui\\\\src\\\\pages\\\\analysis\\\\AnalysisResultPage.jsx\" | Measure-Object -Line\\).Lines)",
+      "PowerShell($env:PATH -split ';' | Where-Object { $_ -match 'maven|java|jdk' -or $_ -match 'mvn' })",
+      "PowerShell($j = Get-Content \"C:\\\\SW_Academy\\\\final project\\\\ESG-platform\\\\esg-platform-ui\\\\src\\\\data\\\\demo-good.json\" | ConvertFrom-Json; $j.PSObject.Properties.Name)",
+      "Bash(Get-ChildItem -Path \"C:\\\\SW_Academy\\\\final project\\\\ESG-platform\\\\analysis-service\\\\src\" -Recurse -File -Filter \"*.java\")",
+      "Bash(Sort-Object FullName)",
+      "Bash(Get-Content \"C:\\\\SW_Academy\\\\final project\\\\ESG-platform\\\\analysis-service\\\\src\\\\main\\\\resources\\\\benchmark\\\\industry_benchmark_2023.csv\")",
+      "Bash(Select-Object -First 5)",
+      "PowerShell(Get-Content \"C:\\\\SW_Academy\\\\final project\\\\ESG-platform\\\\analysis-service\\\\src\\\\main\\\\resources\\\\benchmark\\\\industry_benchmark_2023.csv\" | Select-Object -First 3; Write-Host \"---\"; \\(Get-Content \"C:\\\\SW_Academy\\\\final project\\\\ESG-platform\\\\analysis-service\\\\src\\\\main\\\\resources\\\\benchmark\\\\industry_benchmark_2023.csv\" | Measure-Object -Line\\).Lines)",
+      "Bash(xargs grep -l \"CategoryAnalysis\\\\|categoryAnalysis\\\\|category.*analyze\\\\|analyze.*category\")",
+      "Bash(xargs grep -l \"confidence\\\\|evidence\\\\|breakdown\")",
+      "Bash(npx tsc *)",
+      "Bash(node -e \"console.log\\('syntax OK'\\)\")",
+      "Bash(.\\\\gradlew compileJava)",
+      "Read(//c/SW_Academy/final project/ESG-platform/analysis-service/**)",
+      "Bash(gradlew.bat compileJava)",
+      "Bash(Get-ChildItem *)",
+      "Bash(npx acorn *)",
+      "Bash(Get-Content *)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(grep -v \"import\\\\|export\\\\|const\\\\|function\\\\|interface\\\\|type\\\\|props\\\\|{conf}\\\\|{.*conf.*}\\\\|\\\\\\\\.conf\\\\b\")"
     ]
   }
 }

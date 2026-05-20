@@ -20,6 +20,14 @@ public class FinalReportRequest {
     private Integer totalScore;
     private String finalGrade;
     private Integer confidence;
+    /** AUTO 모드 사전 진단 여부 — E 파일 없이 benchmark 기반으로만 계산된 경우 true */
+    private boolean isAutoSimulation;
+
+    /**
+     * KSIC 업종 코드 (앞 5자리 또는 2자리).
+     * Dynamic Industry Weighting에 사용. null 시 DEFAULT 가중치 (E0.4/S0.3/G0.3) 적용.
+     */
+    private String ksicCode;
 
     /** S/G 카테고리 분석에서 수집된 실제 RAG Evidence (optional) */
     private List<EvidenceItem> evidences;
@@ -54,5 +62,9 @@ public class FinalReportRequest {
         // E 지표 수치 정합성 — CategoryAnalysisService에서 계산된 값을 최종 저장 시 전달
         private String  numericMatchLevel;
         private Double  numericDiffPercent;
+        private String  numericMetric;
+        private Double  inputValue;
+        private Double  extractedValue;
+        private String  unit;
     }
 }

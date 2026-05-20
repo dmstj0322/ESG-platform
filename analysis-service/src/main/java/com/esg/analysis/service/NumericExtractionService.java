@@ -10,32 +10,30 @@ import java.util.regex.*;
  * OCR/CSV 텍스트에서 E 지표 관련 수치를 추출하고 사용자 입력값과 비교합니다.
  *
  * <pre>
- * 지원 지표 → 메트릭 매핑:
- *   E-101 전력 사용량 → electricity (kWh)
- *   E-102 가스 사용량 → gas (MJ)
- *   E-103 탄소 배출량 → carbon (tCO₂)
- *   E-104 폐기물 발생량 → waste (kg)
- *   E-105 수자원 사용량 → water (m³)
+ * 지원 지표 -> 메트릭 매핑:
+ *   E-101 전력 사용량 -> electricity (kWh)
+ *   E-102 가스 사용량 -> gas (MJ)
+ *   E-103 탄소 배출량 -> carbon (tCO2)
+ *   E-104 폐기물 발생량 -> waste (kg)
+ *   E-105 수자원 사용량 -> water (m3)
  *
  * 비교 기준:
- *   diffPercent = abs(input - extracted) / input × 100
- *   ≤ 5%  → HIGH
- *   ≤ 15% → MEDIUM
- *   > 15% → LOW
+ *   diffPercent = abs(input - extracted) / input * 100
+ *   <= 5%  -> HIGH
+ *   <= 15% -> MEDIUM
+ *   >  15% -> LOW
  * </pre>
  *
  * 추출 전략 (우선순위 순):
- *   1. 라인 단위 파싱 — metric 키워드가 포함된 라인에서만 수치 탐색
- *      a. 단위 키워드(kWh, MJ …) 바로 앞 숫자
- *      b. 파이프(|) 구분 마크다운 테이블 컬럼 파싱
- *      c. 라인 내 첫 번째 유효 숫자 (1자리 index 제외)
- *   2. 전문 regex fallback — 단락형 OCR 텍스트용
+ *   1. Markdown table 전체 파싱
+ *   2. 라인 단위 파싱 (영문/한글 키워드 모두 지원)
+ *   3. regex fallback (unicode 정규화 후 적용)
  */
 @Slf4j
 @Service
 public class NumericExtractionService {
 
-    // ── 지표 코드 → 메트릭 이름 ──────────────────────────────────────────────
+    // ---- 지표 코드 -> 메트릭 이름 -----------------------------------------------
     private static final Map<String, String> CODE_TO_METRIC = Map.of(
             "E-101", "electricity",
             "E-102", "gas",
@@ -44,118 +42,237 @@ public class NumericExtractionService {
             "E-105", "water"
     );
 
-    // ── 메트릭 → 표시 단위 ────────────────────────────────────────────────────
+    // ---- 메트릭 -> 표시 단위 -----------------------------------------------------
     private static final Map<String, String> METRIC_UNIT = Map.of(
             "electricity", "kWh",
             "gas",         "MJ",
-            "carbon",      "tCO₂",
+            "carbon",      "tCO2",
             "waste",       "kg",
-            "water",       "m³"
+            "water",       "m3"
     );
 
-    // ── 메트릭 → 단위 키워드 목록 (단위 앞 숫자 추출용) ──────────────────────
-    private static final Map<String, List<String>> UNIT_KEYWORDS = Map.of(
-            "electricity", List.of("kWh", "KWH", "MWh", "킬로와트시"),
-            "gas",         List.of("MJ", "Nm³", "Nm3", "Mcal", "메가줄"),
-            "carbon",      List.of("tCO2", "tCO₂", "TCO2", "tco2eq", "tCO2-eq"),
-            "waste",       List.of("kg", "킬로그램"),
-            "water",       List.of("m³", "m3", "㎥", "세제곱미터", "입방미터")
+    private static final Map<String, String> METRIC_KOREAN_NAME = Map.of(
+            "electricity", "전력 사용량",
+            "gas",         "가스 사용량",
+            "carbon",      "탄소 배출량",
+            "waste",       "폐기물 발생량",
+            "water",       "용수 사용량"
     );
 
-    // ── Fallback: 전문 regex 패턴 (단락형 OCR 텍스트용) ──────────────────────
-    // 그룹 1: 숫자(콤마·소수 포함)
-    private static final Map<String, List<Pattern>> REGEX_FALLBACK;
+    // ---- 메트릭 -> 한국어/영문 라인 필터 키워드 (strategy-2) ----------------------
+    private static final Map<String, List<String>> METRIC_KOR_KEYWORDS = new java.util.LinkedHashMap<>();
+    static {
+        METRIC_KOR_KEYWORDS.put("carbon", List.of(
+                "탄소배출량",   // 탄소배출량
+                "탄소 배출량",  // 탄소 배출량
+                "온실가스배출량",   // 온실가스배출량
+                "온실가스 배출량",  // 온실가스 배출량
+                "온실가스",   // 온실가스
+                "탄소",               // 탄소
+                "tco2", "co2"
+        ));
+        METRIC_KOR_KEYWORDS.put("electricity", List.of(
+                "전력사용량",    // 전력사용량
+                "전력 사용량",   // 전력 사용량
+                "전기사용량",    // 전기사용량
+                "전기 사용량",   // 전기 사용량
+                "전력",  // 전력
+                "전기",  // 전기
+                "kwh"
+        ));
+        METRIC_KOR_KEYWORDS.put("gas", List.of(
+                "가스사용량",    // 가스사용량
+                "가스 사용량",   // 가스 사용량
+                "천연가스",           // 천연가스
+                "가스"                        // 가스
+        ));
+        METRIC_KOR_KEYWORDS.put("waste", List.of(
+                "폐기물발생량",  // 폐기물발생량
+                "폐기물 발생량", // 폐기물 발생량
+                "폐기물"                     // 폐기물
+        ));
+        METRIC_KOR_KEYWORDS.put("water", List.of(
+                "수자원",    // 수자원
+                "용수사용량",   // 용수사용량
+                "용수 사용량",  // 용수 사용량
+                "용수",          // 용수
+                "취수량"     // 취수량
+        ));
+    }
+
+    // ---- UnitDef: 단위 패턴 + 정규화 계수 ----------------------------------------
+    private record UnitDef(String token, double factor) {}
+
+    private static final Map<String, List<UnitDef>> UNIT_DEFS;
+    static {
+        Map<String, List<UnitDef>> m = new java.util.LinkedHashMap<>();
+        m.put("electricity", List.of(
+            new UnitDef("GWh",    1_000_000.0),
+            new UnitDef("MWh",    1_000.0),
+            new UnitDef("kWh",    1.0),
+            new UnitDef("KWH",    1.0),
+            new UnitDef("킬로와트시", 1.0)   // 킬로와트시
+        ));
+        m.put("gas", List.of(
+            new UnitDef("Nm3",    38.4),
+            new UnitDef("Ncm",    38.4),
+            new UnitDef("Mcal",   4.1868),
+            new UnitDef("MJ",     1.0),
+            new UnitDef("메가줄", 1.0)  // 메가줄
+        ));
+        m.put("carbon", List.of(
+            new UnitDef("tCO2",    1.0),
+            new UnitDef("tCO2e",   1.0),
+            new UnitDef("tCO2-eq", 1.0),
+            new UnitDef("tco2eq",  1.0),
+            new UnitDef("TCO2",    1.0),
+            new UnitDef("tonCO2",  1.0),
+            new UnitDef("ton CO2", 1.0)
+        ));
+        m.put("waste", List.of(
+            new UnitDef("ton",     1_000.0),
+            new UnitDef("kg",      1.0),
+            new UnitDef("킬로그램", 1.0)  // 킬로그램
+        ));
+        m.put("water", List.of(
+            new UnitDef("ML",      1_000.0),
+            new UnitDef("kL",      1.0),
+            new UnitDef("m3",      1.0),
+            new UnitDef("세제곱미터", 1.0),  // 세제곱미터
+            new UnitDef("입방미터",       1.0)   // 입방미터
+        ));
+        UNIT_DEFS = Collections.unmodifiableMap(m);
+    }
+
+    // ---- Fallback regex (normalizeForExtraction 적용 후 매칭) ---------------------
+    private record RegexDef(Pattern compiled, double factor, String description) {}
+    private static final Map<String, List<RegexDef>> REGEX_FALLBACK;
     private static final Pattern NUM_PATTERN = Pattern.compile("([\\d][\\d,，]*(?:\\.\\d+)?)");
 
     static {
-        Map<String, List<Pattern>> m = new LinkedHashMap<>();
+        Map<String, List<RegexDef>> m = new LinkedHashMap<>();
         final String NUM = "([\\d][\\d,，]*(?:\\.\\d+)?)";
 
         m.put("electricity", List.of(
-                Pattern.compile(NUM + "\\s*(?:kWh|킬로와트시|KWH)", Pattern.CASE_INSENSITIVE),
-                Pattern.compile(NUM + "\\s*(?:MWh|메가와트시)", Pattern.CASE_INSENSITIVE),
-                Pattern.compile("전력\\s*(?:사용량|소비량?)[^\\d]*" + NUM),
-                Pattern.compile("전기\\s*(?:사용량|소비량?)[^\\d]*" + NUM)
+            new RegexDef(Pattern.compile(NUM + "\\s*(?:GWh|\\uae30\\uac00\\uc640\\ud2b8\\uc2dc)", Pattern.CASE_INSENSITIVE), 1_000_000.0, "NUM+GWh"),
+            new RegexDef(Pattern.compile(NUM + "\\s*(?:MWh|\\uba54\\uac00\\uc640\\ud2b8\\uc2dc)", Pattern.CASE_INSENSITIVE), 1_000.0,     "NUM+MWh"),
+            new RegexDef(Pattern.compile(NUM + "\\s*(?:kWh|KWH|\\ud82c\\ub85c\\uc640\\ud2b8\\uc2dc)",                        Pattern.CASE_INSENSITIVE), 1.0, "NUM+kWh"),
+            new RegexDef(Pattern.compile("\\uc804\\ub825\\s*(?:\\uc0ac\\uc6a9\\ub7c9|\\uc18c\\ube44\\ub7c9?)[^\\d]{0,30}" + NUM), 1.0, "전력사용량+NUM"),
+            new RegexDef(Pattern.compile("\\uc804\\uae30\\s*(?:\\uc0ac\\uc6a9\\ub7c9|\\uc18c\\ube44\\ub7c9?)[^\\d]{0,30}" + NUM), 1.0, "전기사용량+NUM")
         ));
         m.put("gas", List.of(
-                Pattern.compile(NUM + "\\s*(?:MJ|메가줄|Mcal)", Pattern.CASE_INSENSITIVE),
-                Pattern.compile(NUM + "\\s*(?:Nm³|Nm3|Ncm|노멀입방)", Pattern.CASE_INSENSITIVE),
-                Pattern.compile("가스\\s*(?:사용량|소비량?)[^\\d]*" + NUM)
+            new RegexDef(Pattern.compile(NUM + "\\s*(?:MJ|\\uba54\\uac00\\uc904|Mcal)", Pattern.CASE_INSENSITIVE), 1.0,  "NUM+MJ"),
+            new RegexDef(Pattern.compile(NUM + "\\s*(?:Nm3|Ncm|\\ub178\\uba40\\uc785\\ubc29)",  Pattern.CASE_INSENSITIVE), 38.4, "NUM+Nm3"),
+            new RegexDef(Pattern.compile("\\uac00\\uc2a4\\s*(?:\\uc0ac\\uc6a9\\ub7c9|\\uc18c\\ube44\\ub7c9?)[^\\d]{0,30}" + NUM), 1.0, "가스사용량+NUM")
         ));
+        // carbon: normalizeForExtraction 후 tco2 소문자 통일
+        // ton\s*-?\s*co2 -> "ton CO2", "ton-CO2", "tonCO2" 모두 매칭
         m.put("carbon", List.of(
-                Pattern.compile(NUM + "\\s*(?:tCO2|tCO₂|톤-?CO2|ton-?CO2|TCO2|tco2eq|tCO2-eq)", Pattern.CASE_INSENSITIVE),
-                Pattern.compile("탄소\\s*배출량[^\\d]*" + NUM),
-                Pattern.compile("온실가스\\s*배출량[^\\d]*" + NUM)
+            new RegexDef(Pattern.compile(
+                    NUM + "\\s*(?:tco2(?:[e-]?eq)?|tco2e?|ton\\s*-?\\s*co2|t-?co2)",
+                    Pattern.CASE_INSENSITIVE), 1.0, "NUM+tco2-variants"),
+            new RegexDef(Pattern.compile(
+                    "\\ud0c4\\uc18c\\s*\\ubc30\\ucd9c\\ub7c9[^\\d]{0,30}" + NUM,
+                    Pattern.CASE_INSENSITIVE), 1.0, "탄소배출량+NUM"),
+            new RegexDef(Pattern.compile(
+                    "\\uc628\\uc2e4\\uac00\\uc2a4\\s*\\ubc30\\ucd9c\\ub7c9[^\\d]{0,30}" + NUM,
+                    Pattern.CASE_INSENSITIVE), 1.0, "온실가스배출량+NUM"),
+            new RegexDef(Pattern.compile(
+                    "\\ud0c4\\uc18c\\s*\\ubc1c\\uc0dd\\ub7c9[^\\d]{0,30}" + NUM,
+                    Pattern.CASE_INSENSITIVE), 1.0, "탄소발생량+NUM")
         ));
         m.put("waste", List.of(
-                Pattern.compile(NUM + "\\s*(?:kg|킬로그램)", Pattern.CASE_INSENSITIVE),
-                Pattern.compile("(?:폐기물|waste)[^\\n]{0,40}?" + NUM + "\\s*(?:ton|t\\b)", Pattern.CASE_INSENSITIVE),
-                Pattern.compile("폐기물\\s*(?:발생량?|처리량?)?[^\\d]*" + NUM)
+            new RegexDef(Pattern.compile(NUM + "\\s*(?:kg|\\ud82c\\ub85c\\uadf8\\ub7a8)", Pattern.CASE_INSENSITIVE), 1.0,       "NUM+kg"),
+            new RegexDef(Pattern.compile("(?:\\ud3d0\\uae30\\ubb3c|waste)[^\\n]{0,40}?" + NUM + "\\s*(?:ton|t\\b)", Pattern.CASE_INSENSITIVE), 1_000.0, "폐기물+NUM+ton"),
+            new RegexDef(Pattern.compile("\\ud3d0\\uae30\\ubb3c\\s*(?:\\ubc1c\\uc0dd\\ub7c9?|\\ucc98\\ub9ac\\ub7c9?)?[^\\d]{0,30}" + NUM), 1.0, "폐기물발생량+NUM")
         ));
         m.put("water", List.of(
-                Pattern.compile(NUM + "\\s*(?:m³|m3|㎥|세제곱미터|입방미터)", Pattern.CASE_INSENSITIVE),
-                Pattern.compile("수자원\\s*(?:사용량?|취수량?)?[^\\d]*" + NUM),
-                Pattern.compile("용수\\s*(?:사용량?)?[^\\d]*" + NUM)
+            new RegexDef(Pattern.compile(NUM + "\\s*(?:m3|\\u338d|\\uc138\\uc81c\\uacf1\\ubbf8\\ud130|\\uc785\\ubc29\\ubbf8\\ud130)", Pattern.CASE_INSENSITIVE), 1.0, "NUM+m3"),
+            new RegexDef(Pattern.compile("\\uc218\\uc790\\uc6d0\\s*(?:\\uc0ac\\uc6a9\\ub7c9?|\\ucde8\\uc218\\ub7c9?)?[^\\d]{0,30}" + NUM), 1.0, "수자원+NUM"),
+            new RegexDef(Pattern.compile("\\uc6a9\\uc218\\s*(?:\\uc0ac\\uc6a9\\ub7c9?)?[^\\d]{0,30}" + NUM), 1.0, "용수+NUM")
         ));
 
         REGEX_FALLBACK = Collections.unmodifiableMap(m);
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
+    // ==========================================================================
     // 공개 API
-    // ══════════════════════════════════════════════════════════════════════════
+    // ==========================================================================
 
-    /** E 지표 코드를 메트릭 이름으로 변환합니다. 매핑 없으면 null. */
     public String indicatorCodeToMetric(String code) {
         return CODE_TO_METRIC.get(code);
     }
 
-    /** 메트릭 이름에 대응하는 표준 단위를 반환합니다. */
     public String metricUnit(String metric) {
         return METRIC_UNIT.getOrDefault(metric, "");
     }
 
+    public String metricKoreanName(String metric) {
+        return METRIC_KOREAN_NAME.getOrDefault(metric, metric);
+    }
+
     /**
-     * OCR/CSV 마크다운 텍스트에서 특정 메트릭 수치를 추출합니다.
+     * OCR/CSV 텍스트에서 메트릭 수치를 추출합니다.
+     * 내부적으로 normalizeForExtraction() 을 거쳐 3단계 전략을 순서대로 시도합니다.
      *
-     * <p>전략: 라인 단위 파싱(우선) → 전문 regex fallback
-     *
-     * @param text   OCR 마크다운 / CSV 마크다운 / Evidence 텍스트
+     * @param text   OCR/마크다운/Evidence 텍스트
      * @param metric "electricity" | "gas" | "carbon" | "waste" | "water"
-     * @return 첫 번째로 발견된 양수 값 (없으면 empty)
+     * @return 추출된 양수 값 (없으면 empty)
      */
     public Optional<Double> extractFromText(String text, String metric) {
         if (text == null || text.isBlank() || metric == null) return Optional.empty();
 
-        // 1차: 라인 단위 파싱 — row/column index 오추출 방지
-        Optional<Double> lineResult = extractFromLines(text, metric);
-        if (lineResult.isPresent()) return lineResult;
+        log.info("[E-METRIC-PARSE-ENTRY] metric={} textLen={} textPreview='{}'",
+                metric, text.length(),
+                text.length() > 120 ? text.substring(0, 120).replaceAll("\\s+", " ") + "..." : text.replaceAll("\\s+", " "));
 
-        // 2차: 전문 regex fallback (단락형 OCR 텍스트)
-        return extractByRegexFallback(text, metric);
+        // unicode subscript/공백 정규화
+        String normalized = normalizeForExtraction(text);
+
+        String previewRaw  = text.replaceAll("\\s+", " ");
+        String previewNorm = normalized;
+        if (previewRaw.length()  > 300) previewRaw  = previewRaw.substring(0, 300)  + "...";
+        if (previewNorm.length() > 300) previewNorm = previewNorm.substring(0, 300) + "...";
+
+        log.info("[E-METRIC-PARSE] metric={} textLen={} rawPreview='{}' normalizedPreview='{}'",
+                metric, text.length(), previewRaw, previewNorm);
+
+        // 1차: Markdown table
+        Optional<Double> tableResult = extractFromMarkdownTable(normalized, metric);
+        if (tableResult.isPresent()) {
+            log.info("[E-METRIC-PARSE] metric={} strategy=table value={} SUCCESS", metric, tableResult.get());
+            return tableResult;
+        }
+        log.debug("[E-METRIC-PARSE] metric={} strategy=table MISS", metric);
+
+        // 2차: 라인 단위 (영문+한글 키워드)
+        Optional<Double> lineResult = extractFromLines(normalized, metric);
+        if (lineResult.isPresent()) {
+            log.info("[E-METRIC-PARSE] metric={} strategy=line value={} SUCCESS", metric, lineResult.get());
+            return lineResult;
+        }
+        log.debug("[E-METRIC-PARSE] metric={} strategy=line MISS", metric);
+
+        // 3차: regex fallback
+        Optional<Double> regexResult = extractByRegexFallback(normalized, metric);
+        if (regexResult.isEmpty()) {
+            log.info("[E-METRIC-PARSE] metric={} strategy=all-fail reason=NO_PATTERN_MATCH normalizedText='{}'",
+                    metric, previewNorm);
+        }
+        return regexResult;
     }
 
     /**
-     * 사용자 입력값과 OCR 추출값을 비교하여 MatchResult를 반환합니다.
-     *
-     * <pre>
-     * diffPercent = abs(input - extracted) / input × 100
-     * HIGH   : diffPercent ≤  5%
-     * MEDIUM : diffPercent ≤ 15%
-     * LOW    : diffPercent >  15%
-     * </pre>
+     * 사용자 입력값 vs OCR 추출값 비교.
      */
     public MatchResult compare(double input, double extracted) {
         if (input <= 0) return new MatchResult("LOW", 100.0);
         double diff = Math.abs(input - extracted) / input * 100.0;
         double roundedDiff = Math.round(diff * 100.0) / 100.0;
-        String level = diff <= 5.0 ? "HIGH" : diff <= 15.0 ? "MEDIUM" : "LOW";
+        String level = diff <= 5.0 ? "HIGH" : diff <= 20.0 ? "MEDIUM" : "LOW";
         return new MatchResult(level, roundedDiff);
     }
 
-    /**
-     * MatchLevel → Confidence 가중치 점수 (0.0~1.0).
-     */
     public double numericMatchScore(String level) {
         return switch (level) {
             case "HIGH"   -> 1.0;
@@ -164,127 +281,176 @@ public class NumericExtractionService {
         };
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // 라인 단위 파싱
-    // ══════════════════════════════════════════════════════════════════════════
+    // ==========================================================================
+    // 정규화 헬퍼
+    // ==========================================================================
 
     /**
-     * 텍스트를 라인 단위로 분리 후 metric 키워드를 포함한 라인에서만 수치를 추출합니다.
-     * row/column index가 추출되지 않도록 라인 범위를 제한합니다.
+     * OCR 텍스트를 regex 매칭에 적합하도록 정규화합니다.
+     *
+     * 처리 순서:
+     *   1. Unicode subscript/superscript 숫자 -> ASCII  (tCO2 의 U+2082 subscript 2 포함)
+     *   2. 비표준 공백(non-breaking, en, em, thin, ideographic) -> 일반 공백  (U+00A0, U+2002, U+2003, U+2009, U+3000)
+     *   3. 연속 공백 -> 단일 공백
      */
+    static String normalizeForExtraction(String text) {
+        // subscript/superscript 숫자 -> ASCII
+        String s = text
+                .replace('₀', '0')
+                .replace('₁', '1')
+                .replace('₂', '2')   // tCO2 의 핵심
+                .replace('₃', '3')
+                .replace('₄', '4')
+                .replace('₅', '5')
+                .replace('₆', '6')
+                .replace('₇', '7')
+                .replace('₈', '8')
+                .replace('₉', '9')
+                .replace('²', '2')   // superscript 2
+                .replace('³', '3');  // superscript 3
+
+        // 비표준 공백 -> 일반 공백
+        s = s.replaceAll("[    　​⁠]", " ");
+
+        // 각 줄 내 연속 공백/탭 -> 단일 공백 (줄바꿈 보존 — 테이블 행 분리 유지)
+        s = s.replaceAll("[ \t]+", " ");
+
+        // CRLF 통일
+        s = s.replace("\r\n", "\n").replace("\r", "\n");
+
+        return s.trim();
+    }
+
+    // ==========================================================================
+    // 1차 전략: Markdown table 전체 파싱
+    // ==========================================================================
+
+    private Optional<Double> extractFromMarkdownTable(String text, String metric) {
+        String metricLower = metric.toLowerCase();
+
+        List<String> tableLines = new ArrayList<>();
+        for (String rawLine : text.split("\\r?\\n")) {
+            String line = rawLine.trim();
+            if (line.startsWith("|") && line.endsWith("|") && !line.isBlank()) {
+                tableLines.add(line);
+            }
+        }
+        if (tableLines.isEmpty()) return Optional.empty();
+
+        int targetColIdx  = -1;
+        int headerLineIdx = -1;
+
+        for (int i = 0; i < tableLines.size(); i++) {
+            String line = tableLines.get(i);
+            if (isSeparatorRow(line)) continue;
+
+            List<String> cols = splitTableLine(line);
+            for (int j = 0; j < cols.size(); j++) {
+                if (cols.get(j).toLowerCase().contains(metricLower)) {
+                    targetColIdx  = j;
+                    headerLineIdx = i;
+                    log.info("[NumericMatch] header found metric={} col_idx={} col_name='{}'",
+                            metric, j, cols.get(j));
+                    break;
+                }
+            }
+            if (targetColIdx >= 0) break;
+        }
+
+        if (targetColIdx < 0) return Optional.empty();
+
+        List<Double> values = new ArrayList<>();
+        for (int i = headerLineIdx + 1; i < tableLines.size(); i++) {
+            String line = tableLines.get(i);
+            if (isSeparatorRow(line)) continue;
+
+            List<String> cols = splitTableLine(line);
+            if (targetColIdx < cols.size()) {
+                String valStr = cols.get(targetColIdx).replaceAll("[,，]", "");
+                try {
+                    double val = Double.parseDouble(valStr);
+                    if (val > 0) {
+                        values.add(val);
+                        log.info("[NumericMatch] data row metric={} col_idx={} value={}",
+                                metric, targetColIdx, val);
+                    }
+                } catch (NumberFormatException ignore) {}
+            }
+        }
+
+        if (values.isEmpty()) return Optional.empty();
+
+        double total = values.stream().mapToDouble(Double::doubleValue).sum();
+        log.info("[NumericMatch] parsed {}={} ({}rows summed)", metric, total, values.size());
+        return Optional.of(total);
+    }
+
+    // ==========================================================================
+    // 2차 전략: 라인 단위 파싱 (영문/한글 키워드 지원)
+    // ==========================================================================
+
     private Optional<Double> extractFromLines(String text, String metric) {
         String metricLower = metric.toLowerCase();
+        List<String> korKeywords = METRIC_KOR_KEYWORDS.getOrDefault(metric, List.of());
 
         for (String rawLine : text.split("\\r?\\n")) {
             String line = rawLine.trim();
             if (line.isBlank()) continue;
-            if (!line.toLowerCase().contains(metricLower)) continue;
-            // 마크다운 구분선(|---|---|) 제외
-            if (line.replaceAll("[|:\\-\\s]", "").isEmpty()) continue;
+            if (isSeparatorRow(line)) continue;
 
-            // 우선순위 a: 단위 키워드 바로 앞 숫자
+            String lineLower = line.toLowerCase();
+            boolean hasMetricKeyword = lineLower.contains(metricLower)
+                    || korKeywords.stream().anyMatch(k -> lineLower.contains(k.toLowerCase()));
+            if (!hasMetricKeyword) continue;
+
+            // 우선순위 a: 단위 키워드 직전 숫자
             Optional<Double> byUnit = extractByUnit(line, metric);
             if (byUnit.isPresent()) {
-                log.info("[NumericMatch] parsed metric={} value={} from line={}", metric, byUnit.get(), line);
+                log.info("[NumericMatch] inline unit-match metric={} value={} line='{}'",
+                        metric, byUnit.get(), line);
                 return byUnit;
             }
 
-            // 우선순위 b: 파이프 테이블 컬럼 파싱 (| metric | VALUE | unit |)
+            // 우선순위 b: 파이프 테이블 라인 — col 이름 기준 바로 다음 셀 추출
             if (line.contains("|")) {
                 Optional<Double> tableVal = extractFromTableLine(line, metric);
                 if (tableVal.isPresent()) {
-                    log.info("[NumericMatch] parsed metric={} value={} from line={}", metric, tableVal.get(), line);
+                    log.info("[NumericMatch] inline table-match metric={} value={} line='{}'",
+                            metric, tableVal.get(), line);
                     return tableVal;
                 }
+                // 파이프 테이블 행에서는 first-num fallback 사용 금지 (날짜 컬럼 오추출 방지)
+                log.debug("[NumericMatch] pipe-table line skipped first-num metric={} line='{}'",
+                        metric, line.length() > 80 ? line.substring(0, 80) + "..." : line);
+                continue;
             }
 
-            // 우선순위 c: 라인 내 첫 번째 유효 숫자 (1자리 index 제외)
+            // 우선순위 c: 라인 내 첫 번째 유효 숫자 (비테이블 라인 전용)
             Optional<Double> firstNum = extractFirstSignificantNumber(line);
             if (firstNum.isPresent()) {
-                log.info("[NumericMatch] parsed metric={} value={} from line={}", metric, firstNum.get(), line);
+                log.info("[NumericMatch] inline first-num metric={} value={} line='{}'",
+                        metric, firstNum.get(), line);
                 return firstNum;
             }
         }
         return Optional.empty();
     }
 
-    /**
-     * 단위 키워드(kWh, MJ …) 바로 앞에 위치한 숫자를 추출합니다.
-     * 단위와 숫자 사이의 공백만 허용 — 파이프(|)가 사이에 있으면 미매칭.
-     */
     private Optional<Double> extractByUnit(String line, String metric) {
-        for (String unit : UNIT_KEYWORDS.getOrDefault(metric, List.of())) {
+        for (UnitDef ud : UNIT_DEFS.getOrDefault(metric, List.of())) {
             Pattern p = Pattern.compile(
-                    "([\\d][\\d,，]*(?:\\.\\d+)?)\\s*" + Pattern.quote(unit),
+                    "([\\d][\\d,，]*(?:\\.\\d+)?)\\s*" + Pattern.quote(ud.token()),
                     Pattern.CASE_INSENSITIVE
             );
             Matcher mat = p.matcher(line);
             if (mat.find()) {
                 try {
-                    double val = Double.parseDouble(mat.group(1).replaceAll("[,，]", ""));
-                    if (val > 0) return Optional.of(val);
-                } catch (NumberFormatException ignore) {}
-            }
-        }
-        return Optional.empty();
-    }
-
-    /**
-     * 파이프(|) 구분 마크다운 테이블 라인을 컬럼 단위로 분리하고
-     * metric 키워드 컬럼의 바로 다음 컬럼 값을 반환합니다.
-     *
-     * 예: "| electricity | 50000 | kWh |" → 50000.0
-     */
-    private Optional<Double> extractFromTableLine(String line, String metric) {
-        String[] cols = line.split("\\|");
-        for (int i = 0; i < cols.length; i++) {
-            if (cols[i].trim().toLowerCase().contains(metric.toLowerCase())) {
-                if (i + 1 < cols.length) {
-                    String valStr = cols[i + 1].trim().replaceAll("[,，]", "");
-                    try {
-                        double val = Double.parseDouble(valStr);
-                        if (val > 0) return Optional.of(val);
-                    } catch (NumberFormatException ignore) {}
-                }
-            }
-        }
-        return Optional.empty();
-    }
-
-    /**
-     * 라인에서 첫 번째 유효 숫자를 반환합니다.
-     * 단, 1자리 숫자(row/column index 가능성)는 건너뜁니다.
-     */
-    private Optional<Double> extractFirstSignificantNumber(String line) {
-        Matcher mat = NUM_PATTERN.matcher(line);
-        while (mat.find()) {
-            try {
-                String raw = mat.group(1).replaceAll("[,，]", "");
-                double val = Double.parseDouble(raw);
-                // 1자리 숫자는 row/column index일 가능성이 높으므로 제외
-                if (val >= 10 && val > 0) return Optional.of(val);
-            } catch (NumberFormatException ignore) {}
-        }
-        return Optional.empty();
-    }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // 전문 regex fallback (단락형 OCR 텍스트용)
-    // ══════════════════════════════════════════════════════════════════════════
-
-    private Optional<Double> extractByRegexFallback(String text, String metric) {
-        List<Pattern> patterns = REGEX_FALLBACK.get(metric);
-        if (patterns == null) return Optional.empty();
-
-        for (Pattern p : patterns) {
-            Matcher mat = p.matcher(text);
-            if (mat.find()) {
-                try {
-                    String numStr = mat.group(1).replaceAll("[,，]", "");
-                    double val = Double.parseDouble(numStr);
-                    if (val > 0) {
-                        log.info("[NumericMatch] regex-fallback metric={} value={}", metric, val);
-                        return Optional.of(val);
+                    double raw = Double.parseDouble(mat.group(1).replaceAll("[,，]", ""));
+                    if (raw > 0) {
+                        double normalized = raw * ud.factor();
+                        if (ud.factor() != 1.0)
+                            log.info("[UnitNorm] metric={} unit='{}' {}x{}={}", metric, ud.token(), raw, ud.factor(), normalized);
+                        return Optional.of(normalized);
                     }
                 } catch (NumberFormatException ignore) {}
             }
@@ -292,14 +458,125 @@ public class NumericExtractionService {
         return Optional.empty();
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
+    private Optional<Double> extractFromTableLine(String line, String metric) {
+        List<String> cols = splitTableLine(line);
+        String metricNorm = metric.toLowerCase();
+        for (int i = 0; i < cols.size(); i++) {
+            if (cols.get(i).toLowerCase().contains(metricNorm)) {
+                if (i + 1 < cols.size()) {
+                    String valStr  = cols.get(i + 1).replaceAll("[,，]", "");
+                    String unitStr = (i + 2 < cols.size()) ? cols.get(i + 2) : "";
+                    try {
+                        double val = Double.parseDouble(valStr);
+                        if (val > 0) {
+                            log.info("[NumericMatch] extractTableLine metric={} value={} unit={}",
+                                    cols.get(i), val, unitStr);
+                            return Optional.of(val);
+                        }
+                    } catch (NumberFormatException ignore) {}
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    private Optional<Double> extractFirstSignificantNumber(String line) {
+        Matcher mat = NUM_PATTERN.matcher(line);
+        while (mat.find()) {
+            try {
+                String raw = mat.group(1).replaceAll("[,，]", "");
+                double val = Double.parseDouble(raw);
+                if (val >= 10) return Optional.of(val);
+            } catch (NumberFormatException ignore) {}
+        }
+        return Optional.empty();
+    }
+
+    // ==========================================================================
+    // 3차 전략: regex fallback — 상세 [E-METRIC-PARSE] 로그 포함
+    // ==========================================================================
+
+    private Optional<Double> extractByRegexFallback(String text, String metric) {
+        List<RegexDef> patterns = REGEX_FALLBACK.get(metric);
+        if (patterns == null) {
+            log.info("[E-METRIC-PARSE] metric={} strategy=regex FAIL reason=NO_PATTERNS_DEFINED", metric);
+            return Optional.empty();
+        }
+
+        int idx = 0;
+        for (RegexDef rd : patterns) {
+            idx++;
+            Matcher mat = rd.compiled().matcher(text);
+            if (!mat.find()) {
+                log.debug("[E-METRIC-PARSE] metric={} strategy=regex pattern[{}]='{}' reason=NO_REGEX_MATCH",
+                        metric, idx, rd.description());
+                continue;
+            }
+
+            String matchedText = mat.group(0);
+            String numStr;
+            try {
+                numStr = mat.group(1).replaceAll("[,，]", "");
+            } catch (IndexOutOfBoundsException e) {
+                log.info("[E-METRIC-PARSE] metric={} strategy=regex pattern[{}]='{}' matchedText='{}' FAIL reason=NO_CAPTURE_GROUP",
+                        metric, idx, rd.description(), matchedText);
+                continue;
+            }
+
+            double raw;
+            try {
+                raw = Double.parseDouble(numStr);
+            } catch (NumberFormatException e) {
+                log.info("[E-METRIC-PARSE] metric={} strategy=regex pattern[{}]='{}' matchedText='{}' numStr='{}' FAIL reason=NUMBER_PARSE_FAIL",
+                        metric, idx, rd.description(), matchedText, numStr);
+                continue;
+            }
+
+            if (raw <= 0) {
+                log.info("[E-METRIC-PARSE] metric={} strategy=regex pattern[{}]='{}' matchedText='{}' value={} SKIP reason=NOT_POSITIVE",
+                        metric, idx, rd.description(), matchedText, raw);
+                continue;
+            }
+
+            double normalized = raw * rd.factor();
+            if (rd.factor() != 1.0)
+                log.info("[UnitNorm-Regex] metric={} raw={} x{}={}", metric, raw, rd.factor(), normalized);
+
+            log.info("[E-METRIC-PARSE] metric={} strategy=regex pattern[{}]='{}' matchedText='{}' value={} unit={} SUCCESS",
+                    metric, idx, rd.description(), matchedText, normalized, metricUnit(metric));
+            return Optional.of(normalized);
+        }
+
+        log.info("[E-METRIC-PARSE] metric={} strategy=regex FAIL reason=ALL_PATTERNS_NO_MATCH patternsTriedCount={}",
+                metric, idx);
+        return Optional.empty();
+    }
+
+    // ==========================================================================
+    // 공통 헬퍼
+    // ==========================================================================
+
+    private List<String> splitTableLine(String line) {
+        List<String> cols = new ArrayList<>();
+        for (String c : line.split("\\|")) {
+            String trimmed = c.trim();
+            if (!trimmed.isEmpty()) cols.add(trimmed);
+        }
+        return cols;
+    }
+
+    private boolean isSeparatorRow(String line) {
+        return line.replaceAll("[|:\\-\\s]", "").isEmpty();
+    }
+
+    // ==========================================================================
     // 결과 타입
-    // ══════════════════════════════════════════════════════════════════════════
+    // ==========================================================================
 
     /**
      * 수치 비교 결과.
      *
-     * @param level      "HIGH" / "MEDIUM" / "LOW"
+     * @param level       "HIGH" / "MEDIUM" / "LOW"
      * @param diffPercent 차이 비율 (%)
      */
     public record MatchResult(String level, double diffPercent) {

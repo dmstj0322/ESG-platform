@@ -1,0 +1,45 @@
+{
+  "companyName": "스마트솔루션 주식회사",
+  "industry": "IT/소프트웨어",
+  "finalGrade": "B",
+  "totalScore": 64,
+  "eScore": 71,
+  "sScore": 55,
+  "gScore": 58,
+  "overallConfidence": 53,
+  "analyzedAt": "2026-05-15T14:30:11",
+  "processingTimeMs": 5820,
+  "ocrTimeMs": 2400,
+  "ragTimeMs": 1800,
+  "verifyTimeMs": 620,
+  "ragBased": true,
+  "ocrFallback": false,
+  "lowMismatchCount": 1,
+  "gradeCeilingApplied": false,
+  "evidenceCount": 4,
+  "esgChart": {
+    "radar": [
+      { "category": "E", "label": "환경",    "score": 71, "grade": "B" },
+      { "category": "S", "label": "사회",    "score": 55, "grade": "C" },
+      { "category": "G", "label": "지배구조","score": 58, "grade": "C" }
+    ],
+    "totalScore": 64,
+    "breakdown": [
+      { "kesgCode": "E-101", "title": "전력 사용량",   "score": 88, "grade": "A", "confidence": 85 },
+      { "kesgCode": "E-102", "title": "가스 사용량",   "score": 75, "grade": "B", "confidence": 70 },
+      { "kesgCode": "E-103", "title": "탄소 배출량",   "score": 20, "grade": "D", "confidence": 25 },
+      { "kesgCode": "E-104", "title": "폐기물 발생량", "score": 82, "grade": "A", "confidence": 80 },
+      { "kesgCode": "E-105", "title": "용수 사용량",   "score": 70, "grade": "B", "confidence": 68 },
+      { "kesgCode": "S-201", "title": "산업안전 교육", "score": 55, "grade": "C", "confidence": 48 },
+      { "kesgCode": "G-301", "title": "윤리경영 정책", "score": 60, "grade": "C", "confidence": 52 }
+    ]
+  },
+  "evidenceMatches": [
+    { "indicatorCode": "E-101", "indicatorTitle": "전력 사용량",   "numericMatchLevel": "HIGH",   "numericDiffPercent": 2.8,  "inputValue": 4200,  "extractedValue": 4318,  "unit": "MWh", "isValidEvidence": true,  "confidenceLevel": "HIGH" },
+    { "indicatorCode": "E-102", "indicatorTitle": "가스 사용량",   "numericMatchLevel": "MEDIUM", "numericDiffPercent": 11.2, "inputValue": 980,   "extractedValue": 1090,  "unit": "GJ",  "isValidEvidence": true,  "confidenceLevel": "MEDIUM" },
+    { "indicatorCode": "E-103", "indicatorTitle": "탄소 배출량",   "numericMatchLevel": "LOW",    "numericDiffPercent": 28.4, "inputValue": 2100,  "extractedValue": 2696,  "unit": "tCO₂","isValidEvidence": false, "confidenceLevel": "LOW" },
+    { "indicatorCode": "E-104", "indicatorTitle": "폐기물 발생량", "numericMatchLevel": "HIGH",   "numericDiffPercent": 1.5,  "inputValue": 87,    "extractedValue": 88,    "unit": "ton", "isValidEvidence": true,  "confidenceLevel": "HIGH" },
+    { "indicatorCode": "S-201", "indicatorTitle": "산업안전 교육", "similarity": 0.58, "finalScore": 0.55, "evidenceText": "직원 교육 프로그램 운영 현황입니다.", "isValidEvidence": true, "confidenceLevel": "LOW", "pageNumber": 7 }
+  ],
+  "fullReport": "### ESG 종합 총평\n\n스마트솔루션 주식회사는 환경 데이터 일부와 S/G 증빙 부족으로 평가 정확도에 제한이 있습니다.\n\n### 위험 요소\n\n- 탄소 배출량 수치 불일치 감지\n- S/G 지표 5개 항목 증빙 미제출\n\n### 개선 권고\n\n- ESG 관련 정책 문서 제출 필요\n- 사회·지배구조 관련 공시 자료 보완 권장"
+}

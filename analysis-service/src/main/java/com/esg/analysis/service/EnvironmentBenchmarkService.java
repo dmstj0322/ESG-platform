@@ -72,8 +72,8 @@ public class EnvironmentBenchmarkService {
         }
 
         int emp = Math.max(employeeCount, 1);
-        log.info("[EnvBenchmark] 업종 벤치마크 적용 ksic={} 업종={} 임직원={}",
-                prefix, bm.getIndustryName(), emp);
+        log.info("[EnvBenchmark] 공공 통계 기반 업종 벤치마크 적용 ksic={} 업종={} 임직원={} / 전력출처={}",
+                prefix, bm.getIndustryName(), emp, bm.getElectricitySource());
 
         return EnvironmentValues.fromBenchmark(bm, emp);
     }
@@ -90,7 +90,7 @@ public class EnvironmentBenchmarkService {
         private final Double wasteKg;
         private final Double waterM3;
 
-        /** 데이터 출처: "ACTUAL" (실측) / "BENCHMARK" (업종 평균) / "NONE" */
+        /** 데이터 출처 구분: "ACTUAL" (기업 실측) / "BENCHMARK" (공공 통계 기반) / "NONE" */
         private final String source;
 
         // 단위 (벤치마크에서 전달, 실측 시 표준 단위 사용)
@@ -100,28 +100,44 @@ public class EnvironmentBenchmarkService {
         private final String wasteUnit;
         private final String waterUnit;
 
+        // 지표별 데이터 출처 (UI/PDF 표시용)
+        private final String electricitySource;
+        private final String gasSource;
+        private final String carbonSource;
+        private final String wasteSource;
+        private final String waterSource;
+
         private EnvironmentValues(Double elec, Double gas, Double carbon, Double waste, Double water,
                                   String source,
                                   String electricityUnit, String gasUnit, String carbonUnit,
-                                  String wasteUnit, String waterUnit) {
-            this.electricityKwh  = elec;
-            this.gasMj           = gas;
-            this.carbonTco2      = carbon;
-            this.wasteKg         = waste;
-            this.waterM3         = water;
-            this.source          = source;
-            this.electricityUnit = electricityUnit;
-            this.gasUnit         = gasUnit;
-            this.carbonUnit      = carbonUnit;
-            this.wasteUnit       = wasteUnit;
-            this.waterUnit       = waterUnit;
+                                  String wasteUnit, String waterUnit,
+                                  String electricitySource, String gasSource, String carbonSource,
+                                  String wasteSource, String waterSource) {
+            this.electricityKwh   = elec;
+            this.gasMj            = gas;
+            this.carbonTco2       = carbon;
+            this.wasteKg          = waste;
+            this.waterM3          = water;
+            this.source           = source;
+            this.electricityUnit  = electricityUnit;
+            this.gasUnit          = gasUnit;
+            this.carbonUnit       = carbonUnit;
+            this.wasteUnit        = wasteUnit;
+            this.waterUnit        = waterUnit;
+            this.electricitySource = electricitySource;
+            this.gasSource         = gasSource;
+            this.carbonSource      = carbonSource;
+            this.wasteSource       = wasteSource;
+            this.waterSource       = waterSource;
         }
 
         static EnvironmentValues fromActual(EnvironmentData d) {
             return new EnvironmentValues(
                     d.getElectricityKwh(), d.getGasMj(), d.getCarbonTco2(),
                     d.getWasteKg(), d.getWaterM3(), "ACTUAL",
-                    "kWh", "MJ", "tCO2-eq", "kg", "m³");
+                    "kWh", "MJ", "tCO₂", "kg", "m³",
+                    "기업 제출 실측 데이터", "기업 제출 실측 데이터", "기업 제출 실측 데이터",
+                    "기업 제출 실측 데이터", "기업 제출 실측 데이터");
         }
 
         static EnvironmentValues fromBenchmark(EnvironmentBenchmark bm, int employeeCount) {
@@ -133,11 +149,14 @@ public class EnvironmentBenchmarkService {
                     scale(bm.getWaterPerEmployee(),       employeeCount),
                     "BENCHMARK",
                     bm.getElectricityUnit(), bm.getGasUnit(), bm.getCarbonUnit(),
-                    bm.getWasteUnit(), bm.getWaterUnit());
+                    bm.getWasteUnit(), bm.getWaterUnit(),
+                    bm.getElectricitySource(), bm.getGasSource(), bm.getCarbonSource(),
+                    bm.getWasteSource(), bm.getWaterSource());
         }
 
         static EnvironmentValues empty() {
             return new EnvironmentValues(null, null, null, null, null, "NONE",
+                    null, null, null, null, null,
                     null, null, null, null, null);
         }
 

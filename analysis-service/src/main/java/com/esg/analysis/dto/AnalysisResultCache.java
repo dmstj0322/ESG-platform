@@ -38,6 +38,8 @@ public class AnalysisResultCache implements Serializable {
     private Integer lowMismatchCount;
     /** Grade Ceiling 규칙으로 등급이 낮아진 경우 true */
     private Boolean gradeCeilingApplied;
+    /** AUTO 모드 사전 진단 여부 — E 파일 없이 benchmark 기반으로만 계산된 경우 true */
+    private Boolean isAutoSimulation;
 
     @Data
     @NoArgsConstructor

@@ -14,6 +14,8 @@ public interface AnalysisReportRepository extends JpaRepository<AnalysisReport, 
 
     Optional<AnalysisReport> findFirstByCompanyIdAndStatusOrderByIdDesc(Long companyId, String status);
 
+    java.util.List<AnalysisReport> findTop20ByCompanyIdAndStatusOrderByIdDesc(Long companyId, String status);
+
     long countByCompanyAndStatus(Long companyId, String status);
 
     /** 중복 분석 요청 차단: PENDING 또는 PROCESSING 상태가 이미 존재하면 true */

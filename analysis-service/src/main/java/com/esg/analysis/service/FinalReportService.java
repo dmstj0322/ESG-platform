@@ -19,6 +19,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * E/S/G 로컬 결과를 받아 종합 리포트를 생성합니다.
@@ -35,6 +36,38 @@ public class FinalReportService {
     private final AnalysisOpenAiClient        openAiClient;
     private final ObjectMapper                objectMapper;
     private final TransactionTemplate         transactionTemplate;
+
+    // WS ready 이후 실행을 위해 요청 데이터를 단기 메모리 캐싱 (createSession → startSession 사이)
+    private final ConcurrentHashMap<Long, FinalReportRequest> pendingRequests = new ConcurrentHashMap<>();
+
+    // ── [Step 1] 세션 생성 — DB 레코드만 저장, 분석 실행 안 함 ──────────────────
+    public Long createSession(Long userId, Long companyId, FinalReportRequest req) {
+        AnalysisReport saved = transactionTemplate.execute(status ->
+                analysisReportRepository.save(
+                        AnalysisReport.builder()
+                                .memberId(userId)
+                                .companyId(companyId)
+                                .status("PENDING")
+                                .reportContent("분석 대기 중...")
+                                .build()
+                )
+        );
+        pendingRequests.put(saved.getId(), req);
+        log.info("[Session] 세션 생성 sessionId={} companyId={}", saved.getId(), companyId);
+        return saved.getId();
+    }
+
+    // ── [Step 2] 분석 실행 — PipelinePage WS 구독 완료 후 호출됨 ──────────────
+    public void startSession(Long sessionId, Long companyId) {
+        FinalReportRequest req = pendingRequests.remove(sessionId);
+        if (req == null) {
+            log.error("[Session] 요청 데이터 없음 sessionId={} — 세션 만료 또는 중복 호출", sessionId);
+            send(companyId, "FAILED");
+            throw new IllegalArgumentException("세션을 찾을 수 없습니다: " + sessionId);
+        }
+        log.info("[Session] 분석 시작 sessionId={} companyId={}", sessionId, companyId);
+        processAsync(sessionId, companyId, req);
+    }
 
     public Long createFinalReport(Long userId, Long companyId, FinalReportRequest req) {
         AnalysisReport saved = transactionTemplate.execute(status ->
@@ -54,6 +87,7 @@ public class FinalReportService {
     @Async("analysisExecutor")
     public void processAsync(Long analysisId, Long companyId, FinalReportRequest req) {
         try {
+            boolean autoSim = req.isAutoSimulation();
             send(companyId, "RULE_BASED_SCORING");
             Thread.sleep(500);
 
@@ -61,10 +95,15 @@ public class FinalReportService {
             int sScore  = score(req.getSocialResult());
             int gScore  = score(req.getGovernanceResult());
             int adjS    = Math.min(100, sScore + (req.isEcoPointApplied() ? 4 : 0));
-            int total   = req.getTotalScore() != null
-                    ? req.getTotalScore()
-                    : Math.round(eScore * 0.33f + adjS * 0.33f + gScore * 0.34f);
-            String grade = req.getFinalGrade() != null ? req.getFinalGrade() : toGrade(total);
+
+            // ── Dynamic Industry Weighting (KSIC 기반) ───────────────────
+            double[] w = EsgScoreConstants.getWeights(req.getKsicCode());
+            EsgScoreConstants.IndustryType industryType = EsgScoreConstants.getIndustryType(req.getKsicCode());
+            log.info("[DynamicWeight] ksic={} industryType={} weights=[E={}, S={}, G={}]",
+                    req.getKsicCode(), industryType, w[0], w[1], w[2]);
+
+            int total   = (int) Math.round(eScore * w[0] + adjS * w[1] + gScore * w[2]);
+            String grade = req.getFinalGrade() != null ? req.getFinalGrade() : EsgScoreConstants.toGrade(total);
             int conf    = req.getConfidence() != null ? req.getConfidence() : avgConf(req);
 
             // Grade Ceiling (LOW mismatch 개수 기반: ≥1→B, ≥3→C, ≥4→D)
@@ -80,13 +119,15 @@ public class FinalReportService {
             else if (lowCount >= 1) conf = Math.min(conf, 40);
 
             send(companyId, "GPT_SUMMARY");
-            GptOpinion opinion = callGptWithMismatch(eScore, adjS, gScore, total, grade, req, lowCount);
+            GptOpinion opinion = autoSim
+                    ? callGptSimulation(eScore, adjS, gScore, total, grade, req)
+                    : callGptWithMismatch(eScore, adjS, gScore, total, grade, req, lowCount);
 
             send(companyId, "MERGING_SCORE");
             Thread.sleep(400);
 
             AnalysisResultCache cache = buildCache(
-                    eScore, adjS, gScore, total, grade, conf, opinion, req, lowCount, gradeCeilingApplied);
+                    eScore, adjS, gScore, total, grade, conf, opinion, req, lowCount, gradeCeilingApplied, autoSim);
             String json = objectMapper.writeValueAsString(cache);
             final String finalGrade = grade;
 
@@ -101,7 +142,7 @@ public class FinalReportService {
             });
 
             Thread.sleep(400);
-            send(companyId, "COMPLETED");
+            send(companyId, "COMPLETED:" + analysisId);
 
         } catch (Exception e) {
             log.error("[FinalReport] 처리 실패 analysisId={}: {}", analysisId, e.getMessage(), e);
@@ -134,13 +175,6 @@ public class FinalReportService {
         return r != null && r.getConfidence() != null ? r.getConfidence() : 70;
     }
 
-    private String toGrade(int score) {
-        if (score >= 80) return "A";
-        if (score >= 65) return "B";
-        if (score >= 45) return "C";
-        return "D";
-    }
-
     private int avgConf(FinalReportRequest req) {
         int total = 0, cnt = 0;
         for (FinalReportRequest.CategoryResult r : List.of(
@@ -164,7 +198,7 @@ public class FinalReportService {
     }
 
     private String applyGradeCeiling(String grade, String ceiling) {
-        java.util.List<String> order = java.util.List.of("A", "B", "C", "D");
+        java.util.List<String> order = EsgScoreConstants.GRADE_ORDER;
         int gi = order.indexOf(grade);
         int ci = order.indexOf(ceiling);
         if (gi < 0 || ci < 0) return grade;
@@ -179,6 +213,52 @@ public class FinalReportService {
                 ? "[리스크] 입력 ESG 데이터와 증빙자료 간 심각한 수치 불일치가 감지되었습니다. (" + lowCount + "개 항목 불일치) 데이터 신뢰성에 심각한 문제가 있으며 즉각적인 검토가 필요합니다."
                 : "[리스크] 입력 ESG 데이터와 증빙자료 간 수치 불일치가 감지되었습니다. 제출된 환경 데이터의 신뢰성 검증이 필요합니다.";
         return new GptOpinion(base.overallOpinion(), mismatchRisk + " " + base.riskOpportunity());
+    }
+
+    private GptOpinion callGptSimulation(int e, int s, int g, int total, String grade, FinalReportRequest req) {
+        String prompt = "[업종 benchmark 기반 사전 진단 모드]\n"
+                + "당신은 10년 경력의 ESG 전문 컨설턴트입니다.\n"
+                + "아래 결과는 실제 증빙 감사(RAG Audit)가 아닌 업종 평균 benchmark 기반 K-ESG 사전 진단 결과입니다.\n\n"
+                + "## 평가 결과 (사전 진단 — 증빙 미검증)\n"
+                + "- 환경(E): " + e + "점 / " + grade(req.getEnvironmentResult()) + "등급 (업종 benchmark 기반 추정)\n"
+                + "- 사회(S): " + s + "점 / " + grade(req.getSocialResult()) + "등급\n"
+                + "- 지배구조(G): " + g + "점 / " + grade(req.getGovernanceResult()) + "등급\n"
+                + "- 종합 점수: " + total + "점 / 최종 등급: " + grade + "\n\n"
+                + "## 반환 형식 (JSON)\n"
+                + "{\n"
+                + "  \"overallOpinion\": \"본 결과는 업종 평균 benchmark 기반 ESG 사전 진단이며 실제 증빙 감사는 미수행되었습니다. 200자 내외 진단 의견 포함.\",\n"
+                + "  \"riskOpportunity\": \"[리스크] 실제 ESG 감사 미수행으로 인한 투명성 리스크 포함. [기회] 정식 ESG 감사 수행 시 개선 가능 항목.\"\n"
+                + "}\n\n"
+                + "마케팅 과장 표현 금지. 사전 진단임을 명시하되 건설적인 개선 방향 제시.";
+        try {
+            String raw = openAiClient.callWithRetry(prompt);
+            JsonNode node = objectMapper.readTree(raw);
+            String opinion = node.path("overallOpinion").asText(null);
+            String risk    = node.path("riskOpportunity").asText(null);
+            if (opinion == null || opinion.isBlank()) return fallbackSimulationOpinion(e, s, g, total, grade);
+            return new GptOpinion(
+                    opinion,
+                    risk != null && !risk.isBlank() ? risk : buildSimulationRisk(grade, e, s, g)
+            );
+        } catch (Exception ex) {
+            log.warn("[FinalReport] GPT 사전진단 실패 — 기본 총평 사용: {}", ex.getMessage());
+            return fallbackSimulationOpinion(e, s, g, total, grade);
+        }
+    }
+
+    private GptOpinion fallbackSimulationOpinion(int e, int s, int g, int total, String grade) {
+        String opinion = String.format(
+                "[업종 benchmark 기반 사전 진단] K-ESG 종합 점수 %d점(%s등급)으로 추정됩니다. "
+                + "환경(E) %d점, 사회(S) %d점, 지배구조(G) %d점입니다. "
+                + "본 결과는 실제 ESG 증빙 감사(RAG Audit)가 아닌 업종 평균 기반 사전 진단이므로, "
+                + "정확한 평가를 위해 증빙 문서를 포함한 정식 분석을 권장합니다.",
+                total, grade, e, s, g);
+        return new GptOpinion(opinion, buildSimulationRisk(grade, e, s, g));
+    }
+
+    private String buildSimulationRisk(String grade, int e, int s, int g) {
+        return "[리스크] 실제 ESG 증빙 감사 미수행으로 공시 의무화 대응에 한계가 있을 수 있습니다. "
+                + "[기회] 환경(E) 증빙 문서 및 S/G 관련 정책 자료를 제출하면 더 정확한 K-ESG 평가를 받을 수 있습니다.";
     }
 
     private GptOpinion callGpt(int e, int s, int g, int total, String grade, FinalReportRequest req) {
@@ -241,7 +321,8 @@ public class FinalReportService {
                                             String grade, int conf,
                                             GptOpinion opinion,
                                             FinalReportRequest req,
-                                            int lowCount, boolean gradeCeilingApplied) {
+                                            int lowCount, boolean gradeCeilingApplied,
+                                            boolean autoSim) {
         AnalysisResultCache cache = new AnalysisResultCache();
         cache.setEScore(e);
         cache.setSScore(s);
@@ -255,6 +336,7 @@ public class FinalReportService {
         cache.setAnalyzedAt(LocalDateTime.now().toString().substring(0, 19));
         cache.setLowMismatchCount(lowCount > 0 ? lowCount : null);
         cache.setGradeCeilingApplied(gradeCeilingApplied ? true : null);
+        cache.setIsAutoSimulation(autoSim ? true : null);
         cache.setSections(List.of(
                 toSection("Environment", "환경",     e, grade(req.getEnvironmentResult())),
                 toSection("Social",      "사회",     s, grade(req.getSocialResult())),
@@ -298,6 +380,9 @@ public class FinalReportService {
                         .sourceFile(item.getSourceFile())
                         .numericMatchLevel(item.getNumericMatchLevel())
                         .numericDiffPercent(item.getNumericDiffPercent())
+                        .inputValue(item.getInputValue())
+                        .extractedValue(item.getExtractedValue())
+                        .unit(item.getUnit())
                         .build());
             }
             evidenceMatchRepository.saveAll(matches);

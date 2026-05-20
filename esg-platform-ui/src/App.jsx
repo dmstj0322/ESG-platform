@@ -27,6 +27,7 @@ import MyActivityList from './pages/user/MyActiviyList';
 
 import DashboardPage from './pages/analysis/DashboardPage';
 import AnalysisPage from './pages/analysis/AnalysisPage';
+import PipelinePage from './pages/analysis/PipelinePage';
 import ReportPage from './pages/analysis/ReportPage';
 import AnalysisResultPage from './pages/analysis/AnalysisResultPage';
 
@@ -34,7 +35,7 @@ const ProtectedLanding = () => {
   const { isLoggedIn, user } = useAuth();
   if (isLoggedIn) {
     const isAdmin = user?.role === 'SYSTEM_ADMIN' || user?.role === 'COMPANY_ADMIN';
-    return <Navigate to={isAdmin ? '/analysis' : '/community'} replace />;
+    return <Navigate to={isAdmin ? '/analysis/dashboard' : '/community'} replace />;
   }
   return <LandingPage />;
 };
@@ -42,18 +43,18 @@ const ProtectedLanding = () => {
 const CommunityLayout = () => (
   <>
     <Header />
-    <div style={{ padding: '20px', minHeight: 'calc(100vh - 60px)' }}>
-      <Outlet /> {/* 여기에 PostList, MarketList 등이 렌더링됩니다. */}
+    <div className="px-5 py-5 min-h-[calc(100vh-56px)]">
+      <Outlet />
     </div>
   </>
 );
 
 const AnalysisLayout = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+  <div className="flex flex-col min-h-screen">
     <Header />
-    <div style={{ display: 'flex', flex: 1 }}>
+    <div className="flex flex-1">
       <Sidebar />
-      <main style={{ flex: 1, overflow: 'auto', minWidth: 0 }}>
+      <main className="flex-1 overflow-auto min-w-0 bg-[#F7F8FA]">
         <Outlet />
       </main>
     </div>
@@ -89,16 +90,18 @@ function App() {
                 <AdminRoute><ProductAdmin /></AdminRoute>
               } />
             </Route>
+            {/* Pipeline: 독립 full-screen — Layout 없음 */}
+            <Route path="/analysis/pipeline/:sessionId" element={
+              <AdminRoute><PipelinePage /></AdminRoute>
+            } />
             <Route path="/analysis" element={
                 <AdminRoute>
                   <AnalysisLayout />
                 </AdminRoute>
               }
             >
-              {/* /analysis 로 들어오면 기본적으로 dashboard를 보여줌 */}
-              <Route index element={<DashboardPage />} /> 
+              <Route index element={<AnalysisPage />} />
               <Route path="dashboard" element={<DashboardPage />} />
-              <Route path="detail" element={<AnalysisPage />} />
               <Route path="report" element={<ReportPage />} />
               <Route path="result/:analysisId" element={<AnalysisResultPage />} />
             </Route>

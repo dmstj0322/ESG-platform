@@ -19,8 +19,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -50,6 +52,7 @@ public class AnalysisController {
                     log.info(">>>> [조회 성공] 리포트 ID: {}, 등급: {}", report.getId(), report.getGrade());
 
                     Map<String, Object> response = new HashMap<>();
+                    response.put("analysisId", report.getId());
                     response.put("finalGrade", report.getGrade());
                     response.put("analysisResult", report.getReportContent());
 
@@ -59,6 +62,43 @@ public class AnalysisController {
                     log.warn(">>>> [조회 결과 없음] 완료된 리포트 없음 (기업 ID: {})", companyId);
                     return ResponseEntity.noContent().build();
                 });
+    }
+
+    /**
+     * [GET] 완료된 분석 이력 목록 조회 (최신 20건)
+     */
+    @GetMapping("/analysis/history")
+    public ResponseEntity<?> getAnalysisHistory(@RequestHeader("X-Company-Id") Long companyId) {
+        log.info(">>>> [API 호출] 기업 ID {}의 분석 이력 조회", companyId);
+
+        List<?> history = analysisReportRepository
+                .findTop20ByCompanyIdAndStatusOrderByIdDesc(companyId, "COMPLETED")
+                .stream()
+                .map(report -> {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("analysisId", report.getId());
+                    item.put("grade", report.getGrade());
+                    item.put("createdAt", report.getCreatedDate() != null
+                            ? report.getCreatedDate().toString() : null);
+
+                    // reportContent에서 점수/신뢰도 파싱 (있을 때만)
+                    String content = report.getReportContent();
+                    if (content != null && content.startsWith("{")) {
+                        try {
+                            Map<String, Object> parsed = objectMapper.readValue(
+                                    content, new TypeReference<Map<String, Object>>() {});
+                            if (parsed.containsKey("eScore"))   item.put("eScore",   parsed.get("eScore"));
+                            if (parsed.containsKey("sScore"))   item.put("sScore",   parsed.get("sScore"));
+                            if (parsed.containsKey("gScore"))   item.put("gScore",   parsed.get("gScore"));
+                            if (parsed.containsKey("totalScore")) item.put("totalScore", parsed.get("totalScore"));
+                            if (parsed.containsKey("confidence")) item.put("confidence", parsed.get("confidence"));
+                        } catch (Exception ignored) {}
+                    }
+                    return item;
+                })
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(history);
     }
 
     /**
@@ -96,12 +136,35 @@ public class AnalysisController {
             @RequestPart("checkedCount") String checkedCountStr,
             @RequestPart("totalItems") String totalItemsStr,
             @RequestPart(value = "file",      required = false) MultipartFile file,
-            @RequestPart(value = "eMetrics",  required = false) String eMetricsJson) {
+            @RequestPart(value = "eMetrics",  required = false) String eMetricsJson,
+            @RequestPart(value = "ksicCode",  required = false) String ksicCode,
+            @RequestPart(value = "envMode",   required = false) String envMode) {
 
-        log.info("★카테고리 분석★ category={} userId={} companyId={} hasFile={} hasEMetrics={}",
-                category, userId, companyId,
-                file != null && !file.isEmpty(),
-                eMetricsJson != null && !eMetricsJson.isBlank());
+        log.info("======================================================");
+        log.info("[CATEGORY-START] /api/v1/analysis/category RECEIVED");
+        log.info("  category={} userId={} companyId={} ksicCode={} envMode={}", category, userId, companyId, ksicCode, envMode);
+        log.info("  file={} fileSize={} fileType={}",
+                file != null ? file.getOriginalFilename() : "NULL",
+                file != null ? file.getSize() : -1,
+                file != null ? file.getContentType() : "NULL");
+        log.info("  eMetricsJson={}", eMetricsJson != null
+                ? eMetricsJson.substring(0, Math.min(200, eMetricsJson.length()))
+                : "NULL");
+        log.info("======================================================");
+
+        // S/G 카테고리에 CSV 업로드 차단 — Upstage OCR은 CSV를 지원하지 않음
+        if (file != null && !file.isEmpty()
+                && ("S".equalsIgnoreCase(category) || "G".equalsIgnoreCase(category))) {
+            String ct = file.getContentType();
+            String fn = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase() : "";
+            boolean isCsv = (ct != null && ct.contains("csv")) || fn.endsWith(".csv");
+            if (isCsv) {
+                log.warn("[{}-CATEGORY-REJECT] CSV 업로드 차단 file={} contentType={}", category, file.getOriginalFilename(), ct);
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "S/G 분석은 PDF 증빙 파일만 업로드 가능합니다."));
+            }
+        }
+
         try {
             Map<String, Boolean> answers = objectMapper.readValue(
                     checklistAnswersJson, new TypeReference<Map<String, Boolean>>() {});
@@ -117,8 +180,12 @@ public class AnalysisController {
 
             CategoryAnalysisResponse result =
                     categoryAnalysisService.analyze(category, answers, checkedCount, totalItems,
-                            file, eMetricInputs);
+                            file, eMetricInputs, ksicCode, envMode);
             return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            log.warn("[Category] 요청 거부 category={} 원인={}", category, e.getMessage());
+            return ResponseEntity.unprocessableEntity()
+                    .body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
             log.error("[Category] 분석 실패 category={} 원인={}", category, e.getMessage(), e);
             return ResponseEntity.internalServerError()
@@ -127,7 +194,7 @@ public class AnalysisController {
     }
 
     /**
-     * [POST] E/S/G 로컬 결과 집계 → 최종 리포트 생성 (OCR/RAG 없음)
+     * [POST] E/S/G 로컬 결과 집계 → 최종 리포트 생성 (OCR/RAG 없음) — 레거시 유지
      */
     @PostMapping("/api/v1/analysis/final-report")
     public ResponseEntity<?> requestFinalReport(
@@ -135,9 +202,42 @@ public class AnalysisController {
             @RequestHeader("X-CompanyId") Long companyId,
             @RequestBody FinalReportRequest request) {
 
-        log.info("★최종 집계 요청★ userId={} companyId={}", userId, companyId);
+        log.info("★최종 집계 요청 (레거시)★ userId={} companyId={}", userId, companyId);
         Long analysisId = finalReportService.createFinalReport(userId, companyId, request);
         return ResponseEntity.accepted().body(analysisId);
+    }
+
+    /**
+     * [POST] Step 1 — 세션만 생성, 분석 실행 안 함
+     * PipelinePage가 navigate 직전에 호출, sessionId를 받아 /pipeline/:id 로 이동.
+     */
+    @PostMapping("/api/v1/analysis/session")
+    public ResponseEntity<?> createSession(
+            @RequestHeader("X-UserId") Long userId,
+            @RequestHeader("X-CompanyId") Long companyId,
+            @RequestBody FinalReportRequest request) {
+
+        log.info("[Session] 세션 생성 요청 userId={} companyId={}", userId, companyId);
+        Long sessionId = finalReportService.createSession(userId, companyId, request);
+        return ResponseEntity.accepted().body(Map.of("sessionId", sessionId));
+    }
+
+    /**
+     * [POST] Step 2 — 분석 실행 시작 (PipelinePage WebSocket 구독 완료 후 호출)
+     * 이 시점에 WebSocket 구독이 보장되므로 첫 이벤트부터 유실 없음.
+     */
+    @PostMapping("/api/v1/analysis/session/{sessionId}/start")
+    public ResponseEntity<?> startSession(
+            @PathVariable Long sessionId,
+            @RequestHeader("X-CompanyId") Long companyId) {
+
+        log.info("[Session] 분석 시작 요청 sessionId={} companyId={}", sessionId, companyId);
+        try {
+            finalReportService.startSession(sessionId, companyId);
+            return ResponseEntity.accepted().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 
     /**

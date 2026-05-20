@@ -74,6 +74,18 @@ public class ESGEvidenceMatch {
     @Column(name = "numeric_diff_percent")
     private Double numericDiffPercent;
 
+    /** 사용자 CSV 원본 입력값 (E 지표 외에는 null) */
+    @Column(name = "input_value")
+    private Double inputValue;
+
+    /** OCR/CSV 문서 추출값 (E 지표 외에는 null) */
+    @Column(name = "extracted_value")
+    private Double extractedValue;
+
+    /** 수치 단위 (예: "kWh", "MJ", "tCO₂", "kg", "m³") */
+    @Column(name = "numeric_unit", length = 20)
+    private String unit;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

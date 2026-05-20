@@ -1,0 +1,51 @@
+{
+  "companyName": "에코테크 주식회사",
+  "industry": "제조업",
+  "finalGrade": "A",
+  "totalScore": 87,
+  "eScore": 92,
+  "sScore": 83,
+  "gScore": 86,
+  "overallConfidence": 91,
+  "analyzedAt": "2026-05-15T10:23:44",
+  "processingTimeMs": 3210,
+  "ocrTimeMs": 1200,
+  "ragTimeMs": 820,
+  "verifyTimeMs": 310,
+  "ragBased": true,
+  "ocrFallback": false,
+  "lowMismatchCount": 0,
+  "gradeCeilingApplied": false,
+  "evidenceCount": 9,
+  "esgChart": {
+    "radar": [
+      { "category": "E", "label": "환경",    "score": 92, "grade": "A" },
+      { "category": "S", "label": "사회",    "score": 83, "grade": "B" },
+      { "category": "G", "label": "지배구조","score": 86, "grade": "A" }
+    ],
+    "totalScore": 87,
+    "breakdown": [
+      { "kesgCode": "E-101", "title": "전력 사용량",          "score": 95, "grade": "S", "confidence": 92 },
+      { "kesgCode": "E-102", "title": "가스 사용량",          "score": 90, "grade": "A", "confidence": 88 },
+      { "kesgCode": "E-103", "title": "탄소 배출량",          "score": 88, "grade": "A", "confidence": 90 },
+      { "kesgCode": "E-104", "title": "폐기물 발생량",        "score": 93, "grade": "A", "confidence": 91 },
+      { "kesgCode": "E-105", "title": "용수 사용량",          "score": 89, "grade": "A", "confidence": 89 },
+      { "kesgCode": "S-201", "title": "산업안전 교육 여부",   "score": 85, "grade": "A", "confidence": 80 },
+      { "kesgCode": "S-204", "title": "임직원 참여 프로그램", "score": 80, "grade": "B", "confidence": 75 },
+      { "kesgCode": "G-301", "title": "윤리경영 정책",        "score": 88, "grade": "A", "confidence": 82 },
+      { "kesgCode": "G-303", "title": "ESG 담당 조직",        "score": 84, "grade": "A", "confidence": 80 }
+    ]
+  },
+  "evidenceMatches": [
+    { "indicatorCode": "E-101", "indicatorTitle": "전력 사용량", "numericMatchLevel": "HIGH",   "numericDiffPercent": 1.2,  "inputValue": 12500, "extractedValue": 12650, "unit": "MWh", "isValidEvidence": true, "confidenceLevel": "HIGH" },
+    { "indicatorCode": "E-102", "indicatorTitle": "가스 사용량", "numericMatchLevel": "HIGH",   "numericDiffPercent": 0.8,  "inputValue": 3200,  "extractedValue": 3226,  "unit": "GJ",  "isValidEvidence": true, "confidenceLevel": "HIGH" },
+    { "indicatorCode": "E-103", "indicatorTitle": "탄소 배출량", "numericMatchLevel": "HIGH",   "numericDiffPercent": 2.1,  "inputValue": 8400,  "extractedValue": 8576,  "unit": "tCO₂","isValidEvidence": true, "confidenceLevel": "HIGH" },
+    { "indicatorCode": "E-104", "indicatorTitle": "폐기물 발생량","numericMatchLevel": "HIGH",  "numericDiffPercent": 0.3,  "inputValue": 540,   "extractedValue": 542,   "unit": "ton", "isValidEvidence": true, "confidenceLevel": "HIGH" },
+    { "indicatorCode": "E-105", "indicatorTitle": "용수 사용량", "numericMatchLevel": "MEDIUM", "numericDiffPercent": 8.4,  "inputValue": 24000, "extractedValue": 26016, "unit": "m³",  "isValidEvidence": true, "confidenceLevel": "MEDIUM" },
+    { "indicatorCode": "S-201", "indicatorTitle": "산업안전 교육 여부",   "similarity": 0.82, "finalScore": 0.85, "evidenceText": "안전보건교육을 연 2회 전 임직원 대상으로 실시하였으며, 교육 이수율 98%를 달성하였습니다.", "isValidEvidence": true, "confidenceLevel": "HIGH", "pageNumber": 12 },
+    { "indicatorCode": "S-204", "indicatorTitle": "임직원 참여 프로그램", "similarity": 0.74, "finalScore": 0.78, "evidenceText": "사내 캠페인 운영 및 임직원 참여율 87%를 기록하였습니다.", "isValidEvidence": true, "confidenceLevel": "MEDIUM", "pageNumber": 15 },
+    { "indicatorCode": "G-301", "indicatorTitle": "윤리경영 정책 수립",   "similarity": 0.86, "finalScore": 0.88, "evidenceText": "윤리경영 방침 및 행동강령을 수립하고 전 임직원에게 고지하였습니다.", "isValidEvidence": true, "confidenceLevel": "HIGH", "pageNumber": 22 },
+    { "indicatorCode": "G-303", "indicatorTitle": "ESG 담당 조직 여부",   "similarity": 0.79, "finalScore": 0.84, "evidenceText": "ESG위원회를 설치하고 ESG 전담부서를 운영 중입니다.", "isValidEvidence": true, "confidenceLevel": "HIGH", "pageNumber": 28 }
+  ],
+  "fullReport": "### ESG 종합 총평\n\n에코테크 주식회사는 전반적으로 우수한 ESG 관리 역량을 보여주고 있습니다.\n\n### 주요 강점\n\n- E 카테고리 수치 검증 결과 대부분 HIGH 수준으로 데이터 신뢰도가 높음\n- 윤리경영 체계 및 ESG 담당 조직 구비\n\n### 개선 권고\n\n- 용수 사용량 데이터 정확도 향상 필요\n- S 카테고리 evidence 보완 권장"
+}

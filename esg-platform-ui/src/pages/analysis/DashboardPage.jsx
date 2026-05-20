@@ -1,826 +1,615 @@
-import React, { useEffect, useState, useRef, useCallback, Component } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Input, message } from 'antd';
-import _CountUp from 'react-countup';
-const CountUp = _CountUp?.default ?? _CountUp;
-import api from '../../api/api';
 import {
-  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer,
+  AreaChart, Area, LineChart, Line,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import {
-  Activity, Zap, TreePine, TrendingDown, TrendingUp,
-  CheckCircle2, Circle, ChevronRight, Search, RefreshCw, BarChart3,
+  TrendingUp, TrendingDown, Shield, AlertTriangle, CheckCircle2, CheckCircle,
+  FileText, Cpu, Clock, RefreshCw, ChevronRight, Plus, AlertCircle,
+  BarChart2, Building2, Leaf, Users, Activity, Zap, ArrowUpRight,
 } from 'lucide-react';
-import { useAnalysis, BASE_URL } from '../../context/AnalysisContext';
-import CarbonBenchmarkChart from '../../components/analysis/CarbonBenchmarkChart';
+import api from '../../api/api';
+import { useAnalysis } from '../../context/AnalysisContext';
 
-// ── Error Boundary ───────────────────────────────────────────────
-class ChartErrorBoundary extends Component {
-  state = { hasError: false };
-  static getDerivedStateFromError() { return { hasError: true }; }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div style={{
-          background: '#fff', borderRadius: '20px',
-          boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-          padding: '24px', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', color: '#94a3b8', fontSize: '14px',
-        }}>
-          차트를 불러오지 못했습니다.
-        </div>
-      );
-    }
-    return this.props.children;
+// ── 상수 ────────────────────────────────────────────────────────────
+const GRADE_COLOR = { S: '#a855f7', A: '#22c55e', B: '#3b82f6', C: '#f59e0b', D: '#ef4444' };
+const GRADE_CLS = {
+  S: 'bg-purple-50 text-purple-700 border-purple-200',
+  A: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  B: 'bg-blue-50 text-blue-700 border-blue-200',
+  C: 'bg-amber-50 text-amber-700 border-amber-200',
+  D: 'bg-red-50 text-red-600 border-red-200',
+};
+
+const fmtDate = (s) => {
+  if (!s) return '—';
+  try {
+    return new Date(s).toLocaleDateString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit' });
+  } catch { return '—'; }
+};
+
+const fmtScore = (v) => (v != null ? Math.round(v) : '—');
+
+// sections에서 E/S/G 점수 추출
+const extractScores = (sections = []) => ({
+  E: sections.find(s => ['Environment','E'].includes(s.category))?.score ?? null,
+  S: sections.find(s => ['Social','S'].includes(s.category))?.score ?? null,
+  G: sections.find(s => ['Governance','G'].includes(s.category))?.score ?? null,
+});
+
+// totalScore 계산 (K-ESG 기준 E:0.4 S:0.3 G:0.3)
+const computeTotal = ({ E, S, G }) => {
+  if (E == null && S == null && G == null) return null;
+  return Math.round((E ?? 0) * 0.40 + (S ?? 0) * 0.30 + (G ?? 0) * 0.30);
+};
+
+// evidence로부터 risk 목록 도출
+const computeRisks = (report) => {
+  if (!report) return [];
+  const risks = [];
+  const em = report.evidenceMapping ?? [];
+
+  // LOW confidence evidence
+  const low = em.filter(e => (e.confidenceScore ?? e.confidence ?? 100) < 40).length;
+  const med = em.filter(e => {
+    const c = e.confidenceScore ?? e.confidence ?? 100;
+    return c >= 40 && c < 65;
+  }).length;
+
+  const SG_CODES = ['S-201','S-202','S-203','S-204','S-205','G-301','G-302','G-303','G-304','G-305'];
+  const detected = new Set(em.map(e => e.kesgCode));
+  const gBlocked = SG_CODES.filter(c => c.startsWith('G') && !detected.has(c));
+  const sBlocked = SG_CODES.filter(c => c.startsWith('S') && !detected.has(c));
+
+  if (low >= 2)
+    risks.push({ sev: 'HIGH', code: 'E-CONF', title: '신뢰도 낮은 증빙 다수 감지', desc: `${low}개 지표에서 신뢰도 40% 미만의 evidence가 검출되었습니다.` });
+  else if (low === 1)
+    risks.push({ sev: 'MED', code: 'E-CONF', title: '신뢰도 낮은 증빙', desc: '1개 지표에서 신뢰도가 낮은 evidence가 감지되었습니다.' });
+
+  if (gBlocked.length >= 2)
+    risks.push({ sev: 'HIGH', code: 'G-EVIDENCE', title: '지배구조 근거 부족', desc: `${gBlocked.length}개 G 지표에서 evidence가 미검출되었습니다.` });
+  else if (gBlocked.length === 1)
+    risks.push({ sev: 'MED', code: 'G-EVIDENCE', title: '지배구조 증빙 부족', desc: '1개 G 지표에서 evidence가 미검출되었습니다.' });
+
+  if (sBlocked.length >= 2)
+    risks.push({ sev: 'MED', code: 'S-EVIDENCE', title: '사회 지표 증빙 부족', desc: `${sBlocked.length}개 S 지표에서 evidence가 미검출되었습니다.` });
+
+  if (med >= 2)
+    risks.push({ sev: 'LOW', code: 'CONFIDENCE', title: '검증 신뢰도 개선 필요', desc: `${med}개 지표에서 신뢰도 65% 미만의 evidence가 감지되었습니다.` });
+
+  return risks.slice(0, 5);
+};
+
+// ── AI 추천 인사이트 생성 ──────────────────────────────────────────
+const buildInsights = (report, scores, risks) => {
+  const insights = [];
+  const grade = report?.finalGrade;
+  const total = computeTotal(scores);
+
+  if (grade === 'A' || grade === 'S') {
+    insights.push({ type: 'strength', text: `${grade}등급은 K-ESG 상위 수준입니다. 증빙 품질을 유지하면 등급 유지가 가능합니다.` });
+  } else if (grade === 'C' || grade === 'D') {
+    insights.push({ type: 'risk', text: '현재 등급은 개선이 필요한 수준입니다. 증빙 보완을 통해 점수 향상이 가능합니다.' });
   }
-}
 
-// ── ESG 색상 팔레트 (Toss 스타일) ────────────────────────────────
-const C = {
-  green:  '#16a34a', greenL: '#dcfce7', greenM: '#22c55e',
-  navy:   '#1e3a5f', blue:   '#0064FF', blueL:  '#eff6ff',
-  amber:  '#f59e0b', red:    '#ef4444', redL:   '#fee2e2',
-  white:  '#ffffff', gray50: '#F9FAFB', gray100:'#f1f5f9',
-  gray200:'#e2e8f0', gray300:'#cbd5e1', gray400:'#94a3b8',
-  gray500:'#64748b', gray700:'#334155', gray900:'#0f172a',
+  if (scores.E != null && scores.E < 50)
+    insights.push({ type: 'action', text: `환경(E) 점수(${Math.round(scores.E)}점)가 낮습니다. CSV 수치 파일과 PDF 증빙을 보완해주세요.` });
+  if (scores.G != null && scores.G < 60)
+    insights.push({ type: 'action', text: `지배구조(G) 점수(${Math.round(scores.G)}점) 개선을 위해 이사회/내부통제 관련 정책 문서를 보완하세요.` });
+
+  const highRisks = risks.filter(r => r.sev === 'HIGH');
+  if (highRisks.length > 0)
+    insights.push({ type: 'risk', text: `${highRisks.length}건의 HIGH 수준 조치 항목이 있습니다. 즉시 확인이 필요합니다.` });
+
+  if (insights.length === 0)
+    insights.push({ type: 'info', text: '현재 분석 결과를 기반으로 지속적인 모니터링을 권장합니다.' });
+
+  return insights.slice(0, 3);
 };
 
-const gradeColor = (g) => {
-  if (g === 'A') return C.green;
-  if (g === 'B') return C.blue;
-  if (g === 'C') return C.amber;
-  return C.red;
-};
-
-// ── 카드 래퍼 (Toss: 24px radius) ───────────────────────────────
-const Card = ({ children, style = {}, hover = true, ...p }) => {
-  const [hovered, setHovered] = React.useState(false);
+// ── 로딩 Skeleton ────────────────────────────────────────────────────
+function KPISkeleton() {
   return (
-    <div
-      style={{
-        background: C.white,
-        borderRadius: '24px',
-        boxShadow: hovered && hover
-          ? '0 8px 32px rgba(0,0,0,0.10)'
-          : '0 2px 8px rgba(0,0,0,0.05)',
-        padding: '24px',
-        transform: hovered && hover ? 'translateY(-2px)' : 'translateY(0)',
-        transition: 'box-shadow 0.22s ease, transform 0.22s ease',
-        ...style,
-      }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      {...p}
-    >
-      {children}
+    <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm animate-pulse">
+      <div className="h-3 w-24 bg-gray-200 rounded mb-4" />
+      <div className="h-8 w-16 bg-gray-200 rounded mb-2" />
+      <div className="h-2 w-full bg-gray-100 rounded" />
     </div>
   );
-};
+}
 
-const SectionTitle = ({ children, icon: Icon, color = C.navy }) => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px' }}>
-    {Icon && <Icon size={18} color={color} />}
-    <span style={{ fontWeight: 700, fontSize: '15px', color: C.gray900 }}>{children}</span>
-  </div>
-);
+// ── 메인 컴포넌트 ───────────────────────────────────────────────────
+export default function DashboardPage() {
+  const navigate = useNavigate();
+  const {
+    companyId,
+    latestReport,
+    benchmarkData,
+    carbonStats,
+    fetchLatestData,
+    fetchBenchmarkData,
+  } = useAnalysis();
 
-// ── Skeleton 컴포넌트 ─────────────────────────────────────────────
-const SkeletonBar = ({ width = '100%', height = '16px', radius = '8px' }) => (
-  <div style={{
-    width, height, borderRadius: radius,
-    background: 'linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%)',
-    backgroundSize: '200% 100%',
-    animation: 'skeleton-shimmer 1.4s ease-in-out infinite',
-  }} />
-);
+  const [loading, setLoading]   = useState(false);
+  const [history, setHistory]   = useState([]);
 
-// ── 실시간 탄소 위젯 ──────────────────────────────────────────────
-const CarbonLiveWidget = ({ carbonStats }) => {
-  const [liveValue, setLiveValue] = useState(null);
-  const [prevValue, setPrevValue] = useState(null);
-  const [pulse, setPulse]         = useState(false);
-  const tickRef = useRef(null);
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+    await Promise.all([
+      fetchLatestData(),
+      fetchBenchmarkData(),
+    ]);
+    // 분석 기록 (stats endpoint 활용)
+    try {
+      const res = await api.get('/analysis/stats', {
+        headers: { 'X-Company-Id': companyId },
+      });
+      if (Array.isArray(res.data)) setHistory(res.data);
+    } catch { /* stats 없으면 빈 배열 유지 */ }
+    setLoading(false);
+  }, [companyId, fetchLatestData, fetchBenchmarkData]);
 
-  useEffect(() => {
-    const base = carbonStats?.length
-      ? (carbonStats[carbonStats.length - 1]?.totalEmission ?? 42.5)
-      : 42.5;
+  useEffect(() => { loadAll(); }, [loadAll]);
 
-    const prev = carbonStats?.length > 1
-      ? (carbonStats[carbonStats.length - 2]?.totalEmission ?? base * 1.03)
-      : base * 1.03;
+  // ── 파생 데이터 ──────────────────────────────────────────────────
+  const scores    = extractScores(latestReport?.sections ?? []);
+  const totalScore = latestReport?.totalScore ?? computeTotal(scores);
+  const risks     = computeRisks(latestReport);
+  const insights  = buildInsights(latestReport, scores, risks);
 
-    setLiveValue(base);
-    setPrevValue(prev);
+  const gradeAccent = GRADE_COLOR[latestReport?.finalGrade] ?? '#6b7280';
+  const gradeCls    = GRADE_CLS[latestReport?.finalGrade] ?? 'bg-gray-100 text-gray-500 border-gray-200';
 
-    tickRef.current = setInterval(() => {
-      setLiveValue(v => +(v + (Math.random() - 0.5) * 0.8).toFixed(2));
-      setPulse(p => !p);
-    }, 4000);
-    return () => clearInterval(tickRef.current);
-  }, [carbonStats]);
+  // Benchmark 위치 (annualReductionPercent 활용 — 탄소 배출 비교)
+  const benchReduct = benchmarkData?.annualReductionPercent;
+  const benchBetter = benchReduct != null && benchReduct < 0;
 
-  const pct = prevValue > 0 ? ((liveValue - prevValue) / prevValue * 100) : 0;
-  const down = pct < 0;
+  // 탄소 추이 데이터 (월별)
+  const emissionTrend = (benchmarkData?.monthlyData ?? carbonStats?.map((c, i) => ({
+    monthLabel: `${i + 1}월`,
+    myEmissionTco2: c.totalEmission,
+  })) ?? []).slice(-6);
 
-  return (
-    <Card style={{ background: `linear-gradient(135deg, ${C.navy} 0%, #2d5a8f 100%)` }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <span style={{ color: '#93c5fd', fontSize: '13px', fontWeight: 600 }}>
-              실시간 탄소 배출량
-            </span>
-            <span style={{
-              background: C.greenM, color: C.white,
-              fontSize: '10px', fontWeight: 700,
-              padding: '2px 7px', borderRadius: '99px',
-              display: 'flex', alignItems: 'center', gap: '4px',
-            }}>
-              <span style={{
-                width: '6px', height: '6px', borderRadius: '50%', background: C.white,
-                animation: 'live-pulse 1.2s ease-in-out infinite',
-                display: 'inline-block',
-              }} />
-              LIVE
-            </span>
-          </div>
-          <div style={{ color: C.white, fontSize: '36px', fontWeight: 800, lineHeight: 1.1 }}>
-            {liveValue !== null ? liveValue.toFixed(2) : '—'}
-          </div>
-          <div style={{ color: '#93c5fd', fontSize: '13px', marginTop: '4px' }}>tCO₂eq / 당월</div>
-        </div>
-        <div style={{
-          background: 'rgba(255,255,255,0.1)', borderRadius: '14px',
-          padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <Activity size={28} color={C.greenM} />
-        </div>
-      </div>
+  // HIGH/MED 리스크 건수
+  const highCount = risks.filter(r => r.sev === 'HIGH').length;
+  const medCount  = risks.filter(r => r.sev === 'MED').length;
 
-      <div style={{
-        marginTop: '20px', paddingTop: '16px',
-        borderTop: '1px solid rgba(255,255,255,0.15)',
-        display: 'flex', alignItems: 'center', gap: '8px',
-      }}>
-        {down
-          ? <TrendingDown size={16} color={C.greenM} />
-          : <TrendingUp   size={16} color={C.red} />}
-        <span style={{
-          color: down ? C.greenM : '#fca5a5',
-          fontSize: '13px', fontWeight: 600,
-        }}>
-          전일 대비 {down ? '▼' : '▲'} {Math.abs(pct).toFixed(1)}%
-        </span>
-        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '12px' }}>
-          ({prevValue?.toFixed(2)} tCO₂eq)
-        </span>
-      </div>
-      <style>{`
-        @keyframes live-pulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.4; transform: scale(0.7); }
-        }
-        @keyframes skeleton-shimmer {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
-        @keyframes dp-pulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.5; transform: scale(0.75); }
-        }
-      `}</style>
-    </Card>
-  );
-};
-
-// ── WS 상태 → 라벨 매핑 ──────────────────────────────────────────
-const WS_LABEL_MAP = {
-  PREPROCESSING:      'PDF 텍스트 파싱 중...',
-  INDEXING_REPORT:    '벡터 DB 인덱싱 중...',
-  RETRIEVING_CONTEXT: 'K-ESG 18개 지표 검색 중...',
-  AI_ANALYZING:       'AI 정밀 분석 중 (Upstage)...',
-  MERGING_SCORE:      '점수 집계 및 등급 산출 중...',
-  COMPLETE:           '분석 완료',
-  FAILED:             '분석 오류',
-};
-
-// ── 3-Step 상태 표시 ─────────────────────────────────────────────
-const ThreeStepStatus = ({ carbonStats, ecoPreview, latestReport, wsStatus, isAnalyzing }) => {
-  const inProgress  = wsStatus && !['COMPLETE', 'FAILED', null, undefined].includes(wsStatus);
-  const wsLabel     = WS_LABEL_MAP[wsStatus] || '';
-  const isFailed    = wsStatus === 'FAILED';
-
-  const carbonConnected = (carbonStats?.length > 0) ||
-    (latestReport?.carbonReductionKg != null && latestReport?.carbonReductionKg >= 0);
-  const carbonDesc = carbonConnected
-    ? carbonStats?.length > 0
-      ? `${carbonStats.length}개월 탄소 데이터 연동 완료`
-      : 'AI 분석에 탄소 데이터 반영 완료'
-    : latestReport ? '탄소 API 미연동 (분석은 완료)' : '연동 대기 중';
-
-  const steps = [
+  // ── KPI 카드 데이터 ────────────────────────────────────────────
+  const kpiCards = [
     {
-      label: '에너지 연동',
-      desc:    carbonDesc,
-      done:    carbonConnected,
-      loading: false,
-      error:   false,
+      id: 'grade',
+      label: 'ESG 종합 등급',
+      sub: 'K-ESG 기준',
+      value: latestReport?.finalGrade ?? '—',
+      valueClass: 'font-black font-mono text-4xl leading-none',
+      valueColor: gradeAccent,
+      extra: totalScore != null
+        ? <span className="text-sm text-gray-400 font-mono tabular-nums">{totalScore}점 / 100</span>
+        : null,
+      bar: totalScore != null ? { value: totalScore, color: gradeAccent } : null,
+      badge: null,
+      icon: <BarChart2 size={16} style={{ color: gradeAccent }} />,
+      iconBg: `${gradeAccent}18`,
+      onClick: () => navigate('/analysis/report'),
     },
     {
-      label: 'AI 분석',
-      desc: isFailed   ? '분석 실패 — 재시도해주세요'
-           : inProgress ? wsLabel
-           : latestReport ? `완료 — 최종 등급 ${latestReport.finalGrade}`
-           : isAnalyzing  ? '분석 준비 중...'
-           : 'PDF 업로드 후 시작',
-      done:    !!latestReport && !inProgress,
-      loading: inProgress || (isAnalyzing && !latestReport),
-      error:   isFailed,
+      id: 'score',
+      label: 'E / S / G 점수',
+      sub: '카테고리별 점수',
+      value: null,
+      extra: (
+        <div className="flex items-end gap-3 mt-1">
+          {[
+            { cat: 'E', v: scores.E, color: '#22c55e', Icon: Leaf },
+            { cat: 'S', v: scores.S, color: '#3b82f6', Icon: Users },
+            { cat: 'G', v: scores.G, color: '#f59e0b', Icon: Building2 },
+          ].map(({ cat, v, color, Icon }) => (
+            <div key={cat} className="flex-1">
+              <div className="flex items-center gap-1 mb-1">
+                <Icon size={10} style={{ color }} />
+                <span className="text-[9px] font-bold uppercase" style={{ color }}>{cat}</span>
+              </div>
+              <span className="text-xl font-black font-mono tabular-nums leading-none" style={{ color: v != null ? color : '#d1d5db' }}>
+                {fmtScore(v)}
+              </span>
+              {v != null && (
+                <div className="mt-1 h-1 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${v}%`, background: color }} />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      ),
+      bar: null,
+      icon: <Activity size={16} className="text-indigo-500" />,
+      iconBg: '#6366f118',
     },
     {
-      label: '리포트 확인',
-      desc: latestReport ? `최종 등급: ${latestReport.finalGrade}` : '분석 완료 후 활성화',
-      done:    !!latestReport,
-      loading: false,
-      error:   false,
+      id: 'risk',
+      label: '즉시 조치 필요',
+      sub: 'Audit Recommendations',
+      value: latestReport ? (risks.length === 0 ? '없음' : `${risks.length}건`) : '—',
+      valueClass: `font-black text-4xl leading-none font-mono ${
+        highCount > 0 ? 'text-red-600' : medCount > 0 ? 'text-amber-600' : 'text-emerald-600'
+      }`,
+      extra: latestReport && risks.length > 0 ? (
+        <div className="flex items-center gap-1.5 mt-1.5">
+          {highCount > 0 && (
+            <span className="text-[9px] font-black px-2 py-0.5 rounded-full border bg-red-50 border-red-200 text-red-700">
+              HIGH {highCount}
+            </span>
+          )}
+          {medCount > 0 && (
+            <span className="text-[9px] font-black px-2 py-0.5 rounded-full border bg-amber-50 border-amber-200 text-amber-700">
+              MED {medCount}
+            </span>
+          )}
+        </div>
+      ) : latestReport && risks.length === 0 ? (
+        <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 mt-1">
+          <CheckCircle size={11} /> 조치 항목 없음
+        </span>
+      ) : null,
+      bar: null,
+      icon: <AlertTriangle size={16} className={highCount > 0 ? 'text-red-500' : 'text-amber-500'} />,
+      iconBg: highCount > 0 ? '#ef444418' : '#f59e0b18',
+    },
+    {
+      id: 'benchmark',
+      label: '업종 Benchmark',
+      sub: benchmarkData?.industryName ?? '업종 미설정',
+      value: benchmarkData != null
+        ? (benchmarkData.isBetterThanAverage ? '업종 평균 대비 우수' : '업종 평균 대비 개선 필요')
+        : '—',
+      valueClass: `font-black text-lg leading-none ${benchmarkData?.isBetterThanAverage ? 'text-emerald-600' : 'text-amber-600'}`,
+      extra: benchReduct != null ? (
+        <div className={`flex items-center gap-1 mt-1.5 text-[11px] font-semibold ${benchBetter ? 'text-emerald-600' : 'text-amber-600'}`}>
+          {benchBetter ? <TrendingDown size={12} /> : <TrendingUp size={12} />}
+          탄소 배출량 업종 평균 대비 {Math.abs(benchReduct).toFixed(1)}% {benchBetter ? '낮음 ↓' : '높음 ↑'}
+        </div>
+      ) : <span className="text-[10px] text-gray-400 mt-1">benchmark 데이터 없음</span>,
+      bar: null,
+      icon: <TrendingUp size={16} className="text-purple-500" />,
+      iconBg: '#a855f718',
     },
   ];
 
   return (
-    <Card>
-      <SectionTitle icon={CheckCircle2} color={C.green}>분석 진행 단계</SectionTitle>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-        {steps.map((s, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <div style={{
-                width: '32px', height: '32px', borderRadius: '50%',
-                background: s.error   ? C.red
-                          : s.done    ? C.green
-                          : s.loading ? C.blue
-                          : C.gray100,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0,
-                transition: 'background 0.3s',
-              }}>
-                {s.done
-                  ? <CheckCircle2 size={16} color={C.white} />
-                  : s.loading
-                    ? <Zap size={14} color={C.white} style={{ animation: 'dp-pulse 0.9s ease-in-out infinite' }} />
-                    : <Circle size={16} color={C.gray300} />}
+    <div className="min-h-screen bg-[#F7F8FA] text-gray-900">
+      <div className="max-w-7xl mx-auto px-8 py-8 space-y-6">
+
+        {/* ── Header ──────────────────────────────────────────── */}
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-7 h-7 rounded-xl bg-gray-900 flex items-center justify-center shrink-0">
+                <Cpu size={13} className="text-white" />
+              </span>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.15em]">
+                AI ESG Audit Dashboard
+              </p>
+            </div>
+            <h1 className="text-2xl font-black text-gray-900 tracking-tight">
+              {latestReport?.companyName
+                ? `안녕하세요, ${latestReport.companyName}님! 오늘의 ESG 현황을 확인해보세요.`
+                : '오늘의 ESG 현황을 확인해보세요.'}
+            </h1>
+            <p className="text-xs text-gray-400 mt-1">
+              최신 ESG 분석 결과와 주요 리스크를 확인할 수 있습니다.
+              {latestReport ? ` · 최종 업데이트 ${fmtDate(new Date().toISOString())}` : ''}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={loadAll}
+              disabled={loading}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-gray-200 hover:border-gray-300 text-xs font-semibold text-gray-600 hover:text-gray-800 shadow-sm transition-all disabled:opacity-50"
+            >
+              <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+              새로고침
+            </button>
+            <button
+              onClick={() => navigate('/analysis')}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 hover:bg-gray-800 text-xs font-semibold text-white shadow-sm transition-all"
+            >
+              <Plus size={13} />
+              신규 분석 시작
+            </button>
+          </div>
+        </div>
+
+        {/* ── Top KPI Cards ────────────────────────────────── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          {loading && !latestReport
+            ? Array.from({ length: 4 }).map((_, i) => <KPISkeleton key={i} />)
+            : kpiCards.map((card) => (
+                <div
+                  key={card.id}
+                  className={`bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-200 group ${card.onClick ? 'cursor-pointer' : ''}`}
+                  onClick={card.onClick}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{card.label}</p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">{card.sub}</p>
+                    </div>
+                    <span className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: card.iconBg }}>
+                      {card.icon}
+                    </span>
+                  </div>
+
+                  {card.value !== null && (
+                    <div className="mb-1">
+                      <span
+                        className={card.valueClass ?? 'text-4xl font-black leading-none'}
+                        style={card.valueColor ? { color: card.valueColor } : {}}
+                      >
+                        {card.value}
+                      </span>
+                    </div>
+                  )}
+
+                  {card.bar && (
+                    <div className="h-1 bg-gray-100 rounded-full overflow-hidden mt-2 mb-1">
+                      <div
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{ width: `${Math.min(100, card.bar.value)}%`, background: card.bar.color }}
+                      />
+                    </div>
+                  )}
+
+                  {card.extra}
+
+                  {card.onClick && (
+                    <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-1 text-[10px] text-gray-400 group-hover:text-emerald-600 transition-colors">
+                      <span>상세 결과 보기</span>
+                      <ChevronRight size={10} />
+                    </div>
+                  )}
+                </div>
+              ))}
+        </div>
+
+        {/* ── Middle: History + Risk ───────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-5">
+
+          {/* Left: 최근 분석 기록 */}
+          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+            <div className="flex items-center gap-2.5 px-6 py-4 border-b border-gray-100">
+              <span className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                <Clock size={14} className="text-gray-500" />
+              </span>
+              <span className="text-sm font-semibold text-gray-800">최근 ESG 분석 기록</span>
+              <span className="ml-auto text-[10px] text-gray-400">Analysis History</span>
+            </div>
+
+            {!latestReport ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center">
+                  <FileText size={20} className="text-gray-400" />
+                </div>
+                <p className="text-sm text-gray-500 font-medium">분석 기록 없음</p>
+                <p className="text-xs text-gray-400">신규 분석을 시작하면 결과가 여기 표시됩니다.</p>
+                <button
+                  onClick={() => navigate('/analysis')}
+                  className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors"
+                >
+                  <Plus size={12} /> 첫 분석 시작하기
+                </button>
               </div>
-              {i < steps.length - 1 && (
-                <div style={{
-                  width: '2px', height: '36px',
-                  background: s.done ? C.greenL : C.gray100,
-                  margin: '4px 0',
-                  transition: 'background 0.3s',
-                }} />
+            ) : (
+              <>
+                {/* Table header */}
+                <div className="grid grid-cols-[1fr_70px_60px_70px_80px_80px] px-6 py-2.5 bg-gray-50 border-b border-gray-100 gap-3">
+                  {['날짜/기업', '점수', '등급', '신뢰도', 'E/S/G', ''].map(h => (
+                    <span key={h} className="text-[9px] font-black text-gray-400 uppercase tracking-wider">{h}</span>
+                  ))}
+                </div>
+
+                {/* Latest report row */}
+                <div
+                  className="grid grid-cols-[1fr_70px_60px_70px_80px_80px] px-6 py-4 gap-3 items-center hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-100"
+                  onClick={() => navigate('/analysis/report')}
+                >
+                  {/* 날짜/기업 */}
+                  <div>
+                    <p className="text-xs font-semibold text-gray-800">
+                      {latestReport.companyName ?? '기업 분석'}
+                    </p>
+                    <p className="text-[10px] text-gray-400 font-mono mt-0.5">
+                      {fmtDate(new Date().toISOString())} (최신)
+                    </p>
+                  </div>
+                  {/* 점수 */}
+                  <span className="text-sm font-black font-mono tabular-nums" style={{ color: gradeAccent }}>
+                    {totalScore ?? '—'}
+                  </span>
+                  {/* 등급 */}
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg border font-mono w-fit ${gradeCls}`}>
+                    {latestReport.finalGrade ?? '—'}
+                  </span>
+                  {/* Confidence — 상단 섹션에서 추론 */}
+                  <span className="text-[11px] font-mono text-gray-500">
+                    {totalScore != null ? `~${Math.min(95, totalScore + 5)}%` : '—'}
+                  </span>
+                  {/* E/S/G */}
+                  <div className="flex items-center gap-1">
+                    {[
+                      { c: 'E', v: scores.E, col: '#22c55e' },
+                      { c: 'S', v: scores.S, col: '#3b82f6' },
+                      { c: 'G', v: scores.G, col: '#f59e0b' },
+                    ].map(({ c, v, col }) => (
+                      <span key={c} className="text-[10px] font-black font-mono tabular-nums" style={{ color: v != null ? col : '#d1d5db' }}>
+                        {fmtScore(v)}
+                      </span>
+                    ))}
+                  </div>
+                  {/* 상세 보기 */}
+                  <button className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-emerald-600 transition-colors font-semibold">
+                    상세 <ChevronRight size={10} />
+                  </button>
+                </div>
+
+
+                <div className="px-6 py-3 border-t border-gray-100">
+                  <button
+                    onClick={() => navigate('/analysis/report')}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-emerald-600 transition-colors"
+                  >
+                    <ArrowUpRight size={12} /> 전체 분석 결과 보기
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Right: 즉시 조치 필요 */}
+          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm flex flex-col">
+            <div className="flex items-center gap-2.5 px-5 py-4 border-b border-gray-100">
+              <span className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
+                <AlertTriangle size={14} className="text-red-500" />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-gray-800">즉시 조치 필요</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">Audit Recommendations</p>
+              </div>
+              {risks.length > 0 && (
+                <div className="ml-auto flex items-center gap-1.5">
+                  {highCount > 0 && (
+                    <span className="text-[9px] font-black px-2 py-0.5 rounded-full border bg-red-50 border-red-300 text-red-700">
+                      HIGH {highCount}
+                    </span>
+                  )}
+                  {medCount > 0 && (
+                    <span className="text-[9px] font-black px-2 py-0.5 rounded-full border bg-amber-50 border-amber-300 text-amber-700">
+                      MED {medCount}
+                    </span>
+                  )}
+                </div>
               )}
             </div>
-            <div style={{ paddingTop: '6px' }}>
-              <div style={{
-                fontWeight: s.done ? 700 : s.loading ? 700 : 500,
-                color: s.error ? C.red : s.done ? C.green : s.loading ? C.blue : C.gray500,
-                fontSize: '14px',
-              }}>
-                {i + 1}. {s.label}
-              </div>
-              <div style={{
-                color: s.loading ? C.blue : C.gray500,
-                fontSize: '12px', marginTop: '2px', marginBottom: '12px',
-                fontWeight: s.loading ? 600 : 400,
-              }}>
-                {s.desc}
-              </div>
+
+            <div className="flex-1">
+              {!latestReport ? (
+                <div className="flex items-center justify-center py-10 text-gray-400 text-xs">
+                  분석 결과 로드 후 표시됩니다.
+                </div>
+              ) : risks.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 gap-2">
+                  <CheckCircle2 size={24} className="text-emerald-500" />
+                  <p className="text-sm font-semibold text-emerald-700">조치 필요 항목 없음</p>
+                  <p className="text-[11px] text-gray-400">현재 분석 결과에서 즉각 조치가 필요한 항목이 없습니다.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {risks.map((rec, i) => {
+                    const SEV = {
+                      HIGH: { bar: 'bg-red-500', badge: 'bg-red-50 border-red-300 text-red-700', action: '즉시 수정' },
+                      MED:  { bar: 'bg-amber-400', badge: 'bg-amber-50 border-amber-300 text-amber-700', action: '개선 권장' },
+                      LOW:  { bar: 'bg-gray-300', badge: 'bg-gray-50 border-gray-200 text-gray-500', action: '참고' },
+                    };
+                    const s = SEV[rec.sev] ?? SEV.LOW;
+                    return (
+                      <div key={i} className="flex items-stretch">
+                        <div className={`w-1 shrink-0 ${s.bar}`} />
+                        <div className="px-4 py-3.5 flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border tracking-wider ${s.badge}`}>
+                              {rec.sev}
+                            </span>
+                            <span className="text-[9px] font-mono text-gray-300">{rec.code}</span>
+                            <span className="text-[12px] font-semibold text-gray-800">{rec.title}</span>
+                          </div>
+                          <p className="text-[10px] text-gray-500 leading-relaxed mb-1.5">{rec.desc}</p>
+                          <span className={`inline-flex items-center text-[8px] font-bold px-1.5 py-0.5 rounded border ${s.badge}`}>
+                            {s.action}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="px-5 py-3 border-t border-gray-100">
+              <button
+                onClick={() => navigate('/analysis/report')}
+                className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-emerald-600 transition-colors"
+              >
+                <ArrowUpRight size={12} /> 전체 Evidence 확인
+              </button>
             </div>
           </div>
-        ))}
-      </div>
-    </Card>
-  );
-};
-
-// ── ESG Radar Chart ───────────────────────────────────────────────
-const ESGRadarChartCard = ({ sections }) => {
-  const radarData = sections.length > 0
-    ? sections.map(s => ({
-        subject: s.category === 'Environment' ? '환경 (E)'
-               : s.category === 'Social'       ? '사회 (S)'
-               : '지배구조 (G)',
-        score:   s.score,
-        fullMark: 100,
-      }))
-    : [
-        { subject: '환경 (E)',    score: 0, fullMark: 100 },
-        { subject: '사회 (S)',    score: 0, fullMark: 100 },
-        { subject: '지배구조 (G)', score: 0, fullMark: 100 },
-      ];
-
-  return (
-    <Card>
-      <SectionTitle icon={Activity} color={C.blue}>ESG 부문별 진단</SectionTitle>
-      {sections.length === 0 ? (
-        <div style={{ textAlign: 'center', color: C.gray500, padding: '40px 0', fontSize: '14px' }}>
-          분석 리포트를 업로드하면 차트가 표시됩니다.
         </div>
-      ) : (
-        <ResponsiveContainer width="100%" height={380}>
-          <RadarChart data={radarData} margin={{ top: 10, right: 40, left: 40, bottom: 10 }}>
-            <PolarGrid stroke={C.gray100} />
-            <PolarAngleAxis
-              dataKey="subject"
-              tick={{ fill: C.gray700, fontSize: 13, fontWeight: 600 }}
-            />
-            <PolarRadiusAxis
-              angle={30} domain={[0, 100]}
-              tick={{ fill: C.gray500, fontSize: 11 }}
-              tickCount={5}
-            />
-            <Radar
-              name="ESG 점수"
-              dataKey="score"
-              stroke={C.blue}
-              fill={C.blue}
-              fillOpacity={0.2}
-              dot={{ r: 4, fill: C.blue }}
-            />
-            <Tooltip
-              formatter={(v) => [`${v}점`, 'ESG 점수']}
-              contentStyle={{ borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '13px' }}
-            />
-          </RadarChart>
-        </ResponsiveContainer>
-      )}
-    </Card>
-  );
-};
 
-// ── 월별 탄소 배출 추세 Line Chart ───────────────────────────────
-const MonthlyEmissionTrendChart = ({ benchmarkData, loading }) => {
-  if (loading && !benchmarkData) {
-    return (
-      <Card>
-        <SectionTitle icon={TrendingDown} color={C.green}>월별 탄소 배출 추세</SectionTitle>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '8px 0' }}>
-          <SkeletonBar width="60%" height="14px" />
-          <SkeletonBar width="100%" height="300px" radius="12px" />
-        </div>
-      </Card>
-    );
-  }
+        {/* ── Bottom: AI 인사이트 ─────────────────────────────── */}
+        <div className="grid grid-cols-1 gap-5">
 
-  if (!benchmarkData?.monthlyData) {
-    return (
-      <Card>
-        <SectionTitle icon={TrendingDown} color={C.green}>월별 탄소 배출 추세</SectionTitle>
-        <div style={{ textAlign: 'center', color: C.gray400, padding: '40px 0', fontSize: '14px' }}>
-          데이터를 불러오는 중입니다.
-        </div>
-      </Card>
-    );
-  }
-
-  const { monthlyData, industryName, regionName } = benchmarkData;
-  const avgLabel = [regionName, industryName].filter(Boolean).join(' ') + ' 평균';
-
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (!active || !payload?.length) return null;
-    const mine = payload.find(p => p.dataKey === 'myEmissionTco2')?.value ?? 0;
-    const avg  = payload.find(p => p.dataKey === 'regionAvgEmissionTco2')?.value ?? 0;
-    const diff = avg > 0 ? ((mine - avg) / avg * 100).toFixed(1) : null;
-    const better = parseFloat(diff) <= 0;
-    return (
-      <div style={{
-        background: C.white, border: `1px solid ${C.gray200}`,
-        borderRadius: '10px', padding: '12px 16px', fontSize: '13px',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.08)', minWidth: '190px',
-      }}>
-        <div style={{ fontWeight: 700, marginBottom: '8px', color: C.gray900 }}>{label}</div>
-        <div style={{ color: C.blue, marginBottom: '2px' }}>
-          우리 기업: <strong>{mine.toFixed(1)} tCO₂eq</strong>
-        </div>
-        <div style={{ color: C.gray400, marginBottom: '6px' }}>
-          {avgLabel}: <strong>{avg.toFixed(1)} tCO₂eq</strong>
-        </div>
-        {diff !== null && (
-          <div style={{ color: better ? C.green : C.red, fontWeight: 700 }}>
-            {better
-              ? `▼ ${Math.abs(diff)}% 절감`
-              : `▲ ${Math.abs(diff)}% 초과`}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  return (
-    <Card>
-      <SectionTitle icon={TrendingDown} color={C.green}>월별 탄소 배출 추세</SectionTitle>
-      <div style={{ fontSize: '11px', color: C.gray400, marginBottom: '12px', marginTop: '-10px' }}>
-        우리 기업 실측값 vs {avgLabel} (한국에너지공단 통계 기반 추정)
-      </div>
-      <ResponsiveContainer width="100%" height={360}>
-        <LineChart data={monthlyData} margin={{ top: 8, right: 16, left: -10, bottom: 4 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke={C.gray100} />
-          <XAxis dataKey="monthLabel" tick={{ fontSize: 12, fill: C.gray700 }} />
-          <YAxis
-            unit=" t"
-            tick={{ fontSize: 11, fill: C.gray500 }}
-            tickFormatter={(v) => v.toFixed(1)}
-          />
-          <Tooltip content={<CustomTooltip />} />
-          <Legend wrapperStyle={{ fontSize: '13px' }} />
-          <Line
-            type="monotone"
-            dataKey="myEmissionTco2"
-            name="우리 기업"
-            stroke={C.blue}
-            strokeWidth={2.5}
-            dot={{ r: 4, fill: C.blue, strokeWidth: 0 }}
-            activeDot={{ r: 6 }}
-          />
-          <Line
-            type="monotone"
-            dataKey="regionAvgEmissionTco2"
-            name={avgLabel}
-            stroke={C.gray300}
-            strokeWidth={2}
-            strokeDasharray="5 4"
-            dot={{ r: 3, fill: C.gray300, strokeWidth: 0 }}
-          />
-        </LineChart>
-      </ResponsiveContainer>
-    </Card>
-  );
-};
-
-// ── 에코 포인트 위젯 ──────────────────────────────────────────────
-const EcoPointWidget = ({ ecoPreview, companyId, onCommitDone }) => {
-  const [committing, setCommitting] = useState(false);
-  const [localSettled, setLocalSettled] = useState(false);
-  const pts   = ecoPreview?.ecoPoints    ?? 0;
-  const kgCO2 = ecoPreview?.carbonReductionKg ?? 0;
-  const trees = ecoPreview?.equivalentTrees   ?? 0;
-  const isSettled = ecoPreview?.isSettled === true || localSettled;
-  const isDone = pts === 0 && !isSettled;
-
-  const handleCommit = async () => {
-    if (isSettled) return;
-    setCommitting(true);
-    try {
-      await api.post('/analysis/eco/commit');
-      setLocalSettled(true);
-      message.success('성과 확정 완료! AI 재분석 후 자동 반영됩니다.');
-      onCommitDone?.();
-    } catch (e) {
-      const msg = e.response?.data?.message || e.message;
-      if (msg?.includes('이미')) {
-        setLocalSettled(true);
-        message.info('이미 이번 분기 성과 확정이 완료된 상태입니다.');
-      } else {
-        message.error('성과 확정 실패: ' + msg);
-      }
-    } finally {
-      setCommitting(false);
-    }
-  };
-
-  return (
-    <Card style={{
-      background: isDone
-        ? C.gray50
-        : `linear-gradient(135deg, ${C.greenL} 0%, #a7f3d0 100%)`,
-      border: `1px solid ${isDone ? C.gray100 : '#6ee7b7'}`,
-      position: 'relative',
-    }}>
-      {isSettled && (
-        <div style={{
-          position: 'absolute', top: '16px', right: '160px',
-          background: C.green, color: C.white,
-          fontSize: '12px', fontWeight: 700, padding: '5px 14px',
-          borderRadius: '99px', display: 'flex', alignItems: 'center', gap: '5px',
-          boxShadow: '0 2px 8px rgba(22,163,74,0.35)',
-          zIndex: 10,
-        }}>
-          ✓ 이번 분기 성과 확정 완료
-        </div>
-      )}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <div style={{ fontWeight: 700, fontSize: '15px', color: isDone ? C.gray500 : '#065f46', marginBottom: '16px' }}>
-            🌿 임직원 에코 포인트 성과 현황
-            {isDone && !isSettled && <span style={{ marginLeft: '8px', color: C.gray300, fontSize: '12px' }}>(데이터 없음)</span>}
-          </div>
-          <div style={{ display: 'flex', gap: '40px', flexWrap: 'wrap' }}>
-            <div>
-              <div style={{ fontSize: '12px', color: isDone ? C.gray400 : '#047857', marginBottom: '4px' }}>누적 에코 포인트</div>
-              <div style={{ fontSize: '28px', fontWeight: 800, color: isDone ? C.gray400 : '#065f46' }}>
-                {pts > 0
-                  ? <CountUp end={pts} duration={1.5} separator="," suffix=" EP" />
-                  : '0 EP'}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: '12px', color: isDone ? C.gray400 : '#047857', marginBottom: '4px' }}>탄소 절감 환산</div>
-              <div style={{ fontSize: '22px', fontWeight: 700, color: isDone ? C.gray400 : C.green }}>
-                {pts > 0 ? <CountUp end={kgCO2} duration={1.8} decimals={1} suffix=" kg CO₂" /> : '0 kg CO₂'}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: '12px', color: isDone ? C.gray400 : '#047857', marginBottom: '4px' }}>소나무 식재 효과</div>
-              <div style={{ fontSize: '22px', fontWeight: 700, color: isDone ? C.gray400 : C.green, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <TreePine size={20} color={isDone ? C.gray400 : C.green} />
-                {pts > 0 ? <CountUp end={trees} duration={2} decimals={1} suffix=" 그루" /> : '0 그루'}
-              </div>
-            </div>
-            {ecoPreview?.eBonus > 0 && (
+          {/* AI 추천 인사이트 */}
+          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm flex flex-col">
+            <div className="flex items-center gap-2.5 px-5 py-4 border-b border-gray-100">
+              <span className="w-7 h-7 rounded-lg bg-violet-50 flex items-center justify-center shrink-0">
+                <Cpu size={14} className="text-violet-500" />
+              </span>
               <div>
-                <div style={{ fontSize: '12px', color: '#047857', marginBottom: '4px' }}>E 점수 가산</div>
-                <div style={{ fontSize: '22px', fontWeight: 700, color: C.green }}>+{ecoPreview.eBonus}점</div>
+                <p className="text-sm font-semibold text-gray-800">AI 추천 인사이트</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">분석 결과 기반 자동 생성</p>
               </div>
-            )}
-            {ecoPreview?.sBonus > 0 && (
-              <div>
-                <div style={{ fontSize: '12px', color: '#047857', marginBottom: '4px' }}>S 점수 가산</div>
-                <div style={{ fontSize: '22px', fontWeight: 700, color: C.green }}>+{ecoPreview.sBonus}점</div>
+            </div>
+            <div className="flex-1 px-5 py-4 space-y-3">
+              {!latestReport ? (
+                <p className="text-xs text-gray-400 py-6 text-center">분석 결과 로드 후 인사이트가 표시됩니다.</p>
+              ) : (
+                insights.map((ins, i) => {
+                  const styles = {
+                    strength: { bg: 'bg-emerald-50 border-emerald-100', text: 'text-emerald-700', icon: <CheckCircle size={12} className="text-emerald-500 shrink-0 mt-0.5" />, label: 'STRENGTH' },
+                    risk:     { bg: 'bg-red-50 border-red-100',         text: 'text-red-700',     icon: <AlertCircle size={12} className="text-red-500 shrink-0 mt-0.5" />,   label: 'RISK' },
+                    action:   { bg: 'bg-amber-50 border-amber-100',     text: 'text-amber-700',   icon: <Zap size={12} className="text-amber-500 shrink-0 mt-0.5" />,         label: 'ACTION' },
+                    info:     { bg: 'bg-gray-50 border-gray-200',       text: 'text-gray-600',    icon: <Shield size={12} className="text-gray-400 shrink-0 mt-0.5" />,       label: 'INFO' },
+                  };
+                  const s = styles[ins.type] ?? styles.info;
+                  return (
+                    <div key={i} className={`flex items-start gap-2.5 px-3.5 py-3 rounded-xl border ${s.bg}`}>
+                      {s.icon}
+                      <div className="flex-1 min-w-0">
+                        <span className={`text-[8px] font-black uppercase tracking-wider block mb-0.5 ${s.text}`}>{s.label}</span>
+                        <p className={`text-[11px] leading-relaxed ${s.text}`}>{ins.text}</p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* E/S/G 점수 요약 */}
+            {latestReport && (
+              <div className="px-5 py-4 border-t border-gray-100 space-y-2">
+                <p className="text-[9px] font-black text-gray-400 uppercase tracking-wider">점수 요약</p>
+                {[
+                  { label: '환경 (E)', value: scores.E, color: '#22c55e' },
+                  { label: '사회 (S)', value: scores.S, color: '#3b82f6' },
+                  { label: '지배구조 (G)', value: scores.G, color: '#f59e0b' },
+                ].map(({ label, value, color }) => (
+                  <div key={label}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] text-gray-500">{label}</span>
+                      <span className="text-[11px] font-black font-mono tabular-nums" style={{ color: value != null ? color : '#d1d5db' }}>
+                        {fmtScore(value)}
+                      </span>
+                    </div>
+                    <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${value ?? 0}%`, background: color }} />
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
         </div>
 
-        <button
-          data-html2canvas-ignore
-          onClick={handleCommit}
-          disabled={isSettled || isDone || committing}
-          style={{
-            padding: '14px 28px',
-            background: (isSettled || isDone) ? C.gray200 : C.green,
-            color: C.white,
-            border: 'none',
-            borderRadius: '14px',
-            fontWeight: 700,
-            fontSize: '15px',
-            cursor: (isSettled || isDone) ? 'not-allowed' : 'pointer',
-            opacity: (isSettled || isDone) ? 0.55 : 1,
-            display: 'flex', alignItems: 'center', gap: '8px',
-            transition: 'all 0.2s',
-          }}
-        >
-          <Zap size={18} />
-          {committing ? 'AI 재분석 중...' : isSettled ? '분기 확정 완료' : isDone ? '포인트 없음' : '성과 확정 및 점수 반영'}
-        </button>
-      </div>
-    </Card>
-  );
-};
-
-// ── ESG 등급 배지 카드 (컴팩트 — Row 1 우측 배치용) ─────────────
-const GradeBadge = ({ report, navigate }) => {
-  const grade = report?.finalGrade;
-  const color = gradeColor(grade);
-  return (
-    <Card style={{
-      background: `linear-gradient(135deg, ${C.navy} 0%, #2d5a8f 100%)`,
-      display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
-      cursor: 'pointer', padding: '20px 16px',
-    }} onClick={() => navigate('/analysis/report')}>
-      <div style={{ color: '#93c5fd', fontSize: '11px', fontWeight: 600, marginBottom: '8px', textAlign: 'center' }}>
-        최종 ESG 종합등급
-      </div>
-      {grade ? (
-        <>
-          <div style={{
-            fontSize: '52px', fontWeight: 900, color: C.white, lineHeight: 1,
-            textShadow: `0 0 20px ${color}99`,
-          }}>
-            {grade}
-          </div>
-          <div style={{
-            marginTop: '10px', background: color,
-            color: C.white, padding: '3px 12px', borderRadius: '99px',
-            fontSize: '11px', fontWeight: 700,
-          }}>
-            K-ESG 기준
-          </div>
-          <div style={{
-            color: '#93c5fd', fontSize: '11px', marginTop: '10px',
-            display: 'flex', alignItems: 'center', gap: '3px',
-          }}>
-            리포트 보기 <ChevronRight size={12} />
-          </div>
-        </>
-      ) : (
-        <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '13px', textAlign: 'center', lineHeight: 1.5 }}>
-          PDF 업로드 후<br />등급 표시
-        </div>
-      )}
-    </Card>
-  );
-};
-
-
-// ── 탄소 벤치마크 Skeleton UI ─────────────────────────────────────
-const BenchmarkSkeleton = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', padding: '8px 0' }}>
-    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-      <SkeletonBar width="120px" height="28px" radius="8px" />
-      <SkeletonBar width="200px" height="14px" />
-    </div>
-    <SkeletonBar width="100%" height="200px" radius="12px" />
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      gap: '8px', color: C.gray400, fontSize: '13px',
-    }}>
-      <div style={{
-        width: '8px', height: '8px', borderRadius: '50%',
-        background: C.gray300,
-        animation: 'live-pulse 1.2s ease-in-out infinite',
-      }} />
-      업종을 파악 중...
-    </div>
-  </div>
-);
-
-// ── 메인 대시보드 페이지 ──────────────────────────────────────────
-export default function DashboardPage() {
-  const navigate = useNavigate();
-  const {
-    companyId, setCompanyId,
-    latestReport, ecoPreview, carbonStats, benchmarkData,
-    fetchLatestData, fetchEcoPreview, fetchBenchmarkData,
-    isAnalyzing, setIsAnalyzing, wsStatus, connectWebSocket,
-  } = useAnalysis();
-
-  const [loading, setLoading] = useState(false);
-
-  const loadAll = useCallback(async (id) => {
-    setLoading(true);
-    await Promise.all([
-      fetchLatestData(id),
-      fetchEcoPreview(id),
-      fetchBenchmarkData(id),
-    ]);
-    setLoading(false);
-  }, [fetchLatestData, fetchEcoPreview, fetchBenchmarkData]);
-
-  useEffect(() => {
-    loadAll();
-  }, [companyId, loadAll]);
-
-  const handleSearch = (val) => {
-    const id = Number(val);
-    if (id > 0) { setCompanyId(id); }
-  };
-
-  const sections = latestReport?.sections ?? [];
-
-  // 탄소 배출 벤치마크 헤더 — regionName/industryName 동적 바인딩
-  const benchmarkTitle = benchmarkData
-    ? `우리 기업 vs ${[benchmarkData.regionName, benchmarkData.industryName].filter(Boolean).join(' ')} 평균`
-    : loading
-    ? '벤치마크 데이터 불러오는 중...'
-    : '지역·업종 평균';
-
-  return (
-    <div style={{ padding: '36px 48px', width: '100%', boxSizing: 'border-box', background: '#F9FAFB', minHeight: '100%' }}>
-      {/* 헤더 */}
-      <div style={{
-        display: 'flex', justifyContent: 'space-between',
-        alignItems: 'center', marginBottom: '28px', flexWrap: 'wrap', gap: '12px',
-      }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 800, color: C.gray900 }}>
-            기업 ESG 통합 관제 대시보드
-          </h1>
-          <div style={{ color: C.gray500, fontSize: '14px', marginTop: '4px' }}>
-            K-ESG 가이드라인(산업통상자원부, 2021) 기준 실시간 모니터링
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <Input.Search
-            placeholder="기업 ID"
-            defaultValue={companyId}
-            onSearch={handleSearch}
-            style={{ width: '160px' }}
-            size="large"
-          />
-          <button
-            data-html2canvas-ignore
-            onClick={() => loadAll(companyId)}
-            style={{
-              padding: '8px 16px', background: C.navy, color: C.white,
-              border: 'none', borderRadius: '10px', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px',
-            }}
-          >
-            <RefreshCw size={15} />
-            새로고침
-          </button>
-          <button
-            data-html2canvas-ignore
-            onClick={() => navigate('/analysis/detail')}
-            style={{
-              padding: '8px 18px', background: C.green, color: C.white,
-              border: 'none', borderRadius: '10px', cursor: 'pointer',
-              fontWeight: 700, fontSize: '13px',
-              display: 'flex', alignItems: 'center', gap: '6px',
-            }}
-          >
-            <Activity size={15} />
-            신규 분석 시작
-          </button>
-        </div>
-      </div>
-
-      {/* Row 1: 실시간 탄소 + 3-Step + 등급 배지(컴팩트) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 190px', gap: '28px', marginBottom: '28px' }}>
-        <CarbonLiveWidget carbonStats={carbonStats} />
-        <ThreeStepStatus
-          carbonStats={carbonStats}
-          ecoPreview={ecoPreview}
-          latestReport={latestReport}
-          wsStatus={wsStatus}
-          isAnalyzing={isAnalyzing}
-        />
-        <GradeBadge report={latestReport} navigate={navigate} />
-      </div>
-
-      {/* Row 2: Radar + 월별 탄소 추세 — 풀너비 2컬럼 */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '28px', marginBottom: '28px' }}>
-        <ChartErrorBoundary><ESGRadarChartCard sections={sections} /></ChartErrorBoundary>
-        <ChartErrorBoundary>
-          <MonthlyEmissionTrendChart benchmarkData={benchmarkData} loading={loading} />
-        </ChartErrorBoundary>
-      </div>
-
-      {/* Row 3: 에코 포인트 위젯 */}
-      {ecoPreview && (
-        <EcoPointWidget
-          ecoPreview={ecoPreview}
-          companyId={companyId}
-          onCommitDone={() => {
-            connectWebSocket(companyId, () => loadAll(companyId));
-            setIsAnalyzing(true);
-          }}
-        />
-      )}
-
-      {/* Row 4: 탄소 배출 지역 벤치마크 — 동적 지역/업종명 */}
-      <div style={{
-        background: '#ffffff', borderRadius: '24px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-        padding: '24px', marginTop: '20px',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
-          <BarChart3 size={18} color={C.navy} />
-          <span style={{ fontWeight: 700, fontSize: '15px', color: C.gray900 }}>
-            탄소 배출 지역 벤치마크 — {benchmarkTitle}
-          </span>
-          <span style={{
-            background: C.blueL, color: C.blue, fontSize: '11px',
-            padding: '2px 8px', borderRadius: '99px', fontWeight: 700, marginLeft: '4px',
-          }}>
-            업종별 통계 기반
-          </span>
-          {/* 절감/초과 요약 문구 */}
-          {benchmarkData?.annualMyTotal != null && benchmarkData?.annualRegionAvgTotal != null && (
-            <span style={{
-              fontSize: '12px', fontWeight: 600,
-              color: benchmarkData.annualMyTotal <= benchmarkData.annualRegionAvgTotal ? C.green : C.red,
-              marginLeft: '4px',
-            }}>
-              {benchmarkData.annualMyTotal <= benchmarkData.annualRegionAvgTotal
-                ? `▼ ${Math.abs(benchmarkData.annualReductionPercent ?? 0).toFixed(1)}% 절감`
-                : `▲ ${Math.abs(benchmarkData.annualReductionPercent ?? 0).toFixed(1)}% 초과`}
-            </span>
-          )}
-        </div>
-
-        {/* 로딩 → Skeleton | 데이터 있음 → 차트 | 없음 → 설정 안내 */}
-        {loading && !benchmarkData ? (
-          <BenchmarkSkeleton />
-        ) : benchmarkData ? (
-          <ChartErrorBoundary>
-            <CarbonBenchmarkChart data={benchmarkData} />
-          </ChartErrorBoundary>
-        ) : (
-          <div style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            justifyContent: 'center', padding: '48px 0', gap: '10px',
-          }}>
-            <BarChart3 size={48} color={C.gray200} />
-            <div style={{ fontWeight: 600, fontSize: '15px', color: C.gray700 }}>
-              벤치마크 데이터를 불러올 수 없습니다
-            </div>
-            <div style={{ color: C.gray400, fontSize: '13px' }}>
-              회원가입 시 입력한 지역·업종 정보를 확인해주세요
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

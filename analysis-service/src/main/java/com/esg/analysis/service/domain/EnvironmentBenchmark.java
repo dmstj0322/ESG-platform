@@ -80,6 +80,28 @@ public class EnvironmentBenchmark {
     @Column(name = "water_unit", length = 20)
     private String waterUnit;
 
+    // ── 데이터 출처 (지표별) ──────────────────────────────────────────────────
+
+    /** E-101 전력 데이터 출처 */
+    @Column(name = "electricity_source", length = 100)
+    private String electricitySource;
+
+    /** E-102 가스 데이터 출처 */
+    @Column(name = "gas_source", length = 100)
+    private String gasSource;
+
+    /** E-103 탄소 데이터 출처 */
+    @Column(name = "carbon_source", length = 100)
+    private String carbonSource;
+
+    /** E-104 폐기물 데이터 출처 */
+    @Column(name = "waste_source", length = 100)
+    private String wasteSource;
+
+    /** E-105 수자원 데이터 출처 */
+    @Column(name = "water_source", length = 100)
+    private String waterSource;
+
     // ── 메타 ──────────────────────────────────────────────────────────────────
 
     /** 기준 연도. ksicCode와 복합 unique → 연도별 벤치마크 병존 가능 */

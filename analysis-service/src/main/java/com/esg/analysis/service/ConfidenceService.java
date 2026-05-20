@@ -36,19 +36,33 @@ public class ConfidenceService {
     public int calculate(ESGIndicator indicator, List<EvidenceResult> evidences) {
         if (evidences.isEmpty()) return 0;
 
-        double avgSim        = evidences.stream().mapToDouble(EvidenceResult::getSimilarity).average().orElse(0.0);
-        double avgKw         = evidences.stream().mapToDouble(EvidenceResult::getKeywordMatchScore).average().orElse(0.0);
-        double consistency   = computeConsistency(evidences);
-        double reliability   = computeSourceReliability(evidences);
+        double avgSim      = evidences.stream().mapToDouble(EvidenceResult::getSimilarity).average().orElse(0.0);
+        double avgKw       = evidences.stream().mapToDouble(EvidenceResult::getKeywordMatchScore).average().orElse(0.0);
+        double consistency = computeConsistency(evidences);
+        double reliability = computeSourceReliability(evidences);
 
-        double raw   = avgSim * 0.4 + avgKw * 0.3 + consistency * 0.2 + reliability * 0.1;
-        int    score = Math.min((int) Math.round(raw * 100), 100);
+        // ── 패널티 계산 ─────────────────────────────────────────────────────
+        // (1) 낮은 평균 similarity: 0.65 미만이면 차이에 비례하여 신뢰도 감산
+        double weakSimPenalty = avgSim < 0.65 ? (0.65 - avgSim) * 0.40 : 0.0;
 
-        log.debug("[Confidence] indicator={} sim={} kw={} cons={} src={} → {}점",
+        // (2) keyword 불일치 evidence 비율: semantic-only evidence가 많으면 신뢰도 하락
+        long semanticOnlyCount = evidences.stream()
+                .filter(e -> e.getMatchedKeywords() == null || e.getMatchedKeywords().isEmpty())
+                .count();
+        double semanticOnlyRatio   = (double) semanticOnlyCount / evidences.size();
+        double semanticOnlyPenalty = semanticOnlyRatio * 0.10;
+
+        double raw   = avgSim * 0.4 + avgKw * 0.3 + consistency * 0.2 + reliability * 0.1
+                     - weakSimPenalty - semanticOnlyPenalty;
+        int    score = Math.max(0, Math.min((int) Math.round(raw * 100), 100));
+
+        log.info("[CONFIDENCE-BREAKDOWN] indicator={} avgSim={} avgKw={} consistency={} reliability={}" +
+                        " weakSimPenalty={} semanticOnlyRatio={} → raw={} score={}",
                 indicator.getCode(),
                 String.format("%.3f", avgSim), String.format("%.3f", avgKw),
                 String.format("%.2f", consistency), String.format("%.2f", reliability),
-                score);
+                String.format("%.3f", weakSimPenalty), String.format("%.2f", semanticOnlyRatio),
+                String.format("%.3f", raw), score);
 
         return score;
     }

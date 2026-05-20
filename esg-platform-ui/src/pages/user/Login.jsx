@@ -29,7 +29,7 @@ const Login = () => {
       const decoded = jwtDecode(accessToken);
       const role = decoded.role;
       if (role === 'SYSTEM_ADMIN' || role === 'COMPANY_ADMIN') {
-        navigate('/analysis');
+        navigate('/analysis/dashboard');
       } else {
         navigate('/community');
       }

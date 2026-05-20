@@ -1,130 +1,191 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate, useLocation, NavLink } from 'react-router-dom';
-import { jwtDecode } from 'jwt-decode';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import {
+  Leaf, Plus, ChevronDown, LogOut, User,
+  BarChart3, FileText, Users, ShoppingBag, Settings,
+} from 'lucide-react';
 import api from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
 
-const Header = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
+const NAV_ADMIN = [
+  { to: '/analysis', label: 'ESG Audit',  icon: BarChart3,  matchPrefix: '/analysis' },
+  { to: '/community', label: '커뮤니티',   icon: Users,       matchPrefix: '/community' },
+  { to: '/market',    label: 'ESG 마켓',   icon: ShoppingBag, matchPrefix: '/market' },
+];
+
+const NAV_USER = [
+  { to: '/community', label: '커뮤니티', icon: Users,       matchPrefix: '/community' },
+  { to: '/market',    label: 'ESG 마켓',  icon: ShoppingBag, matchPrefix: '/market' },
+];
+
+export default function Header() {
+  const navigate  = useNavigate();
+  const location  = useLocation();
   const { isLoggedIn, logout, user } = useAuth();
-  const [points, setPoints] = useState(0);
-  const isSystemAdmin = user?.role === 'SYSTEM_ADMIN';
+
+  const [points,      setPoints]      = useState(0);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  const isSystemAdmin  = user?.role === 'SYSTEM_ADMIN';
   const isCompanyAdmin = user?.role === 'COMPANY_ADMIN';
-  const isAdmin = isSystemAdmin || isCompanyAdmin;
+  const isAdmin        = isSystemAdmin || isCompanyAdmin;
+  const navItems       = isAdmin ? NAV_ADMIN : NAV_USER;
 
   const fetchPoints = useCallback(async () => {
     const memberId = localStorage.getItem('memberId');
     if (!memberId) return;
-
     try {
       const res = await api.get(`/points/${memberId}/balance`);
       setPoints(res.data);
-    } catch (err) {
-      console.error("포인트 조회 실패");
-    }
+    } catch (_) { }
   }, []);
 
   useEffect(() => {
-    //   if (isLoggedIn) {
-    //     const token = localStorage.getItem('accessToken');
-    //     console.log("localStorage에서 읽은 토큰:", token);
-    //     if (token) {
-    //       try {
-    //         const decoded = jwtDecode(token);
-    //         console.log("디코딩된 토큰 정보:", decoded);
-    //         console.log("Role 확인:", decoded.role);
-    //         const adminStatus = decoded.role === 'ADMIN';
-    //         setIsAdmin(adminStatus);
-
-    //         if (!adminStatus) {
-    //           fetchPoints();
-    //         }
-    //       } catch (e) {
-    //         console.error("토큰 디코딩 실패", e);
-    //       }
-    //     } else {
-    //       console.warn("로그인 상태인데 토큰이 없습니다!");
-    //     }
-    //   } else {
-    //     setIsAdmin(false);
-    //   }
-    // }, [isLoggedIn, fetchPoints, location.key]);
-    if (isLoggedIn && !isAdmin) {
-      fetchPoints();
-    }
+    if (isLoggedIn && !isAdmin) fetchPoints();
   }, [isLoggedIn, isAdmin, fetchPoints, location.key]);
+
+  // close dropdown when clicking outside
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    const handle = () => setUserMenuOpen(false);
+    document.addEventListener('click', handle);
+    return () => document.removeEventListener('click', handle);
+  }, [userMenuOpen]);
 
   const handleLogout = () => {
     logout();
-    // setIsAdmin(false);
     alert('로그아웃 되었습니다.');
     navigate('/login');
   };
-
-  const navItemStyle = { textDecoration: 'none', color: 'black', marginRight: '15px' };
-  const activeStyle = { ...navItemStyle, fontWeight: 'bold', color: '#339af0' };
 
   const logoTo = isLoggedIn
     ? (isAdmin ? '/analysis/dashboard' : '/community')
     : '/';
 
   return (
-    <header style={{
-      padding: '15px 20px',
-      borderBottom: '1px solid #ccc',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center'
-    }}>
-      {/* 좌측 메뉴: 홈 및 서비스 탭 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-        <Link to={logoTo} style={{ textDecoration: 'none', fontWeight: 'bold', fontSize: '20px', color: '#2b8a3e' }}>
-          GreenTrace
-        </Link>
+    <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
+      <div className="flex items-center justify-between px-6 h-14 max-w-screen-2xl mx-auto">
 
-        {isLoggedIn && (
-          <nav style={{ display: 'flex', marginLeft: '20px' }}>
-            {isAdmin && (
-              <NavLink to="/analysis" style={({ isActive }) => isActive ? activeStyle : navItemStyle}>분석</NavLink>
-            )}
-            <NavLink to="/community" style={({ isActive }) => isActive ? activeStyle : navItemStyle}>커뮤니티</NavLink>
-            <NavLink to="/market" style={({ isActive }) => isActive ? activeStyle : navItemStyle}>ESG 마켓</NavLink>
-          </nav>
-        )}
-      </div>
+        {/* ── Left: logo + nav ─────────────────────────────────── */}
+        <div className="flex items-center gap-2">
+          <Link
+            to={logoTo}
+            className="flex items-center gap-2 no-underline mr-4"
+          >
+            <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
+              <Leaf size={15} color="#fff" />
+            </div>
+            <span className="font-bold text-[15px] text-gray-900 tracking-tight">
+              GreenTrace
+            </span>
+          </Link>
 
-      {/* 우측 메뉴: 포인트, 마이페이지, 로그아웃 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-        {isLoggedIn ? (
-          <>
-            {isAdmin ? (
-              <Link to="/admin" style={{ backgroundColor: '#ff6b6b', color: '#fff', padding: '5px 15px', borderRadius: '20px', textDecoration: 'none', fontWeight: 'bold', fontSize: '13px' }}>
-                ADMIN DASHBOARD
-              </Link>
-            ) : (
-              <>
-                <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f8f9fa', padding: '5px 10px', borderRadius: '20px' }}>
-                  <Link to="/points/history" style={{ textDecoration: 'none', color: '#444', fontSize: '14px' }}>
-                    포인트 <span style={{ fontWeight: 'bold', marginLeft: '5px', color: '#339af0' }}>: {points}P</span>
+          {isLoggedIn && (
+            <nav className="flex items-center gap-0.5">
+              {navItems.map(({ to, label, icon: Icon, matchPrefix }) => {
+                const active = location.pathname.startsWith(matchPrefix);
+                return (
+                  <Link
+                    key={to}
+                    to={to}
+                    className={[
+                      'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors no-underline',
+                      active
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100',
+                    ].join(' ')}
+                  >
+                    <Icon size={13} />
+                    {label}
                   </Link>
-                </div>
-                <Link to="/mypage" style={{ textDecoration: 'none', color: '#666', fontSize: '14px' }}>
-                  👤 마이페이지
+                );
+              })}
+            </nav>
+          )}
+        </div>
+
+        {/* ── Right: actions ───────────────────────────────────── */}
+        <div className="flex items-center gap-2">
+          {isLoggedIn ? (
+            <>
+
+              {!isAdmin && (
+                <Link
+                  to="/points/history"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 rounded-lg text-[13px] no-underline hover:bg-gray-200 transition-colors"
+                >
+                  <span className="text-gray-500">포인트</span>
+                  <span className="font-bold text-emerald-600">{points}P</span>
                 </Link>
-              </>
-            )}
-            <button onClick={handleLogout} style={{ cursor: 'pointer' }}>로그아웃</button>
-          </>
-        ) : (
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <Link to="/login"><button>로그인</button></Link>
-            <Link to="/signup"><button>회원가입</button></Link>
-          </div>
-        )}
+              )}
+
+              {/* user dropdown */}
+              <div
+                className="relative"
+                onClick={e => { e.stopPropagation(); setUserMenuOpen(v => !v); }}
+              >
+                <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] text-gray-600 hover:bg-gray-100 transition-colors">
+                  <div className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center">
+                    <User size={12} color="#059669" />
+                  </div>
+                  <span className="hidden sm:block text-gray-700 font-medium">
+                    {user?.name || '내 계정'}
+                  </span>
+                  <ChevronDown size={13} className="text-gray-400" />
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 top-[calc(100%+6px)] w-44 bg-white rounded-xl border border-gray-200 shadow-xl py-1 z-50 animate-fade-in">
+                    {!isAdmin && (
+                      <Link
+                        to="/mypage"
+                        className="flex items-center gap-2 px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 no-underline"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <User size={13} />
+                        마이페이지
+                      </Link>
+                    )}
+                    {isAdmin && (
+                      <Link
+                        to="/admin"
+                        className="flex items-center gap-2 px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 no-underline"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <Settings size={13} />
+                        Admin Dashboard
+                      </Link>
+                    )}
+                    <div className="my-1 border-t border-gray-100" />
+                    <button
+                      onClick={() => { setUserMenuOpen(false); handleLogout(); }}
+                      className="w-full flex items-center gap-2 px-3.5 py-2 text-[13px] text-red-500 hover:bg-red-50 transition-colors"
+                    >
+                      <LogOut size={13} />
+                      로그아웃
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Link
+                to="/login"
+                className="px-3.5 py-1.5 text-[13px] text-gray-600 hover:text-gray-900 no-underline font-medium"
+              >
+                로그인
+              </Link>
+              <Link
+                to="/signup"
+                className="px-3.5 py-1.5 bg-emerald-600 text-white text-[13px] font-semibold rounded-lg hover:bg-emerald-700 no-underline transition-colors"
+              >
+                회원가입
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
-};
-
-export default Header;
+}

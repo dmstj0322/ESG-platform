@@ -17,6 +17,10 @@ spring:
   profiles:
     active: default
 
+upstage:
+  api:
+    key: ${UPSTAGE_API_KEY:}
+
 eureka:
   client:
     service-url:

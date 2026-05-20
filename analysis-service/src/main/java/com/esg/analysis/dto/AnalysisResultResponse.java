@@ -41,6 +41,12 @@ public class AnalysisResultResponse {
     private Integer lowMismatchCount;
     /** Grade Ceiling 규칙으로 등급이 낮아진 경우 true */
     private Boolean gradeCeilingApplied;
+    /** Upstage OCR에서 페이지 마커 추출 실패 → fallback 텍스트 수집 경로가 사용된 경우 true */
+    private Boolean ocrFallback;
+    /** 기업 실측 환경 데이터 없음 → 업종 평균 benchmark 기반 추정치 사용 여부 */
+    private Boolean isBenchmarkFallback;
+    /** AUTO 모드 사전 진단 여부 — E 파일 없이 benchmark 기반으로만 계산된 경우 true */
+    private Boolean isAutoSimulation;
 
     // ── 에코포인트 ────────────────────────────────────────────────────────
     /** null → 0 기본값 적용 */
@@ -101,11 +107,20 @@ public class AnalysisResultResponse {
         /** 원본 파일명. 확인 불가 시 null */
         private String  sourceFile;
 
+        /** ChromaDB 코사인 유사도 (0.0~1.0). S/G Verification Status 결정에 사용. */
+        private Double  similarity;
+
         // ── E 지표 수치 정합성 (E 지표 외에는 null) ──────────────────────────
         /** "HIGH" / "MEDIUM" / "LOW" — MATCH/MISMATCH 배지 */
         private String  numericMatchLevel;
         /** 입력값 대비 추출값 차이 비율 (%) */
         private Double  numericDiffPercent;
+        /** 사용자 CSV 원본 입력값 */
+        private Double  inputValue;
+        /** OCR/CSV 문서 추출값 */
+        private Double  extractedValue;
+        /** 수치 단위 ("kWh" / "MJ" / "tCO₂" / "kg" / "m³") */
+        private String  unit;
     }
 
     /**
@@ -160,7 +175,10 @@ public class AnalysisResultResponse {
     public static class BenchmarkComparisonDto {
         private String industry;
         private String regionName;
-        /** "ACTUAL" = 기업 실측값 / "BENCHMARK" = 업종 평균으로 대체 */
+        /**
+         * 우리 기업 데이터 출처:
+         * "ACTUAL" = 기업 제출 실측값 / "BENCHMARK" = 공공 통계 기반 업종 평균 추정 / "MOCK" = fallback
+         */
         private String companyDataSource;
 
         // 기존 쌍별 필드 — 하위 호환 유지
@@ -176,7 +194,7 @@ public class AnalysisResultResponse {
         private Double industryAvgWaterM3;
 
         /**
-         * 차트용 정규화 배열.
+         * 차트용 정규화 배열 — source 필드 포함.
          * Recharts BarChart data prop에 바로 전달 가능:
          * {@code <Bar dataKey="company" /> <Bar dataKey="industryAvg" />}
          */
@@ -190,6 +208,13 @@ public class AnalysisResultResponse {
             private String unit;
             private Double company;
             private Double industryAvg;
+            /**
+             * 업종 평균 데이터 출처.
+             * 예: "에너지경제연구원 업종별 에너지원단위 2023"
+             *     "환경부 사업장 폐기물 발생 및 처리 현황 2022"
+             *     "K-water 산업용수 수요 통계 2023"
+             */
+            private String source;
         }
     }
 }
