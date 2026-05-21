@@ -4,5 +4,7 @@ public record PointRequest(
   Long memberId,
   Long companyId,
   Long amount,
-  String description) {
+  String description,
+  Long targetId
+) {
 }

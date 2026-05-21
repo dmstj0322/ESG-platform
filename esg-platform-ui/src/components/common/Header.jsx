@@ -1,90 +1,75 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate, useLocation, NavLink } from 'react-router-dom';
-import { jwtDecode } from 'jwt-decode';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import api from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
+import { useNotification } from '../../hooks/useNotification';
+import NotificationPanel from './NotificationPanel';
 
 const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isLoggedIn, logout, user } = useAuth();
+  const { logout, user, isLoggedIn } = useAuth();
+  
   const [points, setPoints] = useState(0);
-  const isSystemAdmin = user?.role === 'SYSTEM_ADMIN';
-  const isCompanyAdmin = user?.role === 'COMPANY_ADMIN';
-  const isAdmin = isSystemAdmin || isCompanyAdmin;
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  
+  // 🌟 알림 영역 감지를 위한 Ref 생성
+  const notificationRef = useRef(null);
+
+  const isAdmin = user?.role === 'SYSTEM_ADMIN' || user?.role === 'COMPANY_ADMIN';
 
   const fetchPoints = useCallback(async () => {
-    const memberId = localStorage.getItem('memberId');
-    if (!memberId) return;
-
+    const memberId = user?.memberId || user?.id || localStorage.getItem('memberId');
+    if (!memberId || isAdmin) return;
     try {
       const res = await api.get(`/points/${memberId}/balance`);
       setPoints(res.data);
     } catch (err) {
       console.error("포인트 조회 실패");
     }
-  }, []);
+  }, [user, isAdmin]);
+
+  const { hasUnread, setHasUnread } = useNotification(
+    user?.memberId || user?.id,
+    fetchPoints
+  );
 
   useEffect(() => {
-    //   if (isLoggedIn) {
-    //     const token = localStorage.getItem('accessToken');
-    //     console.log("localStorage에서 읽은 토큰:", token);
-    //     if (token) {
-    //       try {
-    //         const decoded = jwtDecode(token);
-    //         console.log("디코딩된 토큰 정보:", decoded);
-    //         console.log("Role 확인:", decoded.role);
-    //         const adminStatus = decoded.role === 'ADMIN';
-    //         setIsAdmin(adminStatus);
-
-    //         if (!adminStatus) {
-    //           fetchPoints();
-    //         }
-    //       } catch (e) {
-    //         console.error("토큰 디코딩 실패", e);
-    //       }
-    //     } else {
-    //       console.warn("로그인 상태인데 토큰이 없습니다!");
-    //     }
-    //   } else {
-    //     setIsAdmin(false);
-    //   }
-    // }, [isLoggedIn, fetchPoints, location.key]);
     if (isLoggedIn && !isAdmin) {
       fetchPoints();
     }
   }, [isLoggedIn, isAdmin, fetchPoints, location.key]);
 
+  // 🌟 알림창 바깥 클릭 시 닫기 로직
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setIsPanelOpen(false);
+      }
+    };
+
+    if (isPanelOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isPanelOpen]);
+
   const handleLogout = () => {
     logout();
-    // setIsAdmin(false);
     alert('로그아웃 되었습니다.');
     navigate('/login');
   };
 
-  const navItemStyle = { textDecoration: 'none', color: 'black', marginRight: '15px' };
-  const activeStyle = { ...navItemStyle, fontWeight: 'bold', color: '#339af0' };
-
-  const logoTo = isLoggedIn
-    ? (isAdmin ? '/analysis/dashboard' : '/community')
-    : '/';
+  const logoTo = isLoggedIn ? (isAdmin ? '/analysis/dashboard' : '/community') : '/';
 
   return (
-    <header style={{
-      padding: '15px 20px',
-      borderBottom: '1px solid #ccc',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center'
-    }}>
-      {/* 좌측 메뉴: 홈 및 서비스 탭 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-        <Link to={logoTo} style={{ textDecoration: 'none', fontWeight: 'bold', fontSize: '20px', color: '#2b8a3e' }}>
-          GreenTrace
-        </Link>
-
+    <header style={headerStyle}>
+      <div style={leftSectionStyle}>
+        <Link to={logoTo} style={logoStyle}>GreenTrace</Link>
         {isLoggedIn && (
-          <nav style={{ display: 'flex', marginLeft: '20px' }}>
+          <nav style={mainNavStyle}>
             {isAdmin && (
               <NavLink to="/analysis" style={({ isActive }) => isActive ? activeStyle : navItemStyle}>분석</NavLink>
             )}
@@ -94,37 +79,65 @@ const Header = () => {
         )}
       </div>
 
-      {/* 우측 메뉴: 포인트, 마이페이지, 로그아웃 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+      <div style={rightSectionStyle}>
         {isLoggedIn ? (
           <>
             {isAdmin ? (
-              <Link to="/admin" style={{ backgroundColor: '#ff6b6b', color: '#fff', padding: '5px 15px', borderRadius: '20px', textDecoration: 'none', fontWeight: 'bold', fontSize: '13px' }}>
-                ADMIN DASHBOARD
-              </Link>
+              <Link to="/admin" style={adminButtonStyle}>ADMIN DASHBOARD</Link>
             ) : (
               <>
-                <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#f8f9fa', padding: '5px 10px', borderRadius: '20px' }}>
-                  <Link to="/points/history" style={{ textDecoration: 'none', color: '#444', fontSize: '14px' }}>
-                    포인트 <span style={{ fontWeight: 'bold', marginLeft: '5px', color: '#339af0' }}>: {points}P</span>
+                <div style={pointBadgeStyle}>
+                  <Link to="/points/history" style={pointLinkStyle}>
+                    포인트 <span style={pointValueStyle}>: {points.toLocaleString()}P</span>
                   </Link>
                 </div>
-                <Link to="/mypage" style={{ textDecoration: 'none', color: '#666', fontSize: '14px' }}>
-                  👤 마이페이지
-                </Link>
+
+                {/* 🌟 Ref를 이곳에 지정하여 아이콘과 패널 전체를 감쌉니다. */}
+                <div style={{ position: 'relative' }} ref={notificationRef}>
+                  <button onClick={() => setIsPanelOpen(!isPanelOpen)} style={bellButtonStyle}>
+                    🔔
+                    {hasUnread && <span style={redDotStyle}></span>}
+                  </button>
+                  
+                  {isPanelOpen && (
+                    <NotificationPanel 
+                      memberId={user?.memberId || user?.id} 
+                      onClose={() => setIsPanelOpen(false)}
+                      onRead={() => setHasUnread(false)}
+                    />
+                  )}
+                </div>
+                <Link to="/mypage" style={myPageLinkStyle}>👤 마이페이지</Link>
               </>
             )}
-            <button onClick={handleLogout} style={{ cursor: 'pointer' }}>로그아웃</button>
+            <button onClick={handleLogout} style={logoutButtonStyle}>로그아웃</button>
           </>
         ) : (
           <div style={{ display: 'flex', gap: '10px' }}>
-            <Link to="/login"><button>로그인</button></Link>
-            <Link to="/signup"><button>회원가입</button></Link>
+            <Link to="/login"><button style={authButtonStyle}>로그인</button></Link>
+            <Link to="/signup"><button style={authButtonStyle}>회원가입</button></Link>
           </div>
         )}
       </div>
     </header>
   );
 };
+
+const headerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 40px', backgroundColor: '#fff', borderBottom: '1px solid #eee', position: 'sticky', top: 0, zIndex: 100 };
+const leftSectionStyle = { display: 'flex', alignItems: 'center', gap: '20px' };
+const logoStyle = { textDecoration: 'none', fontWeight: 'bold', fontSize: '22px', color: '#339af0' };
+const mainNavStyle = { display: 'flex', gap: '25px', marginLeft: '30px' };
+const navItemStyle = { textDecoration: 'none', color: '#495057', fontSize: '16px', fontWeight: '500' };
+const activeStyle = { ...navItemStyle, color: '#339af0', fontWeight: 'bold' };
+const rightSectionStyle = { display: 'flex', alignItems: 'center', gap: '20px' };
+const pointBadgeStyle = { backgroundColor: '#f8f9fa', padding: '6px 14px', borderRadius: '20px', border: '1px solid #e9ecef' };
+const pointLinkStyle = { textDecoration: 'none', color: '#444', fontSize: '14px' };
+const pointValueStyle = { fontWeight: 'bold', color: '#339af0', marginLeft: '5px' };
+const bellButtonStyle = { background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', position: 'relative', display: 'flex', alignItems: 'center' };
+const redDotStyle = { position: 'absolute', top: '2px', right: '2px', width: '8px', height: '8px', backgroundColor: '#fa5252', borderRadius: '50%', border: '2px solid #fff' };
+const myPageLinkStyle = { textDecoration: 'none', color: '#666', fontSize: '14px', fontWeight: '500' };
+const logoutButtonStyle = { border: 'none', background: 'none', cursor: 'pointer', color: '#adb5bd', fontSize: '14px' };
+const adminButtonStyle = { backgroundColor: '#ff6b6b', color: '#fff', padding: '6px 18px', borderRadius: '20px', textDecoration: 'none', fontWeight: 'bold', fontSize: '13px' };
+const authButtonStyle = { padding: '6px 12px', cursor: 'pointer', borderRadius: '4px', border: '1px solid #dee2e6', backgroundColor: '#fff' };
 
 export default Header;

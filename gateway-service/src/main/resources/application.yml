@@ -27,7 +27,7 @@ spring:
           enabled: true
       httpclient:
         connect-timeout: 10000 # 연결 타임아웃을 넉넉히 설정
-        response-timeout: 5s
+        response-timeout: 3600s
       routes:
         # WebSocket 전용 라우트 (JwtFilter 없이, /ws-esg/** 직접 전달)
         - id: analysis-websocket
@@ -81,6 +81,13 @@ spring:
           uri: lb://POINT-SERVICE
           predicates:
             - Path=/points/**
+          filters:
+            - JwtAuthFilter # 인증 추가
+
+        - id: notification-service
+          uri: lb://NOTIFICATION-SERVICE
+          predicates:
+            - Path=/notification/**
           filters:
             - JwtAuthFilter # 인증 추가
 

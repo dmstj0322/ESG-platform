@@ -97,6 +97,11 @@ public class Post extends BaseTimeEntity {
     this.rejectionReason = reason;
   }
 
+  public void autoReject(String reason) {
+    this.adminStatus = AdminStatus.AUTO_REJECTED;
+    this.rejectionReason = reason;
+  }
+
   public void update(String title, String content) {
     this.title = title;
     this.content = content;

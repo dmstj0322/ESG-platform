@@ -31,7 +31,7 @@ public class PostService {
   private final PostRepository postRepository;
   private final PostLikeRepository postLikeRepository;
   private final ImageUploadService imageUploadService;
-  private final KafkaTemplate<String, PostCreatedEvent> kafkaTemplate;
+  private final KafkaTemplate<String, Object> kafkaTemplate;
 
   @Transactional
   public PostResponseDto createPost(PostRequestDto requestDto, Long memberId, Long companyId, List<MultipartFile> files) throws IOException {
@@ -104,7 +104,7 @@ public class PostService {
     Page<Post> posts;
     if (companyId == 0L) {
       // 관리자는 전체 조회
-      posts =  postRepository.findAllByOrderByCreatedDateDesc(pageable);
+      posts = postRepository.findAllByOrderByCreatedDateDesc(pageable);
     } else {
       posts = postRepository.findAllByCompanyIdOrderByCreatedDateDesc(companyId, pageable);
     }
@@ -149,6 +149,7 @@ public class PostService {
     postRepository.delete(post);
   }
 
+  @Transactional(readOnly = true)
   public Page<PostResponseDto> searchPosts(Long memberId, Long companyId, String keyword, Pageable pageable) {
     Page<Post> posts;
     if (companyId == 0L) {

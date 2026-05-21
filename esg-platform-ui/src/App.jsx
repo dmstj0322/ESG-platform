@@ -1,7 +1,9 @@
 import React from 'react';
 
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import LandingPage from './pages/LandingPage';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AnalysisProvider } from './context/AnalysisContext';
 
@@ -10,6 +12,7 @@ import Sidebar from './components/common/Sidebar';
 import AdminRoute from './components/common/AdminRoute';
 import ProductAdmin from './components/market/ProductAdmin';
 
+import LandingPage from './pages/LandingPage';
 import PostList from './pages/community/PostList';
 import PostWrite from './pages/community/PostWrite';
 import PostDetail from './pages/community/PostDetail';
@@ -49,10 +52,10 @@ const CommunityLayout = () => (
 
 const AnalysisLayout = () => (
   <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-    <Header /> 
+    <Header />
     <div style={{ display: 'flex', flex: 1 }}>
       <Sidebar />
-      <main style={{ flex: 1, overflow: 'auto', minWidth: 0, background: '#F9FAFB',padding: '20px'}}>
+      <main style={{ flex: 1, overflow: 'auto', minWidth: 0, background: '#F9FAFB', padding: '20px' }}>
         <Outlet />
       </main>
     </div>
@@ -89,19 +92,31 @@ function App() {
               } />
             </Route>
             <Route path="/analysis" element={
-                <AdminRoute>
-                  <AnalysisLayout />
-                </AdminRoute>
-              }
+              <AdminRoute>
+                <AnalysisLayout />
+              </AdminRoute>
+            }
             >
               {/* /analysis 로 들어오면 기본적으로 dashboard를 보여줌 */}
-              <Route index element={<DashboardPage />} /> 
+              <Route index element={<DashboardPage />} />
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="detail" element={<AnalysisPage />} />
               <Route path="report" element={<ReportPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
+          <ToastContainer
+            position="top-right"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="light"
+          />
         </BrowserRouter>
       </AnalysisProvider>
     </AuthProvider>

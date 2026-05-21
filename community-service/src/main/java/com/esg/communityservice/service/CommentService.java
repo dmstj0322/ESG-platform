@@ -21,6 +21,7 @@ public class CommentService {
   private final CommentRepository commentRepository;
   private final PostRepository postRepository;
 
+  @Transactional
   public CommentResponseDto createComment(Long postId, Long memberId, Long companyId, CommentRequestDto requestDto) {
     Post post = postRepository.findById(postId)
       .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
@@ -40,6 +41,7 @@ public class CommentService {
     return CommentResponseDto.from(commentRepository.save(comment));
   }
 
+  @Transactional(readOnly = true)
   public Page<CommentResponseDto> getComments(Long postId, Long companyId, Pageable pageable) {
     Page<Comment> parentComments;
 

@@ -2,6 +2,7 @@ package com.esg.communityservice.service;
 
 import com.esg.communityservice.domain.*;
 import com.esg.communityservice.event.PostCreatedEvent;
+import com.esg.communityservice.kafka.NotificationProducer;
 import com.esg.communityservice.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +17,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminService {
   private final PostRepository postRepository;
-  private final KafkaTemplate<String, PostCreatedEvent> kafkaTemplate;
+  private final KafkaTemplate<String, Object> kafkaTemplate;
+  private final NotificationProducer notificationProducer;
 
   @Transactional
   public void approvePost(Long postId) {
@@ -31,11 +33,13 @@ public class AdminService {
       throw new IllegalStateException("대기 중인 게시글만 승인 가능합니다.");
     }
 
-    post.approve();
-
-    postRepository.save(post);
-
     ActivityType activityType = ActivityType.valueOf(post.getAiResult());
+    if (activityType == ActivityType.FAIL) {
+      throw new IllegalStateException("AI 분석 결과가 FAIL인 게시글은 승인할 수 없습니다.");
+    }
+
+    post.approve();
+    postRepository.save(post);
 
     List<String> imageUrls = post.getImages().stream()
       .map(ImageFile::getS3Url)
@@ -44,6 +48,11 @@ public class AdminService {
     PostCreatedEvent postCreatedEvent = new PostCreatedEvent(
       post.getId(), post.getMemberId(), post.getCompanyId(), imageUrls, activityType);
     kafkaTemplate.send("point-payment-topic", postCreatedEvent);
+
+    String message = String.format("🎉 관리자 승인으로 [%s] 활동 인증이 완료되어 포인트가 지급되었습니다.", activityType.getDescription());
+//    kafkaTemplate.send("notification-topic", new NotificationEvent(post.getMemberId(), message, "POINT_EARNED", postId));
+    notificationProducer.send(post.getMemberId(), message, "POINT_EARNED", postId);
+
     log.info("관리자 승인 완료 및 포인트 지급 이벤트 발행: {}", postId);
   }
 
@@ -57,5 +66,12 @@ public class AdminService {
     }
 
     post.reject(reason);
+    postRepository.save(post);
+
+    String message = String.format("⚠️ 관리자에 의해 인증이 반려되었습니다. 사유: %s", reason);
+//    kafkaTemplate.send("notification-topic", new NotificationEvent(post.getMemberId(), message, "ACTIVITY_REJECTED", postId));
+    notificationProducer.send(post.getMemberId(), message, "ACTIVITY_REJECTED", postId);
+
+    log.info("관리자 거절 완료 및 알림 전송: {}, 사유: {}", postId, reason);
   }
 }

@@ -1,6 +1,5 @@
 package com.esg.marketservice.controller;
 
-import com.esg.marketservice.domain.Product;
 import com.esg.marketservice.dto.ProductResponseDto;
 import com.esg.marketservice.service.ProductService;
 import lombok.RequiredArgsConstructor;
@@ -10,8 +9,6 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/products")
@@ -20,8 +17,10 @@ public class ProductController {
 
   @GetMapping
   public ResponseEntity<Page<ProductResponseDto>> getMarketProducts(@RequestHeader("X-Company-Id") Long companyId,
-                                                                    @PageableDefault(size = 12) Pageable pageable) {
-    return ResponseEntity.ok(productService.getProducts(companyId, pageable));
+                                                                    @RequestParam(value = "category", required = false, defaultValue = "ALL") String category,
+                                                                    @RequestParam(value = "name", required = false) String name,
+                                                                    @PageableDefault(size = 10) Pageable pageable) {
+    return ResponseEntity.ok(productService.getProducts(companyId, category, name, pageable));
   }
 
   @GetMapping("/{productId}")

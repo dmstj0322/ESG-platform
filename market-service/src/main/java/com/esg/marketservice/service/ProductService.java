@@ -57,13 +57,30 @@ public class ProductService {
     return savedProduct.getId();
   }
 
+//  @Transactional(readOnly = true)
+//  public Page<ProductResponseDto> getProducts(Long companyId, Pageable pageable) {
+//    if (companyId == 0L) {
+//      return productRepository.findByDeletedFalse(pageable).map(ProductResponseDto::new);
+//    }
+//
+//    return productRepository.findByCompanyIdAndDeletedFalse(companyId, pageable)
+//      .map(ProductResponseDto::new);
+//  }
+
   @Transactional(readOnly = true)
-  public Page<ProductResponseDto> getProducts(Long companyId, Pageable pageable) {
-    if (companyId == 0L) {
-      return productRepository.findByDeletedFalse(pageable).map(ProductResponseDto::new);
+  public Page<ProductResponseDto> getProducts(Long companyId, String category, String name, Pageable pageable) {
+    Category enumCategory = null;
+    if (category != null && !category.equalsIgnoreCase("ALL") && !category.trim().isEmpty()) {
+      try {
+        enumCategory = Category.valueOf(category.toUpperCase());
+      } catch (IllegalArgumentException e) {
+        log.warn("올바르지 않은 카테고리 Enum 요청 수신: {}", category);
+      }
     }
 
-    return productRepository.findByCompanyIdAndDeletedFalse(companyId, pageable)
+    String searchName = (name != null && !name.trim().isEmpty()) ? name : null;
+
+    return productRepository.findProductsWithFilters(companyId, enumCategory, searchName, pageable)
       .map(ProductResponseDto::new);
   }
 

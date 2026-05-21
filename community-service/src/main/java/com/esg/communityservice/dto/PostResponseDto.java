@@ -25,7 +25,8 @@ public record PostResponseDto(
   Double aiScore,
   String aiResult,
   AIStatus aiStatus,
-  AdminStatus adminStatus
+  AdminStatus adminStatus,
+  String rejectionReason
   ) {
   public static PostResponseDto of(Post post, boolean isLiked) {
     return new PostResponseDto(
@@ -45,7 +46,8 @@ public record PostResponseDto(
       post.getAiScore(),
       post.getAiResult(),
       post.getAiStatus(),
-      post.getAdminStatus()
+      post.getAdminStatus(),
+      post.getRejectionReason()
     );
   }
 }

@@ -26,7 +26,7 @@ const VoucherDetail = () => {
       });
     } catch (e) {
       console.error("이미지 변환 실패:", e);
-      return url; 
+      return url;
     }
   };
 
@@ -70,17 +70,17 @@ const VoucherDetail = () => {
 
     try {
       const canvas = await html2canvas(element, {
-        scale: 3, 
+        scale: 3,
         useCORS: true,
-        backgroundColor: "#f1f3f5", 
+        backgroundColor: "#f1f3f5",
         onclone: (clonedDoc) => {
           const clonedCard = clonedDoc.querySelector(".ticket-card");
           clonedCard.style.width = "400px";
           clonedCard.style.boxShadow = "none";
-          
+
           const imgContainer = clonedDoc.querySelector(".img-container");
           if (imgContainer) {
-            imgContainer.style.height = "250px"; 
+            imgContainer.style.height = "250px";
           }
         }
       });
@@ -111,19 +111,27 @@ const VoucherDetail = () => {
       <div className="ticket-card" style={isDonation ? certCardStyle : voucherCardStyle}>
         {isDonation ? (
           <div className="cert-inner" style={certInnerStyle}>
-            <div style={certBadgeStyle}>CERTIFICATE OF DONATION</div>
-            <h1 style={certTitleStyle}>기부 인증서</h1>
-            {/* ✅ 백엔드에서 넘겨주는 증서번호 출력 추가 */}
-            <p style={{ color: '#888', fontSize: '11px', marginBottom: '15px' }}>No. {data.certificateNumber}</p>
-            <div style={dividerStyle} />
-            <p style={certDescStyle}>
-              위 사람은 <strong>Green-Trace</strong>를 통해<br />
-              나누어 주신 따뜻한 마음,<br />
-              <span style={{ color: '#b8860b', fontWeight: 'bold' }}>[{data.productName}]</span>에 참여하였기에<br />
-              이 인증서를 수여합니다.
-            </p>
-            <p style={certDateStyle}>{new Date(data.orderDate).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-            <h3 style={brandNameStyle}>Green-Trace ESG Platform</h3>
+            <div>
+              <div style={certBadgeStyle}>CERTIFICATE OF DONATION</div>
+              <h1 style={certTitleStyle}>기부 인증서</h1>
+              {/* ✅ 백엔드에서 넘겨주는 증서번호 출력 추가 */}
+              <p style={{ color: '#888', fontSize: '11px', marginBottom: '15px' }}>No. {data.certificateNumber}</p>
+              <div style={dividerStyle} />
+            </div>
+            <div style={certMiddleWrapper}>
+              <p style={{ ...certDescStyle, margin: 0 }}>
+                위 사람은 <strong>Green-Trace</strong>를 통해<br />
+                나누어 주신 따뜻한 마음,<br />
+                <span style={{ color: '#b8860b', fontWeight: 'bold' }}>[{data.productName}]</span>에 참여하였기에<br />
+                이 인증서를 수여합니다.
+              </p>
+            </div>
+            <div>
+              <p style={{ ...certDateStyle, margin: '0 0 8px 0' }}>
+                {new Date(data.orderDate).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
+              </p>
+              <h3 style={{ ...brandNameStyle, margin: 0 }}>Green-Trace ESG Platform</h3>
+            </div>
           </div>
         ) : (
           <div style={{ textAlign: 'left' }}>
@@ -172,8 +180,9 @@ const topNavStyle = { width: '100%', maxWidth: '400px', marginBottom: '20px' };
 const backBtnStyle = { background: 'none', border: 'none', color: '#868e96', cursor: 'pointer', fontSize: '14px' };
 
 const voucherCardStyle = { backgroundColor: '#fff', width: '100%', maxWidth: '400px', padding: '30px', borderRadius: '24px', boxShadow: '0 15px 35px rgba(0,0,0,0.08)', boxSizing: 'border-box' };
-const certCardStyle = { ...voucherCardStyle, border: '10px double #d4af37', backgroundColor: '#fffcf5', padding: '10px' };
-const certInnerStyle = { border: '1px solid #d4af37', padding: '40px 20px', textAlign: 'center' };
+const certCardStyle = { ...voucherCardStyle, border: '10px double #d4af37', backgroundColor: '#fffcf5', padding: '12px', minHeight: '600px', display: 'flex', flexDirection: 'column' };
+const certInnerStyle = { border: '1px solid #d4af37', padding: '50px 20px', textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', boxSizing: 'border-box' };
+const certMiddleWrapper = { margin: '50px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' };
 const certBadgeStyle = { color: '#b8860b', fontSize: '11px', fontWeight: 'bold', letterSpacing: '2px', marginBottom: '10px' };
 const certTitleStyle = { fontFamily: 'serif', fontSize: '30px', color: '#5c4033', margin: '0' };
 const dividerStyle = { borderTop: '2px solid #d4af37', width: '50px', margin: '0 auto 25px' };
@@ -199,17 +208,49 @@ const buttonGroupStyle = { display: 'flex', gap: '10px', width: '100%', maxWidth
 const primaryBtnStyle = { flex: 1, padding: '14px', backgroundColor: '#339af0', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '15px', cursor: 'pointer' };
 const secondaryBtnStyle = { ...primaryBtnStyle, backgroundColor: '#495057' };
 
+// const printStyles = `
+//   @media print {
+//     @page { margin: 10mm; }
+//     body { background: white !important; margin: 0 !important; }
+//     .no-print { display: none !important; }
+//     .ticket-card { 
+//       width: 400px !important; 
+//       margin: 0 auto !important; 
+//       box-shadow: none !important; 
+//       border: 1px solid #eee !important;
+//       position: static !important; 
+//     }
+//   }
+// `;
+
 const printStyles = `
   @media print {
-    @page { margin: 10mm; }
-    body { background: white !important; margin: 0 !important; }
-    .no-print { display: none !important; }
-    .ticket-card { 
-      width: 400px !important; 
-      margin: 0 auto !important; 
-      box-shadow: none !important; 
-      border: 1px solid #eee !important;
-      position: static !important; 
+    @page { margin: 0; }
+    
+    body * {
+      visibility: hidden !important;
+    }
+    
+    .ticket-card, .ticket-card * {
+      visibility: visible !important;
+    }
+    
+    .ticket-card {
+      position: absolute !important;
+      left: 50% !important;
+      top: 15mm !important;
+      transform: translateX(-50%) !important;
+      width: 400px !important;
+      height: !important;
+      margin: 0 !important;
+      border: 1px solid #dee2e6 !important;
+      box-shadow: none !important;
+    }
+
+    body { 
+      background: white !important; 
+      -webkit-print-color-adjust: exact; 
+      print-color-adjust: exact;
     }
   }
 `;

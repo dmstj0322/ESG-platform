@@ -25,12 +25,19 @@ public class PointHistory extends BaseTimeEntity {
 
   private String description;
 
+  private Long balance;
+
+  private Long targetId;
+
   @Builder
-  public PointHistory(Long memberId, Long companyId, Long amount, PointType type, String description) {
+  public PointHistory(Long memberId, Long companyId, Long amount, PointType type,
+                      String description, Long balance, Long targetId) {
     this.memberId = memberId;
     this.companyId = companyId;
     this.amount = amount;
     this.type = type;
     this.description = description;
+    this.balance = balance;
+    this.targetId = targetId;
   }
 }

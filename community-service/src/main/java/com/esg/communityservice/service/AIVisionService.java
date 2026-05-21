@@ -41,7 +41,9 @@ public class AIVisionService {
     BatchAnnotateImagesResponse response = client.batchAnnotateImages(List.of(request));
 
     List<LabelInfo> labels = response.getResponsesList().get(0).getLabelAnnotationsList().stream()
-      .map(annotation -> new LabelInfo(annotation.getDescription().toLowerCase(), annotation.getScore()))
+      .map(annotation -> new LabelInfo(
+        annotation.getDescription().toLowerCase().replace(" ", "_"),
+        annotation.getScore()))
       .toList();
 
     log.info("AI가 감지한 라벨 목록: {}", labels);
@@ -59,14 +61,35 @@ public class AIVisionService {
     log.info("AI 분석된 전체 라벨: {}", allDetectedLabels);
 
     return Arrays.stream(ActivityType.values())
-      .max(Comparator.comparingDouble(type ->
-        allDetectedLabels.stream()
+      .filter(type -> type != ActivityType.FAIL)
+      .max(Comparator.comparingDouble(type -> {
+        boolean isRejected = allDetectedLabels.stream()
+          .anyMatch(label -> type.getRejectKeywords().contains(label.description()) && label.score() > 0.5f);
+
+        if (isRejected) {
+          log.info("활동 타입 {} 분석 중 부정 키워드 감지됨", type);
+          return 0.0; // 강제로 낮은 점수를 주어 후보에서 제외
+        }
+        return allDetectedLabels.stream()
           .filter(label -> type.getKeywords().contains(label.description()))
           .filter(label -> label.score() > 0.6f)
           .mapToDouble(LabelInfo::score)
-          .sum()
-      ))
-      .orElse(ActivityType.TUMBLER); // 매칭 없으면 기본값
+          .sum();
+      }))
+      .filter(type -> {
+        // 최고 점수 계산 로직 재수행 (위의 map 로직에서 반환된 점수 활용 필요)
+        double score = allDetectedLabels.stream()
+          .filter(label -> type.getKeywords().contains(label.description()))
+          .filter(label -> label.score() > 0.6f)
+          .mapToDouble(LabelInfo::score)
+          .sum();
+
+        boolean isRejected = allDetectedLabels.stream()
+          .anyMatch(label -> type.getRejectKeywords().contains(label.description()) && label.score() > 0.5f);
+
+        return !isRejected && score > 0.0;
+      })
+      .orElse(ActivityType.FAIL); // 매칭 없으면 기본값
   }
 
   public double getMaxConfidenceScore(ActivityType type, List<String> imageUrls) {
@@ -82,6 +105,14 @@ public class AIVisionService {
         ).asByteArray());
 
         List<LabelInfo> labels = detectLabels(imgBytes);
+
+        boolean isRejected = labels.stream()
+          .anyMatch(label -> type.getRejectKeywords().contains(label.description()) && label.score() > 0.5f);
+
+        if (isRejected) {
+          log.warn("🚨 부정 키워드 감지됨! AI 자동 탈락 처리. 활동: {}, 이미지: {}", type, urlString);
+          return 0.0; // 일회용품이나 부정맥락이 발견되면 즉시 0점 처리
+        }
 
         double currentMax = labels.stream()
           .filter(label -> type.getKeywords().contains(label.description()) && label.score() > 0.6f)

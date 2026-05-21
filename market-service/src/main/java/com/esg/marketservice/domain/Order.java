@@ -25,6 +25,9 @@ public class Order extends BaseTimeEntity {
   private Long memberId;
 
   @Column(nullable = false)
+  private String nickname;
+
+  @Column(nullable = false)
   private Long companyId;
 
   @Column(nullable = false)
@@ -42,12 +45,13 @@ public class Order extends BaseTimeEntity {
     orderItem.setOrder(this);
   }
 
-  public static Order createOrder(Long memberId, Long companyId, List<OrderItem> orderItems) {
+  public static Order createOrder(Long memberId, Long companyId, String nickname, List<OrderItem> orderItems) {
     Long total = orderItems.stream().mapToLong(OrderItem::getTotalPrice).sum();
 
     Order order = Order.builder()
       .memberId(memberId)
       .companyId(companyId)
+      .nickname(nickname)
       .totalPrice(total)
       .status(OrderStatus.COMPLETED)
       .orderItems(new ArrayList<>())

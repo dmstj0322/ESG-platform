@@ -7,14 +7,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 public record CommentResponseDto(
-  Long id, Long postId, Long memberId, String nickname, String content,
-  LocalDateTime createdDate, LocalDateTime lastModifiedDate,
+  Long id,
+  Long postId,
+  String postTitle,
+  Long memberId,
+  String nickname,
+  String content,
+  LocalDateTime createdDate,
+  LocalDateTime lastModifiedDate,
   List<CommentResponseDto> replies
 ) {
   public static CommentResponseDto from(Comment comment) {
     return new CommentResponseDto(
       comment.getId(),
       comment.getPost().getId(),
+      comment.getPost().getTitle(),
       comment.getMemberId(),
       comment.getNickname(),
       comment.getContent(),
