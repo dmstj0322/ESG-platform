@@ -96,12 +96,13 @@ public class ProductService {
     Product product = findActiveProduct(companyId, productId);
 
     String imageUrl = product.getVoucherUrl(); // 기본적으로 기존 URL 유지
+
     if (file != null && !file.isEmpty()) {
       imageUrl = s3Uploader.upload(file, "products");
       log.info("상품 이미지 변경 완료: {}", imageUrl);
     }
 
-    product.update(dto.name(), dto.price(), dto.stock(), dto.category(), dto.content(), imageUrl, dto.targetAmount());
+    product.update(dto.name(), dto.price(), dto.stock(), dto.category(), dto.content(), imageUrl);
 
     log.info("상품 상품 수정 완료 - ID: {}, Company: {}", productId, companyId);
   }
