@@ -89,7 +89,7 @@ public class PostService {
     Post post = postRepository.findById(id)
       .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다. postId: " + id));
 
-    if (companyId != 0L && !post.getCompanyId().equals(companyId)) {
+    if (!post.getCompanyId().equals(companyId)) {
       throw new IllegalArgumentException("접근 권한이 없습니다.");
     }
 
@@ -101,13 +101,8 @@ public class PostService {
 
   @Transactional(readOnly = true)
   public Page<PostResponseDto> getPosts(Long memberId, Long companyId, String role, Pageable pageable) {
-    Page<Post> posts;
-    if (companyId == 0L) {
-      // 관리자는 전체 조회
-      posts = postRepository.findAllByOrderByCreatedDateDesc(pageable);
-    } else {
-      posts = postRepository.findAllByCompanyIdOrderByCreatedDateDesc(companyId, pageable);
-    }
+    Page<Post> posts =  postRepository.findAllByCompanyIdOrderByCreatedDateDesc(companyId, pageable);
+
     return posts.map(post -> {
       boolean isLiked = postLikeRepository.existsByPostIdAndMemberId(post.getId(), memberId);
       return PostResponseDto.of(post, isLiked);
@@ -119,7 +114,7 @@ public class PostService {
     Post post = postRepository.findById(postId)
       .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
 
-    if (companyId != 0 && !post.getCompanyId().equals(companyId)) {
+    if (!post.getCompanyId().equals(companyId)) {
       throw new IllegalArgumentException("접근 권한이 없습니다.");
     }
 
@@ -138,7 +133,7 @@ public class PostService {
     Post post = postRepository.findById(postId)
       .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
 
-    if (companyId != 0 && !post.getCompanyId().equals(companyId)) {
+    if (!post.getCompanyId().equals(companyId)) {
       throw new IllegalArgumentException("접근 권한이 없습니다.");
     }
 
@@ -151,12 +146,7 @@ public class PostService {
 
   @Transactional(readOnly = true)
   public Page<PostResponseDto> searchPosts(Long memberId, Long companyId, String keyword, Pageable pageable) {
-    Page<Post> posts;
-    if (companyId == 0L) {
-      posts = postRepository.findByTitleContainingOrContentContaining(keyword, keyword, pageable);
-    } else {
-      posts = postRepository.findByCompanyIdAndTitleContainingOrContentContaining(companyId, keyword, keyword, pageable);
-    }
+    Page<Post> posts = postRepository.findByCompanyIdAndTitleContainingOrContentContaining(companyId, keyword, keyword, pageable);
 
     return posts.map(post -> {
       boolean isLiked = postLikeRepository.existsByPostIdAndMemberId(post.getId(), memberId);
@@ -176,5 +166,26 @@ public class PostService {
     // 좋아요 리포지토리를 통해 본인이 좋아요 누른 게시글 목록 조회
     return postLikeRepository.findPostsByMemberIdAndCompanyId(memberId, companyId, pageable)
       .map(post -> PostResponseDto.of(post, true));
+  }
+
+  @Transactional(readOnly = true)
+  public Page<PostResponseDto> getAdminPosts(Long companyId, String status, Pageable pageable) {
+    AdminStatus enumStatus = null;
+    if (status != null && !status.equalsIgnoreCase("ALL") && !status.trim().isEmpty()) {
+      try {
+        enumStatus = AdminStatus.valueOf(status.toUpperCase());
+      } catch (IllegalArgumentException e) {
+        log.warn("올바르지 않은 관리자 상태 Enum 요청 수신: {}", status);
+      }
+    }
+
+    Page<Post> posts;
+    if (enumStatus == null) {
+      posts = postRepository.findAllByCompanyIdOrderByCreatedDateDesc(companyId, pageable);
+    } else {
+      posts = postRepository.findAllByCompanyIdAndAdminStatusOrderByCreatedDateDesc(companyId, enumStatus, pageable);
+    }
+
+    return posts.map(post -> PostResponseDto.of(post, false));
   }
 }

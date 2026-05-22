@@ -1,18 +1,17 @@
 package com.esg.communityservice.controller;
 
-import com.esg.communityservice.domain.AdminStatus;
-import com.esg.communityservice.domain.Post;
 import com.esg.communityservice.dto.PostResponseDto;
-import com.esg.communityservice.repository.PostRepository;
 import com.esg.communityservice.service.AdminService;
+import com.esg.communityservice.service.PostService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -20,32 +19,17 @@ import java.util.Map;
 @RequestMapping("/admin")
 public class AdminController {
   private final AdminService adminService;
-  private final PostRepository postRepository;
+  private final PostService postService;
 
   @PreAuthorize("hasRole('ADMIN')")
   @GetMapping("/posts")
-  public ResponseEntity<List<PostResponseDto>> getAllPosts(@RequestHeader("X-Company-Id") Long companyId) {
-    List<Post> posts;
+  public ResponseEntity<Page<PostResponseDto>> getAllPosts(
+    @RequestHeader("X-Company-Id") Long companyId,
+    @RequestParam(value = "status", required = false, defaultValue = "ALL") String status,
+    @PageableDefault(size = 10, sort = "createdDate", direction = Sort.Direction.DESC) Pageable pageable) {
 
-    if (companyId == 0L) {
-      posts = postRepository.findAll();
-    } else {
-      posts = postRepository.findAllByCompanyIdOrderByCreatedDateDesc(companyId, Pageable.unpaged()).getContent();
-    }
-
-    List<PostResponseDto> response = posts.stream()
-      .map(post -> PostResponseDto.of(post, false))
-      .toList();
-
+    Page<PostResponseDto> response = postService.getAdminPosts(companyId, status, pageable);
     return ResponseEntity.ok(response);
-  }
-
-  @PreAuthorize("hasRole('ADMIN')")
-  @GetMapping("/posts/waiting")
-  public ResponseEntity<List<PostResponseDto>> getWaitingPosts(Pageable pageable) {
-    Page<Post> posts = postRepository.findByAdminStatus(AdminStatus.WAITING, pageable);
-    return ResponseEntity.ok(posts.stream()
-      .map(post -> PostResponseDto.of(post, false)).toList());
   }
 
   @PreAuthorize("hasRole('ADMIN')")

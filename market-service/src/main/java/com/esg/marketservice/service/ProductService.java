@@ -127,7 +127,7 @@ public class ProductService {
     Product product = productRepository.findByIdAndDeletedFalse(productId)
       .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없거나 이미 삭제되었습니다."));
 
-    if (companyId != 0L && !product.getCompanyId().equals(companyId)) {
+    if (!product.getCompanyId().equals(companyId)) {
       throw new RuntimeException("해당 상품에 대한 권한이 없습니다.");
     }
     return product;

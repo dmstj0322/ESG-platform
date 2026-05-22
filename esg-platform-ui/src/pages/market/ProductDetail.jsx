@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
+import ImagePlaceholder from '../../components/market/ImagePlaceholder';
 
 const ProductDetail = () => {
   const { productId } = useParams();
@@ -32,20 +33,20 @@ const ProductDetail = () => {
       return navigate('/login');
     }
 
-    const confirmMsg = product.category === 'GIFTICON' 
-      ? "구매하시겠습니까? 결제 완료 후 등록된 이메일로 바코드가 발송됩니다." 
+    const confirmMsg = product.category === 'GIFTICON'
+      ? "구매하시겠습니까? 결제 완료 후 등록된 이메일로 바코드가 발송됩니다."
       : "기부에 참여하시겠습니까? 포인트가 차감됩니다.";
 
     if (!window.confirm(confirmMsg)) return;
 
     try {
-      await api.post('/market/orders', { 
-        productId: product.id, 
-        count: 1 
+      await api.post('/market/orders', {
+        productId: product.id,
+        count: 1
       }, {
-        headers: { 
-          'X-Member-Id': user.memberId, 
-          'X-Company-Id': user.companyId 
+        headers: {
+          'X-Member-Id': user.memberId,
+          'X-Company-Id': user.companyId
         }
       });
       alert('주문이 완료되었습니다! 마이페이지에서 확인하세요.');
@@ -59,8 +60,8 @@ const ProductDetail = () => {
   if (!product) return <div style={{ textAlign: 'center', padding: '50px' }}>상품을 찾을 수 없습니다.</div>;
 
   const isSoldOut = product.status === 'SOLD_OUT' || (product.category === 'GIFTICON' && product.stock <= 0);
-  const buttonText = isSoldOut 
-    ? (product.category === 'DONATION' ? "참여 종료" : "품절된 상품") 
+  const buttonText = isSoldOut
+    ? (product.category === 'DONATION' ? "참여 종료" : "품절된 상품")
     : (product.category === 'DONATION' ? "지금 기부하기" : "지금 구매하기");
 
   // ✅ 상세 진행률 계산
@@ -69,7 +70,14 @@ const ProductDetail = () => {
   return (
     <div style={containerStyle}>
       <div style={imageContainerStyle}>
-        <img src={product.voucherUrl} alt={product.name} style={imageStyle} />
+        {/* <img src={product.voucherUrl} alt={product.name} style={imageStyle} /> */}
+        <ImagePlaceholder
+          src={product.voucherUrl}
+          alt={product.name}
+          category={product.category}
+          style={imageStyle}
+          size="large"
+        />
         {isSoldOut && <div style={soldOutBadge}>{product.category === 'DONATION' ? "종료" : "품절"}</div>}
       </div>
 
@@ -114,7 +122,7 @@ const ProductDetail = () => {
           </ul>
         </div>
 
-        <button 
+        <button
           onClick={handleOrder}
           disabled={isSoldOut}
           style={isSoldOut ? disabledBtnStyle : activeBtnStyle}
@@ -129,7 +137,7 @@ const ProductDetail = () => {
 // --- 원본 Styles 유지 ---
 const containerStyle = { display: 'flex', gap: '50px', padding: '50px', maxWidth: '1200px', margin: '0 auto' };
 const imageContainerStyle = { flex: 1, position: 'relative' };
-const imageStyle = { width: '100%', borderRadius: '15px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' };
+const imageStyle = { width: '100%', maxWidth: '500px', height: 'auto', borderRadius: '15px', border: '1px solid #e9ecef', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', margin: '0 auto', display: 'block' };
 const infoContainerStyle = { flex: 1, display: 'flex', flexDirection: 'column' };
 const categoryStyle = { color: '#339af0', fontWeight: 'bold', fontSize: '18px' };
 const titleStyle = { fontSize: '36px', margin: '10px 0 20px 0' };

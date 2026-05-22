@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
+import ImagePlaceholder from '../../components/market/ImagePlaceholder';
 
 const MarketList = () => {
   const [products, setProducts] = useState([]);
@@ -22,14 +23,14 @@ const MarketList = () => {
   const fetchProducts = useCallback(async () => {
     try {
       let url = `/market/products?page=${page}&size=${PAGE_SIZE}&sort=id,desc`;
-      
+
       if (filterCategory !== "ALL") {
         url += `&category=${filterCategory}`;
       }
 
       const res = await api.get(url, { headers: { 'X-Company-Id': companyId } });
       const visibleProducts = (res.data.content || []).filter(p => p.status !== 'HIDDEN');
-      
+
       setProducts(visibleProducts);
       setTotalPages(res.data.totalPages || 1);
     } catch (err) {
@@ -65,7 +66,7 @@ const MarketList = () => {
       <div style={tabContainerStyle}>
         <button onClick={() => handleCategoryChange("ALL")} style={tabButtonStyle(filterCategory === "ALL")}>전체 상품</button>
         <button onClick={() => handleCategoryChange("GIFTICON")} style={tabButtonStyle(filterCategory === "GIFTICON")}>🎁 기프티콘</button>
-        <button onClick={() => handleCategoryChange("DONATION")} style={tabButtonStyle(filterCategory === "DONATION")}>🤝 기부 캠페인</button>
+        <button onClick={() => handleCategoryChange("DONATION")} style={tabButtonStyle(filterCategory === "DONATION")}>💙 기부 캠페인</button>
       </div>
 
       {/* --- 상품 리스트 그리드 --- */}
@@ -73,13 +74,19 @@ const MarketList = () => {
         {products.map(p => {
           const isSoldOut = p.status === 'SOLD_OUT' || (p.category === 'GIFTICON' && p.stock <= 0);
           const statusText = p.category === 'DONATION' ? '참여 종료' : '품절';
-          
+
           const progress = Math.min(100, Math.round((p.currentAmount / p.targetAmount) * 100) || 0);
 
           return (
             <div key={p.id} style={cardStyle} onClick={() => navigate(`/products/${p.id}`)}>
               <div style={{ position: 'relative', height: '220px', overflow: 'hidden' }}>
-                <img src={p.voucherUrl} alt={p.name} style={imageStyle} />
+                {/* <img src={p.voucherUrl} alt={p.name} style={imageStyle} /> */}
+                <ImagePlaceholder
+                  src={p.voucherUrl}
+                  alt={p.name}
+                  category={p.category}
+                  style={imageStyle}
+                />
                 <span style={categoryTagStyle(p.category)}>
                   {p.category === 'DONATION' ? '기부' : '기프티콘'}
                 </span>
@@ -90,7 +97,7 @@ const MarketList = () => {
 
               <div style={{ padding: '20px' }}>
                 <h3 style={productTitleStyle}>{p.name}</h3>
-                
+
                 {p.category === 'DONATION' ? (
                   <div style={{ marginBottom: '15px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '6px' }}>
@@ -104,11 +111,11 @@ const MarketList = () => {
                 ) : (
                   <p style={priceStyle}>{p.price.toLocaleString()} <span style={{ fontSize: '14px' }}>P</span></p>
                 )}
-                
+
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: '13px', alignItems: 'center' }}>
                   <span>
-                    {p.category === 'DONATION' 
-                      ? (isSoldOut ? '캠페인 종료' : '참여 무제한') 
+                    {p.category === 'DONATION'
+                      ? (isSoldOut ? '캠페인 종료' : '참여 무제한')
                       : `재고: ${p.stock}개`}
                   </span>
                   <span style={{ color: isSoldOut ? '#adb5bd' : '#339af0', fontWeight: 'bold' }}>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
+import ImagePlaceholder from './ImagePlaceholder';
 
 const ProductAdmin = () => {
   const { user } = useAuth();
@@ -13,7 +14,7 @@ const ProductAdmin = () => {
 
   const [voucherText, setVoucherText] = useState("");
   const [addVoucherText, setAddVoucherText] = useState("");
-  const [existingVouchers, setExistingVouchers] = useState([]); 
+  const [existingVouchers, setExistingVouchers] = useState([]);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
@@ -23,22 +24,22 @@ const ProductAdmin = () => {
 
   const [page, setPage] = useState(0); // Spring Boot는 0페이지부터 시작
   const [totalPages, setTotalPages] = useState(1);
-  const PAGE_SIZE = 10; 
+  const PAGE_SIZE = 10;
 
   const fetchProducts = useCallback(async () => {
     try {
       let url = `/market/products?page=${page}&size=${PAGE_SIZE}&sort=id,desc`;
-      
+
       if (searchTerm) url += `&name=${encodeURIComponent(searchTerm)}`;
       if (filterCategory !== "ALL") url += `&category=${filterCategory}`;
 
       const res = await api.get(url, { headers: { 'X-Company-Id': companyId } });
-      
+
       // Spring Page 객체 구조 (res.data.content, res.data.totalPages) 매핑
       setProducts(res.data.content || []);
       setTotalPages(res.data.totalPages || 1);
-    } catch (err) { 
-      console.error("상품 목록 로드 실패", err); 
+    } catch (err) {
+      console.error("상품 목록 로드 실패", err);
     }
   }, [companyId, page, filterCategory, searchTerm]);
 
@@ -127,10 +128,10 @@ const ProductAdmin = () => {
         ...prev,
         stock: Number(prev.stock || 0) + vouchers.length
       }));
-      
+
       setAddVoucherText('');
       fetchProducts();
-      fetchExistingVouchers(editId); 
+      fetchExistingVouchers(editId);
     } catch (err) { alert("보충 실패"); }
   };
 
@@ -153,7 +154,7 @@ const ProductAdmin = () => {
     setPreviewUrl(null);
     voucherText && setVoucherText("");
     addVoucherText && setAddVoucherText("");
-    setExistingVouchers([]); 
+    setExistingVouchers([]);
     setIsEditing(false);
     setEditId(null);
     setShowForm(false);
@@ -198,7 +199,7 @@ const ProductAdmin = () => {
                   <label style={labelStyle}>카테고리 *</label>
                   <select style={inputStyle} value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} disabled={isEditing}>
                     <option value="GIFTICON">🎁 기프티콘</option>
-                    <option value="DONATION">🤝 기부 캠페인</option>
+                    <option value="DONATION">💙 기부 캠페인</option>
                   </select>
                 </div>
                 <div style={inputGroup}>
@@ -268,7 +269,13 @@ const ProductAdmin = () => {
                   />
                   {previewUrl ? (
                     <div style={previewContainer}>
-                      <img src={previewUrl} alt="Preview" style={previewImage} />
+                      {/* <img src={previewUrl} alt="Preview" style={previewImage} /> */}
+                      <ImagePlaceholder
+                        src={previewUrl}
+                        alt="preview"
+                        category={formData.category}
+                        style={previewImage}
+                      />
                       <div style={changeBadge}>🔄 이미지 변경</div>
                     </div>
                   ) : (
@@ -316,9 +323,18 @@ const ProductAdmin = () => {
           <tbody>
             {filteredProducts.map(p => (
               <tr key={p.id} style={tdRowStyle}>
-                <td align="center"><img src={p.voucherUrl} style={tableImg} alt="" /></td>
                 <td align="center">
-                  <div style={badgeCategory(p.category)}>{p.category === 'DONATION' ? '기부' : '기프트'}</div>
+                  {/* <img src={p.voucherUrl} style={tableImg} alt="" /> */}
+                  <ImagePlaceholder
+                    src={p.voucherUrl}
+                    alt={p.name}
+                    category={p.category}
+                    style={tableImg}
+                    size="small"
+                  />
+                </td>
+                <td align="center">
+                  <div style={badgeCategory(p.category)}>{p.category === 'DONATION' ? '기부 캠페인' : '기프티콘'}</div>
                   <div style={badgeStatus(p.status)}>{p.status}</div>
                 </td>
                 <td style={{ padding: '0 20px', textAlign: 'left' }}>
@@ -426,23 +442,23 @@ const uploadPlaceholder = { display: 'flex', flexDirection: 'column', alignItems
 const uploadIcon = { fontSize: '32px', marginBottom: '4px' };
 const uploadMainText = { fontSize: '14px', fontWeight: '800', color: '#339af0' };
 const uploadSubText = { fontSize: '12px', color: '#adb5bd', fontWeight: '500' };
-const previewContainer = { 
-  position: 'relative', 
-  width: '100%', 
-  minHeight: '180px', 
-  padding: '10px', 
-  boxSizing: 'border-box', 
-  display: 'flex', 
+const previewContainer = {
+  position: 'relative',
+  width: '100%',
+  minHeight: '180px',
+  padding: '10px',
+  boxSizing: 'border-box',
+  display: 'flex',
   alignItems: 'center',     // 세로 중앙
   justifyContent: 'center'  // 가로 중앙 (오타 justifyRules -> justifyContent 수정)
 };
 
 // 🌟 수정된 previewImage 스타일
-const previewImage = { 
-  maxWidth: '100%', 
-  maxHeight: '200px', 
-  objectFit: 'contain', 
-  borderRadius: '8px', 
+const previewImage = {
+  maxWidth: '100%',
+  maxHeight: '200px',
+  objectFit: 'contain',
+  borderRadius: '8px',
   boxShadow: '0 4px 15px rgba(0,0,0,0.08)',
   display: 'block',
   margin: '0 auto' // 확실한 중앙 정렬 보장

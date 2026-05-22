@@ -11,29 +11,43 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('POSTS');
   const [posts, setPosts] = useState([]);
   const [orders, setOrders] = useState([]);
-  const [postFilter, setPostFilter] = useState('ALL');
   
-  // 🌟 주문 필터링 상태 추가
+  // 인증글 필터링 상태
+  const [postFilter, setPostFilter] = useState('ALL');
+
+  // 주문 필터링 상태
   const [orderStatusFilter, setOrderStatusFilter] = useState('ALL');
   const [orderCategoryFilter, setOrderCategoryFilter] = useState('ALL');
-  
+
   const [loading, setLoading] = useState(false);
 
-  const [totalPostsCount, setTotalPostsCount] = useState(0);
-  const [orderTotalCount, setOrderTotalCount] = useState(0);
+  // 🌟 카운트 상태
+  const [totalPostsCount, setTotalPostsCount] = useState(0); // 필터링된 인증글 개수
+  const [allPostsCount, setAllPostsCount] = useState(0);     // 전체 인증글 개수 (배지 고정용)
 
-  // 페이지네이션 상태 (인증글은 프론트 페이징 1부터, 주문은 백엔드 페이징 0부터 시작)
-  const [postPage, setPostPage] = useState(1); 
-  const [orderPage, setOrderPage] = useState(0); 
+  const [orderTotalCount, setOrderTotalCount] = useState(0); // 필터링된 주문 개수
+  const [allOrdersCount, setAllOrdersCount] = useState(0);   // 전체 주문 개수 (배지 고정용)
+
+  // 🌟 페이지 상태 (둘 다 백엔드 기준인 0부터 시작)
+  const [postPage, setPostPage] = useState(0);
+  const [postTotalPages, setPostTotalPages] = useState(1);
+
+  const [orderPage, setOrderPage] = useState(0);
   const [orderTotalPages, setOrderTotalPages] = useState(1);
-  const ITEMS_PER_PAGE = 10; 
 
-  // 🌟 ProductAdmin 방식 적용: 필터 조건을 백엔드 URL에 동적으로 결합
+  // 필터 조건을 백엔드 URL에 동적으로 결합하여 데이터 로드
   const fetchData = useCallback(async () => {
     if (!companyId) return;
     setLoading(true);
     try {
-      // 주문 API URL 동적 빌드
+      // 1. 인증글 API URL 동적 빌드
+      let postUrl = `/admin/posts?page=${postPage}&size=10&sort=createdDate,desc`;
+      if (postFilter !== 'ALL') {
+        postUrl += `&status=${postFilter}`;
+      }
+      let totalPostUrl = `/admin/posts?page=0&size=1`;
+
+      // 2. 주문 API URL 동적 빌드
       let orderUrl = `/market/admin/orders?page=${orderPage}&size=10&sort=id,desc`;
       if (orderStatusFilter !== 'ALL') {
         orderUrl += `&status=${orderStatusFilter}`;
@@ -41,26 +55,34 @@ const AdminDashboard = () => {
       if (orderCategoryFilter !== 'ALL') {
         orderUrl += `&category=${orderCategoryFilter}`;
       }
+      let totalOrderUrl = `/market/admin/orders?page=0&size=1`;
 
-      const [postsRes, ordersRes] = await Promise.all([
-        api.get('/admin/posts', { headers: { 'X-Company-Id': companyId } }),
-        api.get(orderUrl, { headers: { 'X-Company-Id': companyId } })
+      // 4개의 API를 동시에 빠르고 효율적으로 호출
+      const [postsRes, totalPostsRes, ordersRes, totalOrdersRes] = await Promise.all([
+        api.get(postUrl, { headers: { 'X-Company-Id': companyId } }),
+        api.get(totalPostUrl, { headers: { 'X-Company-Id': companyId } }),
+        api.get(orderUrl, { headers: { 'X-Company-Id': companyId } }),
+        api.get(totalOrderUrl, { headers: { 'X-Company-Id': companyId } })
       ]);
 
-      const sortedPosts = postsRes.data.sort((a, b) => b.id - a.id);
-      setPosts(sortedPosts);
-      setTotalPostsCount(sortedPosts.length);
+      // 🌟 인증글 백엔드 페이징 데이터 바인딩
+      setPosts(postsRes.data.content || []);
+      setPostTotalPages(postsRes.data.totalPages || 1);
+      setTotalPostsCount(postsRes.data.totalElements || 0);
+      setAllPostsCount(totalPostsRes.data.totalElements || 0);
 
-      // 백엔드에서 필터링되어 넘어온 데이터를 그대로 바인딩 (정확한 페이징 정보 반영)
+      // 🌟 주문 백엔드 페이징 데이터 바인딩
       setOrders(ordersRes.data.content || []);
       setOrderTotalPages(ordersRes.data.totalPages || 1);
       setOrderTotalCount(ordersRes.data.totalElements || 0);
+      setAllOrdersCount(totalOrdersRes.data.totalElements || 0);
+      
     } catch (err) {
       console.error("데이터 로드 실패:", err);
     } finally {
       setLoading(false);
     }
-  }, [companyId, orderPage, orderStatusFilter, orderCategoryFilter]); // 🌟 필터 상태들을 의존성 배열에 추가
+  }, [companyId, postPage, postFilter, orderPage, orderStatusFilter, orderCategoryFilter]);
 
   useEffect(() => {
     fetchData();
@@ -105,21 +127,12 @@ const AdminDashboard = () => {
     } catch (err) { alert("재전송 실패"); }
   };
 
-  // 프론트엔드 필터링 및 페이징 처리 (인증글)
-  const filteredPosts = posts.filter(post => {
-    if (postFilter === 'ALL') return true;
-    if (postFilter === 'AI_SUCCESS') return post.aiResult === 'SUCCESS';
-    return post.adminStatus === postFilter;
-  });
-
-  const totalPostPages = Math.ceil(filteredPosts.length / ITEMS_PER_PAGE);
-  const currentPosts = filteredPosts.slice((postPage - 1) * ITEMS_PER_PAGE, postPage * ITEMS_PER_PAGE);
-
-  // 탭 변경 시 페이지 및 필터 상태 초기화
+  // 탭 변경 시 페이지 및 필터 상태 0으로 초기화
   const handleTabChange = (tab) => {
     setActiveTab(tab);
-    setPostPage(1);
+    setPostPage(0);
     setOrderPage(0);
+    setPostFilter('ALL');
     setOrderStatusFilter('ALL');
     setOrderCategoryFilter('ALL');
   };
@@ -138,32 +151,33 @@ const AdminDashboard = () => {
 
       <div style={tabBarStyle}>
         <button onClick={() => handleTabChange('POSTS')} style={tabItemStyle(activeTab === 'POSTS')}>
-          📝 인증글 관리 <span style={countBadgeStyle}>{totalPostsCount}</span>
+          📝 인증글 관리 <span style={countBadgeStyle}>{allPostsCount}</span>
         </button>
         <button onClick={() => handleTabChange('ORDERS')} style={tabItemStyle(activeTab === 'ORDERS')}>
-          🛒 주문/결제 내역 <span style={countBadgeStyle}>{orderTotalCount}</span>
+          🛒 주문/결제 내역 <span style={countBadgeStyle}>{allOrdersCount}</span>
         </button>
       </div>
-
-      {loading && <div style={{ textAlign: 'center', padding: '20px', color: '#339af0' }}>데이터 동기화 중...</div>}
 
       {/* 📝 인증글 관리 탭 */}
       {activeTab === 'POSTS' && (
         <div style={{ marginTop: '25px' }}>
           <div style={filterGroupStyle}>
             {['ALL', 'WAITING', 'APPROVED', 'REJECTED', 'AUTO_REJECTED'].map(status => (
-              <button key={status} onClick={() => { setPostFilter(status); setPostPage(1); }} style={filterBtnStyle(postFilter === status)}>
+              <button key={status} onClick={() => { setPostFilter(status); setPostPage(0); }} style={filterBtnStyle(postFilter === status)}>
                 {status}
               </button>
             ))}
           </div>
 
+          {loading && <div style={{ textAlign: 'center', padding: '20px', color: '#339af0' }}>데이터 동기화 중...</div>}
+
           <div style={{ marginBottom: '15px', fontSize: '14px', color: '#868e96' }}>
-            필터링된 항목: <strong>{filteredPosts.length}</strong>건
+            필터링된 항목: <strong>{totalPostsCount}</strong>건
           </div>
 
           <div style={postGridStyle}>
-            {currentPosts.map(post => (
+            {/* 🌟 프론트엔드 필터 배열이 아닌 백엔드에서 받아온 posts를 바로 매핑 */}
+            {posts.map(post => (
               <div key={post.id} style={postCardStyle}>
                 <div style={cardHeaderStyle}>
                   <span style={postIdStyle}>#{post.id}</span>
@@ -199,11 +213,12 @@ const AdminDashboard = () => {
             ))}
           </div>
 
-          {totalPostPages > 1 && (
+          {/* 🌟 백엔드 페이징 기반 UI로 완벽 교체 */}
+          {postTotalPages > 1 && (
             <div style={paginationContainerStyle}>
-              <button disabled={postPage === 1} onClick={() => setPostPage(p => p - 1)} style={pageBtnStyle(postPage === 1)}>이전</button>
-              <span style={pageInfoStyle}>{postPage} / {totalPostPages}</span>
-              <button disabled={postPage === totalPostPages} onClick={() => setPostPage(p => p + 1)} style={pageBtnStyle(postPage === totalPostPages)}>다음</button>
+              <button disabled={postPage === 0} onClick={() => setPostPage(p => p - 1)} style={pageBtnStyle(postPage === 0)}>이전</button>
+              <span style={pageInfoStyle}>{postPage + 1} / {postTotalPages}</span>
+              <button disabled={postPage === postTotalPages - 1} onClick={() => setPostPage(p => p + 1)} style={pageBtnStyle(postPage === postTotalPages - 1)}>다음</button>
             </div>
           )}
         </div>
@@ -222,10 +237,12 @@ const AdminDashboard = () => {
             <div style={orderFilterGroupStyle}>
               <span style={filterLabelStyle}>분류:</span>
               <button onClick={() => { setOrderCategoryFilter('ALL'); setOrderPage(0); }} style={filterBtnStyle(orderCategoryFilter === 'ALL')}>전체보기</button>
-              <button onClick={() => { setOrderCategoryFilter('GIFTICON'); setOrderPage(0); }} style={filterBtnStyle(orderCategoryFilter === 'GIFTICON')}>🎫 기프티콘</button>
-              <button onClick={() => { setOrderCategoryFilter('DONATION'); setOrderPage(0); }} style={filterBtnStyle(orderCategoryFilter === 'DONATION')}>🌱 기부 후원</button>
+              <button onClick={() => { setOrderCategoryFilter('GIFTICON'); setOrderPage(0); }} style={filterBtnStyle(orderCategoryFilter === 'GIFTICON')}>🎁 기프티콘</button>
+              <button onClick={() => { setOrderCategoryFilter('DONATION'); setOrderPage(0); }} style={filterBtnStyle(orderCategoryFilter === 'DONATION')}>💙 기부 캠페인</button>
             </div>
           </div>
+
+          {loading && <div style={{ textAlign: 'center', padding: '20px', color: '#339af0' }}>데이터 동기화 중...</div>}
 
           <div style={{ marginBottom: '15px', fontSize: '14px', color: '#868e96' }}>
             필터링된 항목: <strong>{orderTotalCount}</strong>건
@@ -252,7 +269,7 @@ const AdminDashboard = () => {
                       <td style={{ fontWeight: 'bold', color: '#868e96' }}>{order.orderId}</td>
                       <td style={{ color: '#495057' }}>{order.nickname} ({order.memberId})</td>
                       <td style={{ textAlign: 'center', color: '#333', fontWeight: '500' }}>{order.productName}</td>
-                      <td>{order.category === 'GIFTICON' ? '🎫 기프티콘' : '🌱 기부 후원'}</td>
+                      <td>{order.category === 'GIFTICON' ? '🎁 기프티콘' : '💙 기부 캠페인'}</td>
                       <td style={{ color: '#22b8cf', fontWeight: 'bold' }}>{order.totalPrice?.toLocaleString()} P</td>
                       <td style={{ color: '#868e96', fontSize: '13px' }}>
                         {order.createdDate ? new Date(order.createdDate).toLocaleString() : '-'}
@@ -278,7 +295,6 @@ const AdminDashboard = () => {
               </tbody>
             </table>
 
-            {/* 🌟 백엔드 Page 데이터 기반 페이지네이션 UI */}
             {orderTotalPages > 1 && (
               <div style={paginationContainerStyle}>
                 <button disabled={orderPage === 0} onClick={() => setOrderPage(p => p - 1)} style={pageBtnStyle(orderPage === 0)}>이전</button>
@@ -293,7 +309,7 @@ const AdminDashboard = () => {
   );
 };
 
-// --- 스타일링 (Blue 테마 #339af0) ---
+// --- 스타일링 속성 명세 ---
 const containerStyle = { padding: '40px 20px', maxWidth: '1200px', margin: '0 auto', backgroundColor: '#fdfdfd', minHeight: '100vh' };
 const headerContainerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', borderBottom: '1px solid #eee', paddingBottom: '25px' };
 const dashboardTitleStyle = { margin: 0, fontSize: '28px', fontWeight: '800', color: '#333' };

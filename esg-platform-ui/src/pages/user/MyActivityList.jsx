@@ -113,9 +113,9 @@ const MyActivityList = () => {
                   <div style={{ display: 'flex', alignItems: 'center',  gap: '15px', flex: 1, opacity: item.status === 'CANCELED' ? 0.5 : 1 }}>
                     {/* 🌟 기존 코드에 뱃지만 추가 */}
                     {item.category === 'GIFTICON' ? (
-                      <div style={iconCircleStyle('#e7f5ff', '#1c7ed6')}>🎫</div>
+                      <div style={iconCircleStyle('#e7f5ff', '#1c7ed6')}>🎁</div>
                     ) : (
-                      <div style={iconCircleStyle('#f3f0ff', '#7048e8')}>🌱</div>
+                      <div style={iconCircleStyle('#f3f0ff', '#7048e8')}>💙</div>
                     )}
                     <span style={statusBadgeStyle(item.status)}>{item.status}</span>
                     <div>

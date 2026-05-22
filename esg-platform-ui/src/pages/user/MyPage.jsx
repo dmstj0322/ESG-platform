@@ -144,9 +144,9 @@ const MyPage = () => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, opacity: o.status === 'CANCELED' ? 0.5 : 1 }}>
                         {/* 🌟 기존에 없던 뱃지 추가! */}
                         {o.category === 'GIFTICON' ? (
-                          <div style={iconCircleStyle('#e7f5ff', '#1c7ed6')}>🎫</div>
+                          <div style={iconCircleStyle('#e7f5ff', '#1c7ed6')}>🎁</div>
                         ) : (
-                          <div style={iconCircleStyle('#f3f0ff', '#7048e8')}>🌱</div>
+                          <div style={iconCircleStyle('#f3f0ff', '#7048e8')}>💙</div>
                         )}
                         <span style={statusBadgeStyle(o.status)}>{o.status}</span>
                         <div>
