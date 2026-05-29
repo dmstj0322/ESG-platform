@@ -11,13 +11,11 @@ import PropTypes from 'prop-types';
 const GRADE_COLOR = { S: '#7c3aed', A: '#22c55e', B: '#3b82f6', C: '#f59e0b', D: '#ef4444' };
 const CONSISTENCY_COLOR = { High: '#22c55e', Medium: '#f59e0b', Low: '#ef4444' };
 
-// 신뢰도 구간별 레이블·색상 (변별력 있게)
+// 3-tier Semantic Match Quality: HIGH ≥85% / MEDIUM 65~84% / LOW <65%
 const confidenceLevel = (v) => {
-  if (v >= 85) return { color: '#16a34a', label: '매우 높음', bar: '#16a34a' };
-  if (v >= 70) return { color: '#22c55e', label: '높음',      bar: '#22c55e' };
-  if (v >= 55) return { color: '#f59e0b', label: '보통',      bar: '#f59e0b' };
-  if (v >= 40) return { color: '#f97316', label: '약함',      bar: '#f97316' };
-  return             { color: '#ef4444', label: '낮음',       bar: '#ef4444' };
+  if (v >= 85) return { color: '#16a34a', label: 'HIGH',   bar: '#16a34a' };
+  if (v >= 65) return { color: '#d97706', label: 'MEDIUM', bar: '#d97706' };
+  return             { color: '#ef4444', label: 'LOW',    bar: '#ef4444' };
 };
 
 const COLUMNS = [
@@ -53,30 +51,6 @@ const COLUMNS = [
     },
   },
   {
-    accessorKey: 'page',
-    // 업로드한 PDF의 페이지 번호 (K-ESG 가이드라인 페이지 아님)
-    header: () => (
-      <span title="사용자가 업로드한 PDF의 페이지 번호입니다 (K-ESG 가이드라인 아님)">
-        업로드 PDF p. ⓘ
-      </span>
-    ),
-    cell: info => {
-      const v = info.getValue();
-      // page_number 메타데이터만 표시; 0이하·null은 미확인으로 표시
-      const valid = v != null && Number(v) > 0;
-      return valid ? (
-        <span style={{
-          background: '#e0f2fe', color: '#0369a1', padding: '2px 10px',
-          borderRadius: '6px', fontSize: '13px', fontFamily: 'monospace', fontWeight: 700,
-        }}>
-          p.{v}
-        </span>
-      ) : (
-        <span style={{ color: '#d1d5db', fontSize: '12px' }}>—</span>
-      );
-    },
-  },
-  {
     accessorKey: 'consistency',
     header: '일관성',
     cell: info => {
@@ -94,9 +68,19 @@ const COLUMNS = [
   },
   {
     accessorKey: 'confidenceScore',
-    header: '신뢰도',
+    header: () => (
+      <span title="근거 신뢰도: 제출 문서와 K-ESG 지표 간 근거 일치 품질 지표입니다. HIGH(≥85%) = 명시적 근거 확인, MEDIUM(65~84%) = 부분 문맥 일치, LOW(<65%) = 보조 근거 탐지. E 카테고리 수치 검증과는 별도로 계산됩니다.">
+        근거 신뢰도 ⓘ
+      </span>
+    ),
     cell: info => {
-      const v = info.getValue() ?? 0;
+      const ev = info.row.original;
+      // Use similarity (RAG cosine score) as primary — confidenceScore may be backend-scaled differently
+      const simRaw = ev.similarity ?? ev.finalScore;
+      const simPct = simRaw != null ? Math.round(simRaw <= 1 ? simRaw * 100 : simRaw) : null;
+      let v = simPct ?? (info.getValue() ?? 0);
+      // E-category: numericMatchLevel HIGH → minimum MEDIUM tier (65%)
+      if (ev.indicatorCode?.[0] === 'E' && ev.numericMatchLevel === 'HIGH') v = Math.max(v, 65);
       const { color, label, bar } = confidenceLevel(v);
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '80px' }}>
@@ -182,7 +166,7 @@ export default function EvidenceTable({ data }) {
     <div>
       <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ color: '#6b7280', fontSize: '13px' }}>
-          총 {table.getFilteredRowModel().rows.length}개 지표 · 열 헤더 클릭 시 정렬 · 신뢰도 구간: 85%↑ 매우높음 / 70~84% 높음 / 55~69% 보통 / 40~54% 약함 / ~39% 낮음
+          총 {table.getFilteredRowModel().rows.length}개 지표 · 열 헤더 클릭 시 정렬 · 근거 신뢰도: HIGH ≥85% / MEDIUM 65~84% / LOW &lt;65%
         </span>
         <input
           value={globalFilter}
@@ -239,6 +223,33 @@ export default function EvidenceTable({ data }) {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* ── Evidence Quality 범례 ── */}
+      <div style={{
+        marginTop: '16px', padding: '14px 18px',
+        background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px',
+      }}>
+        <p style={{ fontSize: '11px', fontWeight: 700, color: '#6b7280', marginBottom: '10px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+          Semantic Match Quality 기준
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {[
+            { label: 'HIGH', color: '#16a34a', bg: '#f0fdf4', desc: '신뢰도 ≥85% — 직접 수치·정책 문장 일치, 명시적 근거 확인' },
+            { label: 'MEDIUM', color: '#d97706', bg: '#fffbeb', desc: '신뢰도 65~84% — 부분 문맥 일치, 관련 근거 일부 확인' },
+            { label: 'LOW', color: '#ef4444', bg: '#fff1f2', desc: '신뢰도 <65% — 보조 근거 탐지 (반드시 검증 실패를 의미하지는 않음)' },
+          ].map(({ label, color, bg, desc }) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+              <span style={{ background: bg, color, border: `1px solid ${color}33`, padding: '2px 8px', borderRadius: '99px', fontSize: '11px', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                {label}
+              </span>
+              <span style={{ fontSize: '11px', color: '#4b5563', lineHeight: '1.5' }}>{desc}</span>
+            </div>
+          ))}
+        </div>
+        <p style={{ fontSize: '10px', color: '#9ca3af', marginTop: '10px', borderTop: '1px solid #e5e7eb', paddingTop: '8px' }}>
+          E 카테고리: 정량 수치 오차율 기반 판정 (Semantic Match Quality와 별도) · S/G 카테고리: OCR + embedding + semantic similarity 기반 정책·실적 근거 탐지
+        </p>
       </div>
     </div>
   );

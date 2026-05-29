@@ -13,7 +13,7 @@ public class EcoPointConverter {
     public static final double SCORE_PER_CARBON_KG = 0.02;     // 1 kg → E점수 0.02점
     public static final double MAX_E_BONUS = 10.0;              // E 가산점 상한
     public static final double KG_PER_TREE = 6.6;              // 소나무 1그루 = 6.6 kg
-    public static final long EP_PER_S_POINT = 10_000L;         // 10,000 EP → S점수 +1점
+    public static final long EP_PER_S_POINT = 1_000L;          // 1,000 EP → S점수 +1점
     public static final long MAX_S_BONUS = 5L;                  // S 가산점 상한
 
     public double toCarbonKg(long ecoPoints) {

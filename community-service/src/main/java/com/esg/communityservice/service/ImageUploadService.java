@@ -6,6 +6,7 @@ import com.esg.communityservice.domain.ImageFile;
 import com.esg.communityservice.repository.ImageFileRepository;
 import com.esg.infra.s3.S3Uploader;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,7 +15,9 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ImageUploadService {
@@ -29,7 +32,13 @@ public class ImageUploadService {
       throw new IllegalArgumentException("이미 사용하신 인증 사진입니다. 새로운 사진을 촬영해 주세요!");
     }
 
-    String url = s3Uploader.upload(file, "posts");
+    String url;
+    try {
+      url = s3Uploader.upload(file, "posts");
+    } catch (Exception e) {
+      log.warn("[S3] 업로드 실패 — 로컬 placeholder 사용: {}", e.getMessage());
+      url = "https://placehold.co/400x300?text=" + UUID.randomUUID().toString().substring(0, 8);
+    }
 
     return ImageFile.builder()
       .s3Url(url)

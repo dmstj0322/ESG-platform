@@ -43,6 +43,7 @@ public class AsyncAnalysisProcessor {
 
         log.info("[AsyncProcessor] Upstage 파싱 시작 analysisId={} companyId={}", analysisId, companyId);
         try {
+            messagingTemplate.convertAndSend("/topic/analysis/" + companyId, "OCR_PROCESSING");
             String markdownContent = upstageService.parsePdfToMarkdown(fileBytes, filename, contentType);
 
             Map<String, Object> kafkaMsg = new HashMap<>();
@@ -77,7 +78,7 @@ public class AsyncAnalysisProcessor {
         try {
             // 프런트가 WS를 구독한 뒤 메시지를 받을 수 있도록 짧은 대기
             Thread.sleep(1200);
-            messagingTemplate.convertAndSend("/topic/analysis/" + companyId, "COMPLETE");
+            messagingTemplate.convertAndSend("/topic/analysis/" + companyId, "COMPLETED");
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }

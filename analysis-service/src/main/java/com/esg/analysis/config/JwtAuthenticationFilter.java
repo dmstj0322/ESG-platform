@@ -35,10 +35,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       try {
         var claims = jwtUtil.getUserInfoFromToken(jwt);
 
-        Long memberId = claims.get("memberId", Long.class);
-        Long companyId = claims.get("companyId", Long.class);
-        String role = claims.get("role", String.class);
-        String email = claims.get("email", String.class);
+        Long memberId  = ((Number) claims.get("memberId")).longValue();
+        Long companyId = ((Number) claims.get("companyId")).longValue();
+        String role  = claims.get("role", String.class);
+        String email = claims.getSubject();
 
         List<SimpleGrantedAuthority> authorities = Collections.singletonList(
           new SimpleGrantedAuthority("ROLE_" + role)
