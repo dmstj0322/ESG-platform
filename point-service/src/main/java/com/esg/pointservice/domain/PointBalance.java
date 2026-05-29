@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class PointBalance extends BaseTimeEntity {
   @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long memberId;
 
   private Long companyId;

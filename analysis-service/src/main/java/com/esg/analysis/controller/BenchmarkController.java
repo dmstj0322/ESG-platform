@@ -6,6 +6,7 @@ import com.esg.analysis.service.BenchmarkService;
 import com.esg.analysis.client.AuthServiceClient;
 import com.esg.common.dto.CompanyResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
  * <p>GET /api/analysis/benchmark          — 직접 파라미터 지정
  * <p>GET /api/analysis/benchmark/company/{companyId} — Company 테이블 자동 조회
  */
+@Slf4j
 @RestController
 @RequestMapping("/benchmark")
 @RequiredArgsConstructor
@@ -63,9 +65,17 @@ public class BenchmarkController {
 
     CompanyResponse company = authServiceClient.getCompanyById(companyId);
 
-    String regionCode   = (company.regionCode()   != null) ? company.regionCode()   : "11";
-    String ksicCode     = (company.ksicCode()     != null) ? company.ksicCode()     : "26110";
+    String regionCode    = (company.regionCode()    != null) ? company.regionCode()    : "11";
+    String ksicCode      = (company.ksicCode()      != null) ? company.ksicCode()      : "26110";
     int    employeeCount = (company.employeeCount() != null) ? company.employeeCount() : 500;
+
+    // analysis-service 로컬 Company 테이블을 auth-service 최신 정보로 동기화
+    benchmarkService.saveProfileRaw(companyId, company.name(), regionCode, ksicCode, employeeCount,
+            company.industryName());
+
+    log.info("[BenchmarkByCompany] companyId={} name={} industry={} ksic={} region={} employees={}",
+            companyId, company.name(), company.industryName(),
+            ksicCode, regionCode, employeeCount);
 
     return ResponseEntity.ok(
       benchmarkService.getBenchmark(companyId, year, regionCode, ksicCode, employeeCount));

@@ -130,7 +130,7 @@ const PostWrite = () => {
         </div>
 
         <button type="submit" style={submitBtnStyle(isAnalyzing)} disabled={isAnalyzing}>
-          {isAnalyzing ? "AI 분석 대기 중..." : "게시물 등록"}
+          {isAnalyzing ? "분석 대기 중..." : "게시물 등록"}
         </button>
         <button type="button" onClick={() => navigate(-1)} style={cancelBtnStyle}>취소</button>
       </form>

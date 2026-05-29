@@ -38,7 +38,7 @@ public class AnalysisReport {
   private Long memberId;
   private Long companyId;
 
-  @Column(columnDefinition = "TEXT")
+  @Column(columnDefinition = "LONGTEXT")
   private String reportContent; // 여기에 JSON 전체가 들어갑니다.
 
   private String grade;

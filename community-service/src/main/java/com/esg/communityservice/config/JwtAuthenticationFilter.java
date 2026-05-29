@@ -35,10 +35,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       try {
         var claims = jwtUtil.getUserInfoFromToken(jwt);
 
-        Long memberId = claims.get("memberId", Long.class);
-        Long companyId = claims.get("companyId", Long.class);
-        String role = claims.get("role", String.class);
-        String email = claims.get("email", String.class);
+        // JJWT는 작은 숫자를 Integer로 직렬화하므로 Number로 받아 longValue()로 변환
+        Long memberId  = ((Number) claims.get("memberId")).longValue();
+        Long companyId = ((Number) claims.get("companyId")).longValue();
+        String role  = claims.get("role", String.class);
+        String email = claims.getSubject(); // email은 sub 필드에 저장됨
 
         List<SimpleGrantedAuthority> authorities = Collections.singletonList(
           new SimpleGrantedAuthority("ROLE_" + role)

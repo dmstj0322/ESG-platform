@@ -506,7 +506,7 @@ const Dashboard = () => {
                     />
                     <Upload customRequest={handleUpload} showUploadList={false}>
                         <Button type="primary" size="large" icon={<RocketFilled />} loading={isAnalyzing}>
-                            {isAnalyzing ? "AI 분석 진행 중..." : "새 보고서 분석"}
+                            {isAnalyzing ? "ESG 감사 분석 중..." : "새 보고서 분석"}
                         </Button>
                     </Upload>
                     {recentReport && (

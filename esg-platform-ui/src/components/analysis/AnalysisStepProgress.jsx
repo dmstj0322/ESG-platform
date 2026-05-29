@@ -15,7 +15,7 @@ const STATUS_TO_STEP = {
 const STEPS = [
     { title: '전처리',            description: 'PDF 파싱 · 사기 감지' },
     { title: '보고서 인덱싱',     description: '세션 벡터 DB 구축' },
-    { title: '지표별 검색',       description: 'K-ESG 18개 지표 Targeted Retrieval' },
+    { title: '지표별 검색',       description: 'K-ESG 핵심 지표 Targeted Retrieval' },
     { title: 'AI 심층 분석',      description: 'Selective Context RAG + Groq' },
     { title: '성과 집계',         description: '에코포인트 반영 · 등급 확정' },
     { title: '분석 완료',         description: '리포트 생성 완료' },
@@ -46,7 +46,7 @@ const AnalysisStepProgress = ({ wsStatus }) => {
         } else if (i === currentStep && !isDone) {
             icon = <LoadingOutlined />;
         } else if (i < currentStep || isDone) {
-            icon = <CheckCircleOutlined style={{ color: '#6366f1' }} />;
+            icon = <CheckCircleOutlined style={{ color: '#22c55e' }} />;
         }
         return { ...step, icon };
     });
