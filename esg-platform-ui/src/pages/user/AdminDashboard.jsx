@@ -236,7 +236,7 @@ const AdminDashboard = () => {
 
                 <div style={aiAnalysisBoxStyle}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span style={aiLabelStyle}>🤖 AI 분석 결과</span>
+                    <span style={aiLabelStyle}>ESG 활동 분석 결과</span>
                     <span style={aiScoreStyle(post.aiScore)}>{(post.aiScore * 100).toFixed(1)}% 신뢰</span>
                   </div>
                   <p style={{ margin: 0, fontSize: '14px' }}>예측 활동: <strong>{getActivityName(post.aiResult)}</strong></p>

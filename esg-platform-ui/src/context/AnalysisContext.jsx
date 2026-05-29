@@ -1,11 +1,12 @@
-import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import api from '../api/api';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { marked } from 'marked';
+import { useAuth } from './AuthContext';
 
 const AnalysisContext = createContext(null);
-export const BASE_URL = 'http://localhost:8081';
+export const BASE_URL = 'http://localhost:8081/';
 
 const LS_REPORT_CACHE = 'esg_report_cache';
 
@@ -57,10 +58,21 @@ export const computeKEsgGrade = (sections = [], carbonReductionKg = 0) => {
 };
 
 export function AnalysisProvider({ children }) {
+  const { user } = useAuth();
+
   const [companyId, setCompanyId] = useState(() => {
     const saved = localStorage.getItem('companyId');
     return saved ? Number(saved) : 1;
   });
+
+  // Sync companyId whenever the logged-in user changes
+  useEffect(() => {
+    if (user?.companyId) {
+      const id = Number(user.companyId);
+      localStorage.setItem('companyId', String(id));
+      setCompanyId(id);
+    }
+  }, [user?.companyId]);
   const [companyProfileName, setCompanyProfileName] = useState(() =>
     localStorage.getItem('esg_companyName') || null
   );
@@ -74,7 +86,10 @@ export function AnalysisProvider({ children }) {
 
   const fetchLatestData = useCallback(async () => {
     try {
-      const noCache = { headers: { 'Cache-Control': 'no-store, no-cache' }, params: { _t: Date.now() } };
+      const noCache = {
+        headers: { 'Cache-Control': 'no-store, no-cache', 'X-Company-Id': String(companyId) },
+        params: { _t: Date.now() },
+      };
       const [analysisRes, carbonRes] = await Promise.all([
         api.get('/analysis/latest', noCache),
         api.get('/analysis/carbon/stats', {
@@ -114,8 +129,16 @@ export function AnalysisProvider({ children }) {
             .map(s => [s.kesgCode, s.pageNumber])
         );
 
+        const analysisId = raw.analysisId ?? null;
+        if (analysisId != null) {
+          localStorage.setItem('esg_latest_analysis_id', String(analysisId));
+        }
+
         const reportPayload = {
+          analysisId,
           finalGrade,
+          totalScore: raw.totalScore > 0 ? raw.totalScore : (parsed?.totalScore ?? null),
+          analyzedAt: raw.analyzedAt ?? raw.createdAt ?? raw.updatedAt ?? null,
           companyName,
           fullReport:      marked(parsed?.fullReport || '분석 리포트가 없습니다.'),
           _rawFullReport:  parsed?.fullReport || '',
@@ -172,7 +195,7 @@ export function AnalysisProvider({ children }) {
         }
       } catch {}
     }
-  }, []);
+  }, [companyId]);
 
   const fetchEcoPreview = useCallback(async () => {
     try {

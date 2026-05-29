@@ -1,16 +1,23 @@
 package com.esg.analysis.client;
 
+import com.esg.common.dto.EsgPoolResponse;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.*;
 
-// url 속성을 빼버리세요! 유레카가 이름(point-service)을 보고 알아서 주소를 찾아줍니다.
 @FeignClient(name = "point-service")
 public interface PointServiceClient {
 
     @GetMapping("/points/{memberId}/balance")
     Long getMemberPointBalance(@PathVariable("memberId") Long memberId);
 
-    @GetMapping("/points/company/{companyId}/total")
-    Long getCompanyTotalPoints(@PathVariable("companyId") Long companyId);
+    /** 회사 ESG Pool 조회 — SUM(balance) 방식 아님, company_esg_pool 단일 테이블 기반 */
+    @GetMapping("/points/company/{companyId}/esg-pool")
+    EsgPoolResponse getCompanyEsgPool(@PathVariable("companyId") Long companyId);
+
+    /** ESG 분석 후 회사 ESG Pool 차감 — 개인 balance 차감 없음 */
+    @PostMapping("/points/company/{companyId}/consume-esg-pool")
+    void consumeEsgPool(
+            @PathVariable("companyId") Long companyId,
+            @RequestParam("amount") Long amount,
+            @RequestParam(value = "description", required = false, defaultValue = "") String description);
 }

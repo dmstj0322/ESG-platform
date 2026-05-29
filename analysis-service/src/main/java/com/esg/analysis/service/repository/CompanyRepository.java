@@ -15,8 +15,9 @@ public interface CompanyRepository extends JpaRepository<Company, Long> {
     @Modifying
     @Query(value = """
         INSERT INTO company (id, name, region_code, region_name, ksic_code, industry_name, employee_count)
-        VALUES (:id, CONCAT('기업 #', :id), :regionCode, :regionName, :ksicCode, :industryName, :employeeCount)
+        VALUES (:id, :name, :regionCode, :regionName, :ksicCode, :industryName, :employeeCount)
         ON DUPLICATE KEY UPDATE
+          name           = VALUES(name),
           region_code    = VALUES(region_code),
           region_name    = VALUES(region_name),
           ksic_code      = VALUES(ksic_code),
@@ -25,6 +26,7 @@ public interface CompanyRepository extends JpaRepository<Company, Long> {
         """, nativeQuery = true)
     void upsertProfile(
         @Param("id")            Long    id,
+        @Param("name")          String  name,
         @Param("regionCode")    String  regionCode,
         @Param("regionName")    String  regionName,
         @Param("ksicCode")      String  ksicCode,

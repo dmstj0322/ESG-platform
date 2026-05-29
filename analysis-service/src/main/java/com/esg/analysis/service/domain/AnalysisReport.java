@@ -23,7 +23,8 @@ public class AnalysisReport extends BaseTimeEntity {
   @Column(nullable = false)
   private String status; // PENDING, PROCESSING, COMPLETED, FAILED
 
-  @Column(columnDefinition = "TEXT")
+  // TEXT(64KB) → MEDIUMTEXT(16MB): GPT 코멘트 × N 지표 JSON은 64KB를 쉽게 초과함
+  @Column(columnDefinition = "MEDIUMTEXT")
   private String reportContent;
 
   private String grade;

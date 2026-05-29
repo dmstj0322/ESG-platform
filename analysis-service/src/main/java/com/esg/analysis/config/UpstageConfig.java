@@ -8,7 +8,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Configuration
 public class UpstageConfig {
 
-    @Value("${upstage.api.key}") // application.yml에 등록된 키를 읽어옵니다.
+    @Value("${upstage.api.key:}")
     private String apiKey;
 
     @Bean

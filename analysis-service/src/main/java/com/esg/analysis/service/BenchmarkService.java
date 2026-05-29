@@ -149,18 +149,43 @@ public class BenchmarkService {
     @Transactional
     @CacheEvict(value = "benchmark", allEntries = true)
     public void saveProfile(Long companyId, CompanyProfileRequest req) {
-        String regionKey    = (req.getRegionCode() != null && req.getRegionCode().length() >= 2)
-                ? req.getRegionCode().substring(0, 2) : "11";
-        String regionName   = REGION_NAMES.getOrDefault(regionKey, "전국 평균");
-        String industryName = resolveIndustryName(req.getKsicCode());
-        int    employees    = req.getEmployeeCount() != null ? req.getEmployeeCount() : 500;
+        doSaveProfile(companyId, null, req.getRegionCode(), req.getKsicCode(), req.getEmployeeCount(), null);
+    }
+
+    /** auth-service 데이터 없이 원시 파라미터만으로 저장 (하위 호환). */
+    @Transactional
+    @CacheEvict(value = "benchmark", allEntries = true)
+    public void saveProfileRaw(Long companyId, String regionCode, String ksicCode, Integer employeeCount) {
+        doSaveProfile(companyId, null, regionCode, ksicCode, employeeCount, null);
+    }
+
+    /**
+     * auth-service 조회 결과로 기업 프로파일을 동기화합니다.
+     * companyName·industryName이 null이면 각각 "기업 #id" / KSIC 기반 추정값으로 폴백합니다.
+     */
+    @Transactional
+    @CacheEvict(value = "benchmark", allEntries = true)
+    public void saveProfileRaw(Long companyId, String companyName,
+                                String regionCode, String ksicCode,
+                                Integer employeeCount, String industryName) {
+        doSaveProfile(companyId, companyName, regionCode, ksicCode, employeeCount, industryName);
+    }
+
+    private void doSaveProfile(Long companyId, String companyName,
+                                String regionCode, String ksicCode,
+                                Integer employeeCount, String industryName) {
+        String regionKey      = (regionCode != null && regionCode.length() >= 2)
+                ? regionCode.substring(0, 2) : "11";
+        String regionName     = REGION_NAMES.getOrDefault(regionKey, "전국 평균");
+        String resolvedIndustry = industryName != null ? industryName : resolveIndustryName(ksicCode);
+        String resolvedName     = companyName  != null ? companyName  : "기업 #" + companyId;
+        int    employees        = employeeCount != null ? employeeCount : 500;
 
         companyRepository.upsertProfile(
-                companyId, req.getRegionCode(), regionName,
-                req.getKsicCode(), industryName, employees);
+                companyId, resolvedName, regionCode, regionName, ksicCode, resolvedIndustry, employees);
 
-        log.info("기업 {} 프로파일 저장 완료 — 지역:{} 업종:{} 임직원:{}",
-                companyId, regionName, industryName, employees);
+        log.info("[CompanySync] 기업 {} ({}) 프로파일 저장 — 지역:{} 업종:{} ksic:{} 임직원:{}",
+                companyId, resolvedName, regionName, resolvedIndustry, ksicCode, employees);
     }
 
     @Cacheable(value = "benchmark", key = "#companyId + '_' + #year + '_' + #regionCode")

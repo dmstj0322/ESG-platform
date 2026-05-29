@@ -61,7 +61,7 @@ export const exportToPdf = async (data) => {
     </div>
 
     <div style="margin-top: 60px; text-align: center; color: #bbb; font-size: 12px;">
-        본 리포트는 AI 기반으로 작성되었으며, 실제 공시 자료와 차이가 있을 수 있습니다.
+        본 리포트는 ESG 감사 분석 시스템을 통해 작성되었으며, 실제 공시 자료와 차이가 있을 수 있습니다.
     </div>
   `;
 

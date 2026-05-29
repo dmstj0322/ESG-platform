@@ -147,7 +147,7 @@ const ProductAdmin = () => {
       fetchProducts();
       fetchExistingVouchers(editId);
     } catch (err) {
-      // alert("보충 실패"); 
+      // alert("보충 실패");
       toast.error("바우처 보충에 실패했습니다.", { containerId: 'main-toast' });
     }
   };
@@ -165,7 +165,7 @@ const ProductAdmin = () => {
         fetchProducts();
       }
     } catch (err) {
-      // alert(err.response?.data?.message || "삭제 실패"); 
+      // alert(err.response?.data?.message || "삭제 실패");
       toast.error(err.response?.data?.message || "삭제에 실패했습니다.", { containerId: 'main-toast' });
     }
   };
@@ -221,7 +221,7 @@ const ProductAdmin = () => {
                   <label style={labelStyle}>카테고리 *</label>
                   <select style={inputStyle} value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} disabled={isEditing}>
                     <option value="GIFTICON">🎁 기프티콘</option>
-                    <option value="DONATION">💙 기부 캠페인</option>
+                    <option value="DONATION">🤝 기부 캠페인</option>
                   </select>
                 </div>
                 <div style={inputGroup}>
