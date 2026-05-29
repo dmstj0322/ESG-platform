@@ -49,8 +49,6 @@ const ProductDetail = () => {
         }
       });
       alert('주문이 완료되었습니다! 마이페이지에서 확인하세요.');
-      //구매가 완료되었습니다! 이메일을 확인해주세요.
-      // navigate('/mypage');
       navigate('/mypage');
     } catch (error) {
       alert(error.response?.data?.message || "포인트가 부족하거나 처리 중 오류가 발생했습니다.");
@@ -61,76 +59,44 @@ const ProductDetail = () => {
   if (!product) return <div style={{ textAlign: 'center', padding: '50px' }}>상품을 찾을 수 없습니다.</div>;
 
   const isSoldOut = product.status === 'SOLD_OUT' || (product.category === 'GIFTICON' && product.stock <= 0);
-  
-  // ✅ [수정] 카테고리에 따른 버튼 텍스트 설정
   const buttonText = isSoldOut 
     ? (product.category === 'DONATION' ? "참여 종료" : "품절된 상품") 
     : (product.category === 'DONATION' ? "지금 기부하기" : "지금 구매하기");
 
-//   return (
-//     <div style={{ display: 'flex', gap: '50px', padding: '60px', maxWidth: '1100px', margin: '0 auto' }}>
-//       {/* 왼쪽: 상품 이미지 구역 */}
-//       <div style={{ flex: 1, backgroundColor: '#f8f9fa', borderRadius: '15px', height: '500px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #eee' }}>
-//         <span style={{ fontSize: '100px' }}>{product.category === 'GIFTICON' ? '🎫' : '🎁'}</span>
-//       </div>
-
-//       {/* 오른쪽: 구매 정보 구역 */}
-//       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-//         <span style={{ color: '#20c997', fontWeight: 'bold', fontSize: '18px' }}>{product.category}</span>
-//         <h1 style={{ fontSize: '36px', margin: '15px 0' }}>{product.name}</h1>
-//         <p style={{ color: '#666', lineHeight: '1.8', marginBottom: '30px', minHeight: '100px' }}>{product.content}</p>
-        
-//         <div style={{ borderTop: '2px solid #eee', paddingTop: '30px' }}>
-//           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px' }}>
-//             <span style={{ fontSize: '20px', color: '#888' }}>판매 가격</span>
-//             <span style={{ fontSize: '28px', fontWeight: 'bold', color: '#20c997' }}>{product.price.toLocaleString()} P</span>
-//           </div>
-          
-//           <button 
-//             onClick={handleOrder}
-//             disabled={product.stock <= 0}
-//             style={{
-//               width: '100%',
-//               padding: '20px',
-//               fontSize: '20px',
-//               fontWeight: 'bold',
-//               color: '#fff',
-//               backgroundColor: product.stock <= 0 ? '#dee2e6' : '#20c997',
-//               border: 'none',
-//               borderRadius: '8px',
-//               cursor: product.stock <= 0 ? 'not-allowed' : 'pointer'
-//             }}
-//           >
-//             {product.stock <= 0 ? "품절된 상품입니다" : "구매하기"}
-//           </button>
-//           <p style={{ textAlign: 'center', color: '#999', marginTop: '15px', fontSize: '14px' }}>
-//             현재 잔여 재고: {product.stock}개
-//           </p>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-console.log("백엔드 데이터:", product);
+  // ✅ 상세 진행률 계산
+  const progress = Math.min(100, Math.round((product.currentAmount / product.targetAmount) * 100) || 0);
 
   return (
     <div style={containerStyle}>
-      {/* 1. 상품 홍보 이미지 (S3 URL) */}
       <div style={imageContainerStyle}>
         <img src={product.voucherUrl} alt={product.name} style={imageStyle} />
         {isSoldOut && <div style={soldOutBadge}>{product.category === 'DONATION' ? "종료" : "품절"}</div>}
       </div>
 
-      {/* 2. 상품 정보 섹션 */}
       <div style={infoContainerStyle}>
         <span style={categoryStyle}>{product.category}</span>
         <h1 style={titleStyle}>{product.name}</h1>
         <p style={descriptionStyle}>{product.content}</p>
 
+        {/* ✅ 기부 상품일 경우 진행률 현황판 표시 */}
+        {product.category === 'DONATION' && (
+          <div style={donationProgressBox}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '15px' }}>
+              <span style={{ fontWeight: 'bold', color: '#845ef7' }}>현재 달성률 {progress}%</span>
+              <span style={{ color: '#868e96' }}>목표 {product.targetAmount?.toLocaleString()} P</span>
+            </div>
+            <div style={{ height: '12px', backgroundColor: '#e9ecef', borderRadius: '6px', overflow: 'hidden' }}>
+              <div style={{ width: `${progress}%`, height: '100%', backgroundColor: '#845ef7', transition: 'width 0.5s' }} />
+            </div>
+            <div style={{ textAlign: 'right', marginTop: '10px', fontWeight: 'bold', color: '#333' }}>
+              모인 금액: {product.currentAmount?.toLocaleString()} P
+            </div>
+          </div>
+        )}
+
         <div style={priceCardStyle}>
           <div style={priceRowStyle}>
-            <span>판매 가격</span>
+            <span>{product.category === 'DONATION' ? '기부 참여 금액' : '판매 가격'}</span>
             <span style={priceStyle}>{product.price.toLocaleString()} P</span>
           </div>
           <div style={priceRowStyle}>
@@ -139,7 +105,6 @@ console.log("백엔드 데이터:", product);
           </div>
         </div>
 
-        {/* 3. 구매 안내 사항 */}
         <div style={noticeBoxStyle}>
           <p style={noticeTitle}>📢 구매 전 확인하세요!</p>
           <ul>
@@ -161,7 +126,7 @@ console.log("백엔드 데이터:", product);
   );
 };
 
-// --- Styles ---
+// --- 원본 Styles 유지 ---
 const containerStyle = { display: 'flex', gap: '50px', padding: '50px', maxWidth: '1200px', margin: '0 auto' };
 const imageContainerStyle = { flex: 1, position: 'relative' };
 const imageStyle = { width: '100%', borderRadius: '15px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' };
@@ -177,6 +142,6 @@ const noticeTitle = { fontWeight: 'bold', color: '#fa5252', marginBottom: '10px'
 const activeBtnStyle = { padding: '20px', fontSize: '20px', fontWeight: 'bold', color: '#fff', backgroundColor: '#339af0', border: 'none', borderRadius: '10px', cursor: 'pointer' };
 const disabledBtnStyle = { ...activeBtnStyle, backgroundColor: '#adb5bd', cursor: 'not-allowed' };
 const soldOutBadge = { position: 'absolute', top: '20px', left: '20px', backgroundColor: 'rgba(0,0,0,0.7)', color: '#fff', padding: '10px 20px', borderRadius: '5px', fontWeight: 'bold' };
-const centerStyle = { textAlign: 'center', padding: '100px', fontSize: '20px' };
+const donationProgressBox = { backgroundColor: '#f3f0ff', padding: '20px', borderRadius: '12px', marginBottom: '20px' };
 
 export default ProductDetail;

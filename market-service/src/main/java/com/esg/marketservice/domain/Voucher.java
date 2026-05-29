@@ -27,7 +27,15 @@ public class Voucher extends BaseTimeEntity {
   private Long orderId;
 
   public void assignToOrder(Long orderId) {
-    this.isUsed = true;
     this.orderId = orderId;
+  }
+
+  public void markAsUsed() {
+    this.isUsed = true;
+  }
+
+  public void releaseOrder() {
+    this.orderId = null;
+    this.isUsed = false;
   }
 }

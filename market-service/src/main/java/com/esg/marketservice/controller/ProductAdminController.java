@@ -47,17 +47,20 @@ public class ProductAdminController {
     return ResponseEntity.ok(productService.getProductDetail(companyId, productId));
   }
 
-  @PutMapping("/{productId}")
+  @PreAuthorize("hasRole('ADMIN')")
+  @PutMapping(value = "/{productId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<Void> updateProduct(
     @RequestHeader("X-Company-Id") Long companyId,
     @PathVariable Long productId,
-    @RequestBody ProductRequestDto dto) {
-    productService.updateProduct(companyId, productId, dto);
+    @RequestPart("dto") ProductRequestDto dto,
+    @RequestPart(value = "file", required = false) MultipartFile file) throws IOException {
+    productService.updateProduct(companyId, productId, dto, file);
     return ResponseEntity.ok().build();
   }
 
+  @PreAuthorize("hasRole('ADMIN')")
   @PatchMapping("/{productId}/status")
-  public ResponseEntity<Void> updateProduct(
+  public ResponseEntity<Void> updateProductStatus(
     @RequestHeader("X-Company-Id") Long companyId,
     @PathVariable Long productId,
     @RequestBody ProductStatus status) {
@@ -65,6 +68,7 @@ public class ProductAdminController {
     return ResponseEntity.ok().build();
   }
 
+  @PreAuthorize("hasRole('ADMIN')")
   @DeleteMapping("/{productId}")
   public ResponseEntity<Void> deleteProduct(
     @RequestHeader("X-Company-Id") Long companyId,

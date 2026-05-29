@@ -61,9 +61,6 @@ ollama-data/
 # --- Node lock files ---
 package-lock.json
 
-
 *.sqlite3
 chroma-data/
-
 node_modules/
-
