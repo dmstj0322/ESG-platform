@@ -36,7 +36,7 @@
 .prose-esg h2 { font-size: 0.9375rem; border-bottom: 1px solid var(--gray-200); padding-bottom: 0.5em; color: var(--gray-900); }
 .prose-esg h3 { font-size: 0.875rem; color: var(--gray-700); }
 .prose-esg h4 { font-size: 0.8125rem; color: var(--gray-600); }
-.prose-esg p  { margin-top: 0.5em; margin-bottom: 0.5em; color: var(--gray-700); font-size: 0.8125rem; line-height: 1.7; }
+.prose-esg p  { margin-top: 0.65em; margin-bottom: 0.65em; color: var(--gray-700); font-size: 0.8125rem; line-height: 1.75; max-width: 72ch; }
 .prose-esg ul { padding-left: 1.25em; margin: 0.6em 0; list-style: disc; }
 .prose-esg li { margin: 0.35em 0; color: var(--gray-700); font-size: 0.8125rem; }
 .prose-esg strong { color: var(--gray-900); font-weight: 600; }
@@ -83,7 +83,7 @@
   --numeric: 'Inter', 'Pretendard', sans-serif;
   --mono:    ui-monospace, Consolas, monospace;
 
-  font: 15px/155% var(--sans);
+  font: 15px/1.65 var(--sans);
   letter-spacing: -0.01em;
   color-scheme: light;
   color: var(--gray-700);
@@ -137,13 +137,12 @@ body {
   background: #ffffff;
   border: 1px solid var(--gray-200);
   border-radius: 16px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-  transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  transition: box-shadow 0.18s ease, border-color 0.18s ease;
 }
 .saas-card:hover {
-  box-shadow: 0 4px 16px rgba(15,23,42,0.08);
+  box-shadow: 0 4px 16px rgba(15,23,42,0.07);
   border-color: #D1D5DB;
-  transform: translateY(-1px);
 }
 .saas-card-key {
   box-shadow: 0 8px 24px rgba(15,23,42,0.08) !important;
@@ -320,6 +319,193 @@ body {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   RAG Audit Explanation System
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Individual indicator card ── */
+.rag-item {
+  border: 1px solid #E5E7EB;
+  border-radius: 14px;
+  padding: 20px 24px;
+  background: #ffffff;
+  transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+  position: relative;
+}
+.rag-item:hover {
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.07);
+  border-color: #D1D5DB;
+  transform: translateY(-1px);
+}
+
+/* ── Retrieved evidence quote block ── */
+.evidence-quote {
+  background: #F8FAFC;
+  border-left: 3px solid #6366f1;
+  border-radius: 0 8px 8px 0;
+  padding: 12px 14px;
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: #374151;
+  margin-top: 8px;
+  animation: fadeIn 0.2s ease-out;
+}
+.evidence-quote.verified      { border-left-color: #059669; }
+.evidence-quote.weak          { border-left-color: #d97706; }
+.evidence-quote.contradiction { border-left-color: #dc2626; }
+.evidence-quote.no-evidence   { border-left-color: #d1d5db; }
+
+/* ── Evidence quote label ── */
+.evidence-quote-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ── Confidence reasoning row ── */
+.confidence-factors {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+  margin-top: 12px;
+  border-top: 1px solid #F3F4F6;
+}
+.confidence-factor-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-family: 'Inter', 'Pretendard', sans-serif;
+  color: #6B7280;
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-feature-settings: "tnum" 1;
+}
+.confidence-factor-chip .value {
+  font-weight: 700;
+}
+
+/* ── Source citation chip ── */
+.source-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-family: 'Inter', 'Pretendard', sans-serif;
+  color: #9CA3AF;
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  padding: 3px 8px;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Section header gradient icon ── */
+.rag-header-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+}
+
+/* ── Verification rate progress bar ── */
+.verification-bar {
+  height: 4px;
+  background: #F3F4F6;
+  border-radius: 99px;
+  overflow: hidden;
+}
+.verification-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #059669 0%, #34d399 100%);
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Expand/collapse animation for evidence block ── */
+@keyframes evidenceReveal {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.evidence-reveal {
+  animation: evidenceReveal 0.2s ease-out;
+}
+
+/* ── Explanation skeleton / reveal (Stage 1 loading) ─────────────── */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+.explanation-skeleton {
+  height: 13px; border-radius: 5px; margin-bottom: 5px;
+  background: linear-gradient(90deg, #f3f4f6 25%, #eaecef 50%, #f3f4f6 75%);
+  background-size: 400px 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+.explanation-skeleton.short { width: 55%; }
+
+@keyframes explanationReveal {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+.explanation-reveal { animation: explanationReveal 0.3s ease-out; }
+
+/* ── Evidence importance tier borders ────────────────────────────── */
+.rag-item.importance-critical {
+  border-color: #a7f3d0;
+  box-shadow: 0 0 0 1px rgba(5,150,105,0.05), 0 2px 10px rgba(5,150,105,0.05);
+}
+.rag-item.importance-critical:hover {
+  border-color: #6ee7b7;
+  box-shadow: 0 4px 20px rgba(5,150,105,0.1);
+  transform: translateY(-1px);
+}
+.rag-item.importance-weak {
+  opacity: 0.84;
+}
+
+/* ── Contradiction focus styles ──────────────────────────────────── */
+.rag-item.has-contradiction {
+  border-color: #fca5a5;
+}
+.rag-item.has-contradiction:hover {
+  border-color: #f87171;
+  box-shadow: 0 4px 18px rgba(220,38,38,0.09);
+  transform: translateY(-1px);
+}
+.contradiction-focus-card {
+  background: #fff8f8;
+  border: 1.5px solid #fecaca;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+/* ── Audit Confidence Summary stat items ─────────────────────────── */
+.audit-stat-item {
+  padding: 14px 20px;
+}
+.audit-stat-icon {
+  width: 28px; height: 28px; border-radius: 7px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 
 /* ── 기존 커뮤니티 페이지 전용 스타일 ────────────────────────────── */

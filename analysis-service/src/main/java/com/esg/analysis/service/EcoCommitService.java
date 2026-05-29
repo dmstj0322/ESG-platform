@@ -36,7 +36,7 @@ public class EcoCommitService {
     public Map<String, Object> getPreview(Long companyId) {
         Long ecoPoints = 0L;
         try {
-            ecoPoints = pointServiceClient.getCompanyTotalPoints(companyId);
+            ecoPoints = pointServiceClient.getCompanyEsgPool(companyId).esgPoints();
         } catch (Exception e) {
             log.warn("[EcoPreview] point-service 호출 실패 → 0으로 처리: {}", e.getMessage());
         }
@@ -59,7 +59,7 @@ public class EcoCommitService {
 
             Long ecoPoints = 0L;
             try {
-                ecoPoints = pointServiceClient.getCompanyTotalPoints(companyId);
+                ecoPoints = pointServiceClient.getCompanyEsgPool(companyId).esgPoints();
                 log.info("[EcoCommit] 기업:{} 포인트합계:{}EP", companyId, ecoPoints);
             } catch (Exception e) {
                 log.error("[EcoCommit] point-service 호출 실패 → 0으로 처리", e);

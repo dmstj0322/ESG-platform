@@ -160,6 +160,9 @@ export default function ReportPage() {
   const [loading, setLoading]       = useState(false);
   const [gradeStats, setGradeStats] = useState([]);
   const [analysisList, setAnalysisList] = useState([]);
+  const [expanded, setExpanded]     = useState(false);
+
+  const LIST_PREVIEW = 5;
 
   const storedId = localStorage.getItem('esg_latest_analysis_id');
 
@@ -200,10 +203,10 @@ export default function ReportPage() {
                 <ClipboardList size={13} className="text-white" />
               </span>
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.15em]">
-                Audit History
+                분석 이력
               </p>
             </div>
-            <h1 className="text-2xl font-black text-gray-900 tracking-tight" style={{ letterSpacing: '-0.02em' }}>Audit 기록</h1>
+            <h1 className="text-2xl font-black text-gray-900 tracking-tight" style={{ letterSpacing: '-0.02em' }}>분석 기록</h1>
             <p className="text-xs text-gray-400 mt-1">
               완료된 ESG 분석 목록 — 행 클릭 시 상세 결과 페이지로 이동
             </p>
@@ -269,7 +272,7 @@ export default function ReportPage() {
             </div>
           ) : analysisList.length > 0 ? (
             <>
-              {analysisList.map((item, idx) => (
+              {(expanded ? analysisList : analysisList.slice(0, LIST_PREVIEW)).map((item, idx) => (
                 <AuditRow
                   key={item.analysisId}
                   report={mapHistoryItem(item)}
@@ -278,6 +281,25 @@ export default function ReportPage() {
                   onClick={() => handleRowClick(item.analysisId)}
                 />
               ))}
+              {analysisList.length > LIST_PREVIEW && (
+                <div className="flex justify-center px-6 py-3 border-t border-gray-100">
+                  {!expanded ? (
+                    <button
+                      onClick={() => setExpanded(true)}
+                      className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 transition-colors"
+                    >
+                      전체 기록 보기 ({analysisList.length - LIST_PREVIEW}개 더) ▼
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setExpanded(false)}
+                      className="text-xs font-semibold text-gray-400 hover:text-gray-600 flex items-center gap-1.5 transition-colors"
+                    >
+                      접기 ▲
+                    </button>
+                  )}
+                </div>
+              )}
             </>
           ) : (
             /* history API 아직 응답 전 — latestReport만 있을 때 fallback */
@@ -300,14 +322,14 @@ export default function ReportPage() {
                 icon: <BarChart2 size={15} className="text-indigo-500" />,
                 bg: 'bg-indigo-50',
                 label: '상세 분석 결과',
-                sub: 'Evidence · Benchmark · Audit Log',
+                sub: '근거 · 업종 비교 · 분석 기록',
                 action: () => storedId && navigate(`/analysis/result/${storedId}#summary`),
               },
               {
                 icon: <Shield size={15} className="text-emerald-500" />,
                 bg: 'bg-emerald-50',
-                label: 'Evidence Trace',
-                sub: 'AI 검증 근거 확인',
+                label: '근거 추적',
+                sub: '감사 근거 확인',
                 action: () => storedId && navigate(`/analysis/result/${storedId}#evidence`),
               },
               {

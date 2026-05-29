@@ -138,6 +138,7 @@ export function AnalysisProvider({ children }) {
           analysisId,
           finalGrade,
           totalScore: raw.totalScore > 0 ? raw.totalScore : (parsed?.totalScore ?? null),
+          analyzedAt: raw.analyzedAt ?? raw.createdAt ?? raw.updatedAt ?? null,
           companyName,
           fullReport:      marked(parsed?.fullReport || '분석 리포트가 없습니다.'),
           _rawFullReport:  parsed?.fullReport || '',

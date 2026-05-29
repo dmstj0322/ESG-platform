@@ -70,6 +70,18 @@ public class CategoryAnalysisResponse {
         private Double  extractedValue;
         /** 단위 ("kWh" / "MJ" / "tCO₂" / "kg" / "m³") */
         private String  unit;
+
+        // ── Explainability (S/G 지표 전용) ──────────────────────────────────
+        /** KeywordGate 통과 indicator keywords 목록 (UI keyword badge용, E는 null) */
+        private java.util.List<String> matchedKeywords;
+        /** KeywordGate 통과 cluster 식별자 예: "산업안전|교육" (UI 검증 이유 표시용, E는 null) */
+        private String matchedCluster;
+        /**
+         * 백엔드 결정 검증 상태 — frontend getVerificationStatus()의 단일 source of truth.
+         * "VERIFIED": EXPLICIT phrase match 또는 sim≥0.80 + 유효 텍스트
+         * null: frontend 자체 로직으로 결정 (E 지표, 또는 임계값 미달)
+         */
+        private String verificationStatus;
     }
 
     /**
@@ -104,5 +116,7 @@ public class CategoryAnalysisResponse {
         private String  similarityTier;
         /** 최고 similarity evidence 앞 100자 미리보기 (S/G 지표 근거 확인용, E는 null) */
         private String  evidenceSnippet;
+        /** true = 이 지표의 최상위 evidence chunk가 다른 지표에 먼저 사용됨 (cross-indicator reuse detected) */
+        private Boolean sharedEvidenceDetected;
     }
 }

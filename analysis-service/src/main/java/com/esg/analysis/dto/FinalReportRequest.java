@@ -17,6 +17,8 @@ public class FinalReportRequest {
     private CategoryResult socialResult;
     private CategoryResult governanceResult;
     private boolean ecoPointApplied;
+    /** 프론트엔드가 계산한 S 점수 보정값 (0~5). 미제공 시 ecoPointApplied=true → 4 폴백. */
+    private Integer ecoSBonus;
     private Integer totalScore;
     private String finalGrade;
     private Integer confidence;

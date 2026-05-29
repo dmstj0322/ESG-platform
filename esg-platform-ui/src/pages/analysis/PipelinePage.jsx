@@ -393,259 +393,218 @@ export default function PipelinePage() {
     : '준비 중';
 
   return (
-    <div className="fixed inset-0 bg-[#F7F8FA] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 bg-[#F7F8FA] flex flex-col overflow-hidden"
+      style={{ fontFamily: "'Pretendard', sans-serif" }}>
 
-      {/* ── 상단 헤더 바 ───────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-4 px-6 py-4 bg-white border-b border-gray-200 shrink-0 shadow-sm">
+      {/* ── 헤더 바 ──────────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-4 px-6 py-3.5 bg-white border-b border-gray-200 shrink-0">
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
-            <Zap size={16} className={`text-emerald-600 ${!done && !failed ? 'animate-pulse' : ''}`} />
+          <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
+            <Zap size={14} className={`text-emerald-600 ${!done && !failed ? 'animate-pulse' : ''}`} />
           </div>
           <div>
-            <p className="text-sm font-bold text-gray-900">ESG 분석 진행 중</p>
-            <p className="text-xs text-gray-400 mt-0.5">AI가 제출하신 자료를 분석하고 있습니다</p>
+            <p className="text-[13px] font-bold text-gray-900">
+              {done ? '분석 완료' : failed ? '분석 실패' : 'ESG AI 감사 진행 중'}
+            </p>
+            <p className="text-[11px] text-gray-400 mt-0.5">
+              {done ? '결과 페이지로 이동합니다...' : 'AI가 제출하신 ESG 자료를 검토하고 있습니다'}
+            </p>
           </div>
         </div>
 
-        {/* 단계 브레드크럼 */}
-        <div className="hidden md:flex items-center gap-1.5 shrink-0">
-          {STAGES.map((s, i) => {
-            const isCurr = s.key === stageKey && !done;
-            const isPast = done || STAGE_ORDER.indexOf(stageKey) > i;
-            return (
-              <React.Fragment key={s.key}>
-                <span className={`text-xs px-2 py-0.5 rounded-lg font-medium transition-all ${
-                  isCurr ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                  : isPast ? 'text-emerald-600'
-                  : 'text-gray-300'
-                }`}>{s.label}</span>
-                {i < STAGES.length - 1 && <span className="text-gray-300 text-xs">›</span>}
-              </React.Fragment>
-            );
-          })}
-        </div>
-
+        {/* 헤더 메트릭 */}
         <div className="flex items-center gap-5 shrink-0">
           <div className="text-right">
-            <p className="text-[10px] text-gray-400 leading-none">소요 시간</p>
-            <p className="text-sm font-bold text-gray-700 tabular-nums mt-0.5">{fmtElapsed(elapsed)}</p>
+            <p className="text-[9px] text-gray-400 uppercase tracking-wider">소요 시간</p>
+            <p className="text-[13px] font-bold text-gray-700 tabular-nums">{fmtElapsed(elapsed)}</p>
           </div>
           <div className="text-right">
-            <p className="text-[10px] text-gray-400 leading-none">검증 근거</p>
-            <p className="text-sm font-bold text-emerald-600 tabular-nums mt-0.5">{evidenceCount}건</p>
+            <p className="text-[9px] text-gray-400 uppercase tracking-wider">검증 근거</p>
+            <p className="text-[13px] font-bold text-emerald-600 tabular-nums">{evidenceCount}건</p>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="text-right">
+            <p className="text-[9px] text-gray-400 uppercase tracking-wider">진행률</p>
+            <p className="text-[13px] font-bold tabular-nums" style={{
+              color: done ? '#16a34a' : failed ? '#dc2626' : currentStage?.color ?? '#6b7280'
+            }}>{progressPct}%</p>
+          </div>
+          <div className="flex items-center gap-1.5 pl-4 border-l border-gray-200">
             <div className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-emerald-400 animate-pulse' : 'bg-gray-300'}`} />
-            <span className="text-xs text-gray-500">{wsConnected ? 'AI 연결됨' : '연결 중'}</span>
+            <span className="text-[11px] text-gray-500">{wsConnected ? 'AI 연결됨' : '연결 중'}</span>
           </div>
         </div>
       </div>
 
-      {/* ── 메인 영역 ──────────────────────────────────────────────────────── */}
+      {/* ── 메인 영역 ────────────────────────────────────────────────────── */}
       <div className="flex flex-1 min-h-0">
 
-        {/* 왼쪽 패널: Stage Stepper ──────────────────────────────────────── */}
-        <div className="w-64 shrink-0 bg-white border-r border-gray-200 flex flex-col">
-          <div className="px-5 py-3.5 border-b border-gray-100">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">분석 단계</p>
+        {/* 왼쪽: Stage Stepper ──────────────────────────────────────────── */}
+        <div className="w-60 shrink-0 bg-white border-r border-gray-200 flex flex-col">
+          <div className="px-5 py-3 border-b border-gray-100">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">분석 단계</p>
           </div>
-          <div className="flex-1 overflow-y-auto py-2">
+          <div className="flex-1 overflow-y-auto py-1">
             <StageStepper currentStageKey={stageKey} done={done} failed={failed} />
           </div>
           <div className="px-5 py-4 border-t border-gray-100 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-500">전체 진행률</span>
-              <span className="text-sm font-bold tabular-nums" style={{
+              <span className="text-[11px] text-gray-500">전체 진행률</span>
+              <span className="text-[12px] font-bold tabular-nums" style={{
                 color: done ? '#16a34a' : failed ? '#dc2626' : currentStage?.color ?? '#6b7280'
-              }}>
-                {progressPct}%
-              </span>
+              }}>{progressPct}%</span>
             </div>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-700"
+            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-full rounded-full transition-all duration-700"
                 style={{
                   width: `${progressPct}%`,
                   background: done ? '#16a34a' : failed ? '#dc2626' : currentStage?.color ?? '#6b7280',
-                }}
-              />
+                }} />
             </div>
           </div>
         </div>
 
-        {/* 오른쪽: 진행 로그 ─────────────────────────────────────────────── */}
-        <div className="flex-1 flex flex-col min-w-0">
+        {/* 오른쪽: 상태 패널 ────────────────────────────────────────────── */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
-          {/* 로그 헤더 */}
-          <div className="flex items-center gap-3 px-6 py-3 border-b border-gray-200 bg-white shrink-0">
-            <span className="text-xs font-semibold text-gray-600">AI 상세 분석 로그</span>
-            {currentStage && !done && !failed && (
-              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full border"
-                style={{ color: currentStage.color, background: `${currentStage.color}12`, borderColor: `${currentStage.color}30` }}>
-                {currentStage.label}
-              </span>
-            )}
-            <div className="flex-1" />
-            <span className="text-xs text-gray-400">{logs.length}개 메시지</span>
-          </div>
+          {/* ── 분석 중: 현재 단계 카드 + 간략 로그 ── */}
+          {!done && !failed && (
+            <div className="flex-1 overflow-y-auto px-8 py-8 flex flex-col gap-6">
 
-          {/* 로그 출력 */}
-          <div ref={logRef} className="flex-1 overflow-y-auto px-6 py-4 space-y-1">
-            {logs.map((log) => {
-              const stageColorMap = {
-                OCR: '#6366f1', EMBED: '#3b82f6', RETRV: '#22c55e',
-                VALID: '#f59e0b', SCORE: '#f97316', RPT: '#a855f7',
-              };
-              const isStage = log.level === 'stage';
-              const isDone  = log.level === 'done';
-              const isErr   = log.level === 'error';
-              const isSys   = log.level === 'sys' || log.level === 'ws';
-              const tagColor = stageColorMap[log.tag] ?? (isDone ? '#16a34a' : isErr ? '#dc2626' : '#9ca3af');
-
-              return (
-                <div key={log.id} className={`flex items-start gap-3 text-sm leading-relaxed ${isStage ? 'mt-3' : ''}`}>
-                  <span className="text-gray-300 shrink-0 tabular-nums text-xs select-none mt-0.5 w-[52px]">
-                    {log.time}
-                  </span>
-                  {isStage ? (
-                    <span className="flex-1 font-semibold text-gray-800" style={{ color: tagColor }}>
-                      {log.msg}
-                    </span>
-                  ) : isDone ? (
-                    <span className="flex-1 font-semibold text-emerald-700">{log.msg}</span>
-                  ) : isErr ? (
-                    <span className="flex-1 font-semibold text-red-600">{log.msg}</span>
-                  ) : isSys ? (
-                    <span className="flex-1 text-gray-400 text-xs">{log.msg}</span>
-                  ) : (
-                    <span className="flex-1 text-gray-600">{log.msg}</span>
-                  )}
-                </div>
-              );
-            })}
-
-            {!done && !failed && (
-              <div className="flex items-center gap-3 mt-2">
-                <span className="text-gray-300 text-xs w-[52px] shrink-0" />
-                <Loader2 size={13} className="text-blue-400 animate-spin shrink-0" />
-                <span className="text-sm text-gray-400">처리 중...</span>
-              </div>
-            )}
-          </div>
-
-          {/* 하단: 완료 / 실패 바 ──────────────────────────────────────────── */}
-          {(done || failed) && (
-            <div className={`shrink-0 px-6 py-4 border-t ${
-              done ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'
-            }`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {done
-                    ? <CheckCircle2 size={20} className="text-emerald-600 shrink-0" />
-                    : <XCircle     size={20} className="text-red-500 shrink-0" />
-                  }
-                  <div>
-                    <p className={`text-sm font-bold ${done ? 'text-emerald-800' : 'text-red-700'}`}>
-                      {done ? '분석이 완료되었습니다. 결과 페이지로 이동 중...' : '분석 중 오류가 발생했습니다.'}
-                    </p>
-                    <p className={`text-xs mt-0.5 ${done ? 'text-emerald-600' : 'text-red-500'}`}>
-                      {done
-                        ? `총 소요 시간: ${fmtElapsed(elapsed)}`
-                        : '입력 데이터를 확인하고 다시 시도해주세요.'
-                      }
-                    </p>
+              {/* 현재 단계 강조 카드 */}
+              {currentStage && (
+                <div className="rounded-xl border bg-white overflow-hidden"
+                  style={{ borderColor: `${currentStage.color}30` }}>
+                  <div className="flex items-center gap-4 px-6 py-5"
+                    style={{ background: `${currentStage.color}06` }}>
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: `${currentStage.color}14` }}>
+                      <Loader2 size={22} className="animate-spin" style={{ color: currentStage.color }} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest mb-1"
+                        style={{ color: currentStage.color }}>처리 중</p>
+                      <p className="text-[17px] font-bold text-gray-900 leading-tight">{currentStage.label}</p>
+                      <p className="text-[12px] text-gray-500 mt-0.5">{currentStage.sub}</p>
+                    </div>
+                    <div className="ml-auto text-right shrink-0">
+                      <p className="text-[10px] text-gray-400 mb-1">단계</p>
+                      <p className="text-[15px] font-black tabular-nums text-gray-700">
+                        {Math.max(1, stageIdx + 1)}<span className="text-gray-400 font-normal text-[12px]"> / {STAGES.length}</span>
+                      </p>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {done && (
-                    <button
-                      onClick={() => navigate(`/analysis/result/${sessionId}`)}
-                      className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700
-                        text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
-                    >
-                      결과 보기 <ArrowRight size={14} />
-                    </button>
-                  )}
-                  {failed && (
-                    <button
-                      onClick={() => navigate('/analysis')}
-                      className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:border-gray-300
-                        text-gray-700 text-sm font-semibold rounded-xl transition-colors shadow-sm"
-                    >
-                      <RefreshCw size={14} /> 다시 시도
-                    </button>
-                  )}
+              )}
+
+              {/* 간략 로그 (최근 6개, 스크롤 없음) */}
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-100">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">처리 로그</span>
+                  <span className="text-[9px] text-gray-300 ml-auto tabular-nums">{logs.length}개</span>
+                </div>
+                <div ref={logRef} className="px-5 py-4 space-y-2.5 max-h-[260px] overflow-y-auto"
+                  style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}>
+                  {logs.slice(-8).map((log) => {
+                    const stageColorMap = {
+                      OCR: '#6366f1', EMBED: '#3b82f6', RETRV: '#22c55e',
+                      VALID: '#f59e0b', SCORE: '#f97316', RPT: '#a855f7',
+                    };
+                    const isStage = log.level === 'stage';
+                    const isErr   = log.level === 'error';
+                    const isSys   = log.level === 'sys' || log.level === 'ws';
+                    const tagColor = stageColorMap[log.tag] ?? (isErr ? '#dc2626' : '#9ca3af');
+                    return (
+                      <div key={log.id} className="flex items-start gap-3">
+                        <span className="text-[9px] text-gray-300 tabular-nums shrink-0 w-[48px] mt-0.5 select-none">
+                          {log.time}
+                        </span>
+                        {isStage ? (
+                          <span className="text-[11px] font-semibold leading-snug" style={{ color: tagColor }}>
+                            {log.msg}
+                          </span>
+                        ) : isErr ? (
+                          <span className="text-[11px] font-semibold text-red-600 leading-snug">{log.msg}</span>
+                        ) : isSys ? (
+                          <span className="text-[10px] text-gray-400 leading-snug">{log.msg}</span>
+                        ) : (
+                          <span className="text-[11px] text-gray-600 leading-snug">{log.msg}</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <div className="flex items-center gap-3">
+                    <span className="w-[48px] shrink-0" />
+                    <Loader2 size={11} className="text-gray-300 animate-spin shrink-0" />
+                    <span className="text-[10px] text-gray-400">처리 중...</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* ── 완료 상태 ── */}
+          {done && (
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="bg-white rounded-2xl border border-emerald-200 shadow-sm overflow-hidden max-w-md w-full">
+                <div className="px-8 py-6 bg-emerald-50 text-center border-b border-emerald-100">
+                  <CheckCircle2 size={36} className="text-emerald-500 mx-auto mb-3" />
+                  <p className="text-[17px] font-bold text-emerald-800">ESG 감사 완료</p>
+                  <p className="text-[12px] text-emerald-600 mt-1">ESG 감사 분석이 완료되었습니다</p>
+                </div>
+                <div className="px-8 py-5">
+                  <div className="grid grid-cols-3 gap-4 mb-6">
+                    {[
+                      { label: '소요 시간',  value: fmtElapsed(elapsed), color: '#6b7280' },
+                      { label: '검증 근거',  value: `${evidenceCount}건`, color: '#059669' },
+                      { label: '분석 단계',  value: `${STAGES.length}/${STAGES.length}`, color: '#2563eb' },
+                    ].map(({ label, value, color }) => (
+                      <div key={label} className="text-center">
+                        <p className="text-[10px] text-gray-400 mb-1">{label}</p>
+                        <p className="text-[15px] font-bold tabular-nums" style={{ color }}>{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-gray-400 text-center mb-5">
+                    결과 페이지로 자동 이동합니다...
+                  </p>
+                  <button
+                    onClick={() => navigate(`/analysis/result/${sessionId}`)}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl
+                      bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] font-semibold
+                      transition-colors shadow-sm"
+                  >
+                    결과 바로 보기 <ArrowRight size={14} />
+                  </button>
                 </div>
               </div>
             </div>
           )}
-        </div>
 
-        {/* 오른쪽 사이드: 지표 패널 ──────────────────────────────────────── */}
-        <div className="w-52 shrink-0 bg-white border-l border-gray-200 flex flex-col">
-          <div className="px-4 py-3.5 border-b border-gray-100">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">진행 현황</p>
-          </div>
-
-          <div className="flex-1 px-4 py-5 space-y-5">
-            <div>
-              <p className="text-xs text-gray-400 mb-1.5">현재 단계</p>
-              {currentStage && !done && !failed ? (
-                <div>
-                  <p className="text-sm font-bold text-gray-800" style={{ color: currentStage.color }}>
-                    {currentStage.label}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-0.5">{currentStage.sub}</p>
+          {/* ── 실패 상태 ── */}
+          {failed && (
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="bg-white rounded-2xl border border-red-200 shadow-sm overflow-hidden max-w-md w-full">
+                <div className="px-8 py-6 bg-red-50 text-center border-b border-red-100">
+                  <XCircle size={36} className="text-red-500 mx-auto mb-3" />
+                  <p className="text-[17px] font-bold text-red-800">분석 오류 발생</p>
+                  <p className="text-[12px] text-red-600 mt-1">입력 데이터를 확인하고 다시 시도해주세요</p>
                 </div>
-              ) : done ? (
-                <p className="text-sm font-bold text-emerald-600">분석 완료</p>
-              ) : failed ? (
-                <p className="text-sm font-bold text-red-500">오류 발생</p>
-              ) : (
-                <p className="text-sm text-gray-400">준비 중...</p>
-              )}
-            </div>
-
-            <div>
-              <p className="text-xs text-gray-400 mb-1.5">소요 시간</p>
-              <p className="text-2xl font-black tabular-nums text-gray-800">{fmtElapsed(elapsed)}</p>
-            </div>
-
-            <div>
-              <p className="text-xs text-gray-400 mb-1.5">수집된 검증 근거</p>
-              <p className="text-2xl font-black tabular-nums text-emerald-600">{evidenceCount}
-                <span className="text-sm text-gray-400 font-normal ml-1">건</span>
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs text-gray-400 mb-1.5">단계 진행</p>
-              <p className="text-2xl font-black tabular-nums text-gray-800">
-                {done ? STAGES.length : Math.max(0, stageIdx + 1)}
-                <span className="text-sm text-gray-400 font-normal"> / {STAGES.length}</span>
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs text-gray-400 mb-1.5">AI 연결 상태</p>
-              <div className="flex items-center gap-1.5">
-                <div className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-emerald-400 animate-pulse' : 'bg-gray-300'}`} />
-                <p className={`text-sm font-semibold ${wsConnected ? 'text-emerald-700' : 'text-gray-400'}`}>
-                  {wsConnected ? '연결됨' : '연결 중...'}
-                </p>
+                <div className="px-8 py-5">
+                  <button
+                    onClick={() => navigate('/analysis')}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl
+                      bg-white border border-gray-200 hover:border-gray-300
+                      text-gray-700 text-[13px] font-semibold transition-colors"
+                  >
+                    <RefreshCw size={13} /> 다시 시도
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          <div className="px-4 py-4 border-t border-gray-100">
-            <div className="flex items-center gap-1.5 mb-0.5">
-              <Zap size={11} className="text-emerald-500" />
-              <span className="text-xs font-semibold text-gray-600">K-ESG 기준 분석</span>
-            </div>
-            <p className="text-xs text-gray-400">산업통상자원부, 2021</p>
-          </div>
         </div>
-
       </div>
     </div>
   );

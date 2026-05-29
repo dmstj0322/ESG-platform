@@ -1,712 +1,694 @@
-import React, { useEffect, useState, useCallback } from 'react';
+﻿import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  AreaChart, Area, LineChart, Line,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from 'recharts';
-import {
-  TrendingUp, TrendingDown, Shield, AlertTriangle, CheckCircle2, CheckCircle,
-  FileText, Cpu, Clock, RefreshCw, ChevronRight, Plus, AlertCircle,
+  TrendingUp, CheckCircle2, CheckCircle,
+  Clock, RefreshCw, ChevronRight, Plus, AlertCircle,
   BarChart2, Building2, Leaf, Users, Activity, Zap, ArrowUpRight,
+  ClipboardList, FileSearch, Download, LayoutDashboard,
 } from 'lucide-react';
 import api from '../../api/api';
 import { useAnalysis } from '../../context/AnalysisContext';
+import { useAuth } from '../../context/AuthContext';
+import { normalizeScore, computeDashboardKPIs } from '../../utils/esgAnalysisUtils';
+import { exportAnalysisResult } from '../../components/analysis/exportAnalysisResult';
 
-// ── 상수 ────────────────────────────────────────────────────────────
-const GRADE_COLOR = { S: '#a855f7', A: '#059669', B: '#3b82f6', C: '#f59e0b', D: '#ef4444' };
-const GRADE_CLS = {
-  S: 'bg-purple-50 text-purple-700 border-purple-200',
-  A: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  B: 'bg-blue-50 text-blue-700 border-blue-200',
-  C: 'bg-amber-50 text-amber-700 border-amber-200',
-  D: 'bg-red-50 text-red-600 border-red-200',
+// ── 상수 ─────────────────────────────────────────────────────────────
+const GRADE_COLOR = { S: '#7c3aed', A: '#059669', B: '#2563eb', C: '#d97706', D: '#dc2626' };
+
+const SEV_STYLE = {
+  HIGH: { bar: 'bg-red-500',   badgeCls: 'bg-red-50 text-red-600 border-red-200' },
+  MED:  { bar: 'bg-amber-400', badgeCls: 'bg-amber-50 text-amber-700 border-amber-200' },
+  LOW:  { bar: 'bg-gray-200',  badgeCls: 'bg-gray-100 text-gray-500 border-gray-200' },
 };
 
-const fmtDate = (s) => {
-  if (!s) return '—';
+
+
+const wrapStyle = { maxWidth: 1440, margin: '0 auto' };
+
+const fmtDateTime = (s) => {
+  if (!s) return null;
   try {
-    return new Date(s).toLocaleDateString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit' });
-  } catch { return '—'; }
+    const d = new Date(s);
+    return d.toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })
+      + ' ' + d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+  } catch { return null; }
 };
 
-const fmtScore = (v) => (v != null ? Math.round(v) : '—');
-
-// sections에서 E/S/G 점수 추출
-const extractScores = (sections = []) => ({
-  E: sections.find(s => ['Environment','E'].includes(s.category))?.score ?? null,
-  S: sections.find(s => ['Social','S'].includes(s.category))?.score ?? null,
-  G: sections.find(s => ['Governance','G'].includes(s.category))?.score ?? null,
-});
-
-// totalScore 계산 (K-ESG 기준 E:0.4 S:0.3 G:0.3)
-const computeTotal = ({ E, S, G }) => {
-  if (E == null && S == null && G == null) return null;
-  return Math.round((E ?? 0) * 0.40 + (S ?? 0) * 0.30 + (G ?? 0) * 0.30);
-};
-
-// evidence로부터 risk 목록 도출
-const computeRisks = (report) => {
-  if (!report) return [];
-  const risks = [];
-  const em = report.evidenceMapping ?? [];
-
-  // LOW confidence evidence
-  const low = em.filter(e => (e.confidenceScore ?? e.confidence ?? 100) < 40).length;
-  const med = em.filter(e => {
-    const c = e.confidenceScore ?? e.confidence ?? 100;
-    return c >= 40 && c < 65;
-  }).length;
-
-  const SG_CODES = ['S-201','S-202','S-203','S-204','S-205','G-301','G-302','G-303','G-304','G-305'];
-  const detected = new Set(em.map(e => e.kesgCode));
-  const gBlocked = SG_CODES.filter(c => c.startsWith('G') && !detected.has(c));
-  const sBlocked = SG_CODES.filter(c => c.startsWith('S') && !detected.has(c));
-
-  if (low >= 2)
-    risks.push({ sev: 'HIGH', code: 'E-CONF', title: '신뢰도 낮은 증빙 다수 감지', desc: `${low}개 지표에서 신뢰도 40% 미만의 evidence가 검출되었습니다.` });
-  else if (low === 1)
-    risks.push({ sev: 'MED', code: 'E-CONF', title: '신뢰도 낮은 증빙', desc: '1개 지표에서 신뢰도가 낮은 evidence가 감지되었습니다.' });
-
-  if (gBlocked.length >= 2)
-    risks.push({ sev: 'HIGH', code: 'G-EVIDENCE', title: '지배구조 근거 부족', desc: `${gBlocked.length}개 G 지표에서 evidence가 미검출되었습니다.` });
-  else if (gBlocked.length === 1)
-    risks.push({ sev: 'MED', code: 'G-EVIDENCE', title: '지배구조 증빙 부족', desc: '1개 G 지표에서 evidence가 미검출되었습니다.' });
-
-  if (sBlocked.length >= 2)
-    risks.push({ sev: 'MED', code: 'S-EVIDENCE', title: '사회 지표 증빙 부족', desc: `${sBlocked.length}개 S 지표에서 evidence가 미검출되었습니다.` });
-
-  if (med >= 2)
-    risks.push({ sev: 'LOW', code: 'CONFIDENCE', title: '검증 신뢰도 개선 필요', desc: `${med}개 지표에서 신뢰도 65% 미만의 evidence가 감지되었습니다.` });
-
-  return risks.slice(0, 5);
-};
-
-// ── AI 추천 인사이트 생성 ──────────────────────────────────────────
-const buildInsights = (report, scores, risks) => {
-  const insights = [];
-  const grade = report?.finalGrade;
-  const total = computeTotal(scores);
-
-  if (grade === 'A' || grade === 'S') {
-    insights.push({ type: 'strength', text: `${grade}등급은 K-ESG 상위 수준입니다. 증빙 품질을 유지하면 등급 유지가 가능합니다.` });
-  } else if (grade === 'C' || grade === 'D') {
-    insights.push({ type: 'risk', text: '현재 등급은 개선이 필요한 수준입니다. 증빙 보완을 통해 점수 향상이 가능합니다.' });
-  }
-
-  if (scores.E != null && scores.E < 50)
-    insights.push({ type: 'action', text: `환경(E) 점수(${Math.round(scores.E)}점)가 낮습니다. CSV 수치 파일과 PDF 증빙을 보완해주세요.` });
-  if (scores.G != null && scores.G < 60)
-    insights.push({ type: 'action', text: `지배구조(G) 점수(${Math.round(scores.G)}점) 개선을 위해 이사회/내부통제 관련 정책 문서를 보완하세요.` });
-
-  const highRisks = risks.filter(r => r.sev === 'HIGH');
-  if (highRisks.length > 0)
-    insights.push({ type: 'risk', text: `${highRisks.length}건의 HIGH 수준 조치 항목이 있습니다. 즉시 확인이 필요합니다.` });
-
-  if (insights.length === 0)
-    insights.push({ type: 'info', text: '현재 분석 결과를 기반으로 지속적인 모니터링을 권장합니다.' });
-
-  return insights.slice(0, 3);
-};
-
-// ── 로딩 Skeleton ────────────────────────────────────────────────────
-function KPISkeleton() {
+// ── SVG Sparkline ────────────────────────────────────────────────────
+function Sparkline({ data, color = '#059669', vbWidth = 240, height = 40, dotRadius = 3 }) {
+  if (!data || data.length < 2) return null;
+  const nums = data.map(v => Number(v) || 0);
+  const min  = Math.min(...nums);
+  const max  = Math.max(...nums);
+  const rng  = max - min || 1;
+  const pad  = 5;
+  const pts  = nums.map((v, i) => {
+    const x = ((i / (nums.length - 1)) * vbWidth).toFixed(1);
+    const y = (height - pad - ((v - min) / rng) * (height - pad * 2)).toFixed(1);
+    return `${x},${y}`;
+  }).join(' ');
+  const lastPt  = pts.split(' ').pop().split(',');
+  const fillPts = `0,${height} ${pts} ${vbWidth},${height}`;
+  const gradId  = `sg-${color.replace('#', '')}`;
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-6 animate-pulse">
-      <div className="h-2 w-16 bg-gray-100 rounded mb-4" />
-      <div className="h-10 w-14 bg-gray-100 rounded mb-3" />
-      <div className="h-1.5 w-full bg-gray-100 rounded" />
-    </div>
+    <svg width="100%" height={height} viewBox={`0 0 ${vbWidth} ${height}`}
+      preserveAspectRatio="xMidYMid meet"
+      style={{ display: 'block', overflow: 'visible' }}>
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.14" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polygon points={fillPts} fill={`url(#${gradId})`} />
+      <polyline points={pts} stroke={color} strokeWidth="1.8" fill="none"
+        strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={lastPt[0]} cy={lastPt[1]} r={dotRadius} fill={color} />
+      <circle cx={lastPt[0]} cy={lastPt[1]} r={dotRadius + 2.5} fill={color} fillOpacity="0.18" />
+    </svg>
   );
 }
 
-function HeroStatSkeleton() {
-  return <div className="flex-1 h-24 rounded-2xl bg-white/5 animate-pulse" />;
+function KpiSkeleton() {
+  return <div className="bg-white h-[88px] rounded-lg animate-pulse" style={{ background: '#f3f4f6' }} />;
 }
 
-// ── 메인 컴포넌트 ───────────────────────────────────────────────────
+// ── 메인 컴포넌트 ────────────────────────────────────────────────────
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const {
-    companyId,
-    latestReport,
-    benchmarkData,
-    carbonStats,
-    fetchLatestData,
-    fetchBenchmarkData,
-  } = useAnalysis();
+  const { user } = useAuth();
+  const { latestReport, fetchLatestData, fetchBenchmarkData } = useAnalysis();
 
-  const [loading, setLoading]   = useState(false);
-  const [history, setHistory]   = useState([]);
+  const [rawData,          setRawData]          = useState(null);
+  const [loading,          setLoading]          = useState(false);
+  const [error,            setError]            = useState(null);
+  const [historyData,      setHistoryData]      = useState([]);
+  const [showAllHistory,   setShowAllHistory]   = useState(false);
+  const [ecoPool,          setEcoPool]          = useState(null);
+  const [recentPosts,      setRecentPosts]      = useState([]);
+
+  const analysisId = latestReport?.analysisId
+    ?? localStorage.getItem('esg_latest_analysis_id');
 
   const loadAll = useCallback(async () => {
     setLoading(true);
-    await Promise.all([
-      fetchLatestData(),
-      fetchBenchmarkData(),
-    ]);
-    // 분석 기록 (stats endpoint 활용)
-    try {
-      const res = await api.get('/analysis/stats', {
-        headers: { 'X-Company-Id': companyId },
-      });
-      if (Array.isArray(res.data)) setHistory(res.data);
-    } catch { /* stats 없으면 빈 배열 유지 */ }
+    setError(null);
+    await Promise.all([fetchLatestData(), fetchBenchmarkData()]);
     setLoading(false);
-  }, [companyId, fetchLatestData, fetchBenchmarkData]);
+  }, [fetchLatestData, fetchBenchmarkData]);
+
+  useEffect(() => {
+    if (!analysisId) return;
+    api.get(`/api/v1/analysis/${analysisId}/result`)
+      .then(r => setRawData(normalizeScore(r.data)))
+      .catch(() => setError('결과 데이터 로드 실패'));
+  }, [analysisId]);
+
+  useEffect(() => {
+    api.get('/analysis/history')
+      .then(r => {
+        const list = Array.isArray(r.data)          ? r.data
+                   : Array.isArray(r.data?.content) ? r.data.content
+                   : [];
+        setHistoryData([...list].reverse());
+      })
+      .catch(() => setHistoryData([]));
+  }, []);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
-  // ── 파생 데이터 ──────────────────────────────────────────────────
-  const scores    = extractScores(latestReport?.sections ?? []);
-  const totalScore = latestReport?.totalScore ?? computeTotal(scores);
-  const risks     = computeRisks(latestReport);
-  const insights  = buildInsights(latestReport, scores, risks);
+  useEffect(() => {
+    if (!user?.companyId) return;
+    api.get(`/points/company/${user.companyId}/esg-pool`)
+      .then(r => setEcoPool(r.data))
+      .catch(() => setEcoPool(null));
+    api.get('/posts', { params: { size: 5, sort: 'createdDate,desc' } })
+      .then(r => {
+        const list = Array.isArray(r.data) ? r.data
+                   : Array.isArray(r.data?.content) ? r.data.content
+                   : [];
+        setRecentPosts(list);
+      })
+      .catch(() => setRecentPosts([]));
+  }, [user?.companyId]);
 
-  const gradeAccent = GRADE_COLOR[latestReport?.finalGrade] ?? '#6b7280';
-  const gradeCls    = GRADE_CLS[latestReport?.finalGrade] ?? 'bg-gray-100 text-gray-500 border-gray-200';
+  const kpis         = useMemo(() => computeDashboardKPIs(rawData), [rawData]);
+  const hasData      = !!kpis;
+  const gradeAccent  = GRADE_COLOR[kpis?.finalGrade] ?? '#6b7280';
 
-  // Benchmark 위치 (annualReductionPercent 활용 — 탄소 배출 비교)
-  const benchReduct = benchmarkData?.annualReductionPercent;
-  const benchBetter = benchReduct != null && benchReduct < 0;
+  // 신뢰도 스타일 — light 배경 기준
+  const confLevel = kpis?.confidence == null ? null
+    : kpis.confidence >= 75 ? 'HIGH'
+    : kpis.confidence >= 55 ? 'MED'
+    : 'LOW';
+  const confStyle = confLevel === 'HIGH'
+    ? { text: 'text-emerald-600', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
+    : confLevel === 'MED'
+    ? { text: 'text-amber-600',   badge: 'bg-amber-50 text-amber-700 border-amber-200' }
+    : confLevel === 'LOW'
+    ? { text: 'text-red-600',     badge: 'bg-red-50 text-red-600 border-red-200' }
+    : { text: 'text-gray-400',    badge: '' };
 
-  // 탄소 추이 데이터 (월별)
-  const emissionTrend = (benchmarkData?.monthlyData ?? carbonStats?.map((c, i) => ({
-    monthLabel: `${i + 1}월`,
-    myEmissionTco2: c.totalEmission,
-  })) ?? []).slice(-6);
+  const toResult      = (tab)  => analysisId
+    ? navigate(`/analysis/result/${analysisId}?tab=${tab}`)
+    : navigate('/analysis/report');
+  const toResultFocus = (code, tab = 'action') => analysisId
+    ? navigate(`/analysis/result/${analysisId}?tab=${tab}&focus=${code}`)
+    : navigate('/analysis/report');
 
-  // HIGH/MED 리스크 건수
-  const highCount = risks.filter(r => r.sev === 'HIGH').length;
-  const medCount  = risks.filter(r => r.sev === 'MED').length;
+  const auditEvents = useMemo(() => {
+    const deriveEvent = (h) => {
+      const grade  = h.grade ?? null;
+      const conf   = h.overallConfidence != null ? Number(h.overallConfidence) : null;
+      const gScore = Number(h.gScore ?? 0);
+      const time   = h.createdAt;
+      if (grade === 'D')
+        return { dotCls: 'bg-red-400', label: '고위험 이슈 감지',
+          desc: 'D등급 — 즉시 조치 필요 항목 확인됨', time,
+          badge: { cls: 'bg-red-50 text-red-600 border-red-200', text: 'HIGH' } };
+      if (grade === 'C')
+        return { dotCls: 'bg-amber-400', label: '주의 등급 판정',
+          desc: 'C등급 — 개선 필요 항목이 존재합니다', time,
+          badge: { cls: 'bg-amber-50 text-amber-700 border-amber-200', text: '주의' } };
+      if (conf != null && conf < 70)
+        return { dotCls: 'bg-amber-400', label: '신뢰도 주의',
+          desc: `감사 검증 신뢰도 ${conf}% — 증빙 문서 보완이 권장됩니다`, time,
+          badge: { cls: 'bg-amber-50 text-amber-700 border-amber-200', text: '주의' } };
+      if (gScore > 0 && gScore < 60)
+        return { dotCls: 'bg-amber-400', label: 'Governance 미흡',
+          desc: `지배구조 점수 ${Math.round(gScore)}점 — 기준(60점) 미달`, time,
+          badge: { cls: 'bg-amber-50 text-amber-700 border-amber-200', text: '경고' } };
+      const score = h.totalScore ? `종합 ${Math.round(h.totalScore)}점` : '';
+      return { dotCls: 'bg-emerald-400', label: 'AI ESG 분석 완료',
+        desc: [grade && `${grade}등급`, score].filter(Boolean).join(' · ') || '분석 완료',
+        time, badge: { cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', text: '완료' } };
+    };
 
-  // ── KPI 카드 데이터 ────────────────────────────────────────────
-  const kpiCards = [
-    {
-      id: 'grade',
-      label: 'ESG 종합 등급',
-      sub: 'K-ESG 기준',
-      value: latestReport?.finalGrade ?? '—',
-      valueClass: 'font-black font-mono text-4xl leading-none',
-      valueColor: gradeAccent,
-      extra: totalScore != null
-        ? <span className="text-sm text-gray-400 font-mono tabular-nums">{totalScore}점 / 100</span>
-        : null,
-      bar: totalScore != null ? { value: totalScore, color: gradeAccent } : null,
-      badge: null,
-      icon: <BarChart2 size={16} style={{ color: gradeAccent }} />,
-      iconBg: `${gradeAccent}18`,
-      onClick: () => navigate('/analysis/report'),
-    },
-    {
-      id: 'score',
-      label: 'E / S / G 점수',
-      sub: '카테고리별 점수',
-      value: null,
-      extra: (
-        <div className="flex items-end gap-3 mt-1">
-          {[
-            { cat: 'E', v: scores.E, color: '#059669', Icon: Leaf },
-            { cat: 'S', v: scores.S, color: '#3b82f6', Icon: Users },
-            { cat: 'G', v: scores.G, color: '#f59e0b', Icon: Building2 },
-          ].map(({ cat, v, color, Icon }) => (
-            <div key={cat} className="flex-1">
-              <div className="flex items-center gap-1 mb-1">
-                <Icon size={10} style={{ color }} />
-                <span className="text-[9px] font-bold uppercase" style={{ color }}>{cat}</span>
-              </div>
-              <span className="text-xl font-black font-mono tabular-nums leading-none" style={{ color: v != null ? color : '#d1d5db' }}>
-                {fmtScore(v)}
-              </span>
-              {v != null && (
-                <div className="mt-1 h-1 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${v}%`, background: color }} />
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      ),
-      bar: null,
-      icon: <Activity size={16} className="text-indigo-500" />,
-      iconBg: '#6366f118',
-    },
-    {
-      id: 'risk',
-      label: '즉시 조치 필요',
-      sub: 'Audit Recommendations',
-      value: latestReport ? (risks.length === 0 ? '없음' : `${risks.length}건`) : '—',
-      valueClass: `font-black text-4xl leading-none font-mono ${
-        highCount > 0 ? 'text-red-600' : medCount > 0 ? 'text-amber-600' : 'text-emerald-600'
-      }`,
-      extra: latestReport && risks.length > 0 ? (
-        <div className="flex items-center gap-1.5 mt-1.5">
-          {highCount > 0 && (
-            <span className="text-[9px] font-black px-2 py-0.5 rounded-full border bg-red-50 border-red-200 text-red-700">
-              HIGH {highCount}
-            </span>
-          )}
-          {medCount > 0 && (
-            <span className="text-[9px] font-black px-2 py-0.5 rounded-full border bg-amber-50 border-amber-200 text-amber-700">
-              MED {medCount}
-            </span>
-          )}
-        </div>
-      ) : latestReport && risks.length === 0 ? (
-        <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 mt-1">
-          <CheckCircle size={11} /> 조치 항목 없음
-        </span>
-      ) : null,
-      bar: null,
-      icon: <AlertTriangle size={16} className={highCount > 0 ? 'text-red-500' : 'text-amber-500'} />,
-      iconBg: highCount > 0 ? '#ef444418' : '#f59e0b18',
-    },
-    {
-      id: 'benchmark',
-      label: '업종 Benchmark',
-      sub: benchmarkData?.industryName ?? '업종 미설정',
-      value: benchmarkData != null
-        ? (benchmarkData.isBetterThanAverage ? '업종 평균 대비 우수' : '업종 평균 대비 개선 필요')
-        : '—',
-      valueClass: `font-black text-lg leading-none ${benchmarkData?.isBetterThanAverage ? 'text-emerald-600' : 'text-amber-600'}`,
-      extra: benchReduct != null ? (
-        <div className={`flex items-center gap-1 mt-1.5 text-[11px] font-semibold ${benchBetter ? 'text-emerald-600' : 'text-amber-600'}`}>
-          {benchBetter ? <TrendingDown size={12} /> : <TrendingUp size={12} />}
-          탄소 배출량 업종 평균 대비 {Math.abs(benchReduct).toFixed(1)}% {benchBetter ? '낮음 ↓' : '높음 ↑'}
-        </div>
-      ) : <span className="text-[10px] text-gray-400 mt-1">benchmark 데이터 없음</span>,
-      bar: null,
-      icon: <TrendingUp size={16} className="text-purple-500" />,
-      iconBg: '#a855f718',
-    },
+    // 전체 이력을 최신순으로 변환 — UI 레이어에서 slice(0,5) + expand 처리
+    const recentHistory = [...historyData].reverse();
+    if (recentHistory.length > 0) return recentHistory.map(deriveEvent);
+
+    if (!kpis) return [];
+    const events = [deriveEvent({
+      grade: kpis.finalGrade, totalScore: kpis.totalScore,
+      overallConfidence: kpis.confidence, gScore: kpis.gScore, createdAt: kpis.analyzedAt,
+    })];
+    if (kpis.highCount > 0) events.push({
+      dotCls: 'bg-red-400', label: `고위험 이슈 ${kpis.highCount}건`,
+      desc: kpis.recs.find(r => r.sev === 'HIGH')?.title ?? '즉시 조치가 필요한 항목이 있습니다.',
+      time: kpis.analyzedAt, badge: { cls: 'bg-red-50 text-red-600 border-red-200', text: 'HIGH' },
+    });
+    return events;
+  }, [historyData, kpis]);
+
+  const maskNickname = (name) => {
+    if (!name || name.length <= 1) return name ?? '익명';
+    return name[0] + 'OO';
+  };
+
+  const fmtFeedTime = (s) => {
+    if (!s) return '';
+    try {
+      const diff = Date.now() - new Date(s).getTime();
+      const mins = Math.floor(diff / 60000);
+      if (mins < 60) return `${mins}분 전`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return `${hrs}시간 전`;
+      return `${Math.floor(hrs / 24)}일 전`;
+    } catch { return ''; }
+  };
+
+  const uniqueParticipants = useMemo(() =>
+    new Set(recentPosts.map(p => p.memberId)).size,
+  [recentPosts]);
+
+  const trendMetrics = useMemo(() => {
+    const delta = (arr) => arr.length >= 2
+      ? Number((arr[arr.length - 1] - arr[arr.length - 2]).toFixed(1))
+      : null;
+    const eArr = historyData.map(h => Number(h.eScore ?? 0));
+    const sArr = historyData.map(h => Number(h.sScore ?? 0));
+    const gArr = historyData.map(h => Number(h.gScore ?? 0));
+    return [
+      { key: 'E', label: 'E · 환경',     data: eArr, current: kpis?.eScore, color: '#059669', delta: delta(eArr) },
+      { key: 'S', label: 'S · 사회',     data: sArr, current: kpis?.sScore, color: '#2563eb', delta: delta(sArr) },
+      { key: 'G', label: 'G · 지배구조', data: gArr, current: kpis?.gScore, color: '#d97706', delta: delta(gArr) },
+    ];
+  }, [historyData, kpis]);
+
+  const quickNavItems = [
+    { label: '상세 분석 리포트',   desc: '등급·점수·종합 요약',      Icon: BarChart2,     color: '#6366f1', tab: 'summary' },
+    { label: '근거 추적',          desc: '지표별 증빙·근거 확인',     Icon: FileSearch,    color: '#059669', tab: 'evidence' },
+    { label: '개선 과제',          desc: '개선 우선순위·필요 서류',   Icon: Zap,           color: '#dc2626', tab: 'action' },
+    { label: '업종 비교',          desc: '업종 통계 기반 환경 비교',  Icon: TrendingUp,    color: '#7c3aed', tab: 'industry' },
+    { label: '분석 기록',          desc: '시스템 처리 이력 확인',     Icon: ClipboardList, color: '#d97706', tab: 'audit-log' },
+    { label: 'PDF 다운로드',       desc: '전체 리포트 내보내기',      Icon: Download,      color: '#64748b', tab: null, action: () => rawData && exportAnalysisResult(rawData, analysisId, ecoPool?.esgPoints ?? null) },
   ];
 
-  // ── derived for hero
-  const verifiedCount = (() => {
-    const em = latestReport?.evidenceMapping ?? [];
-    return em.filter(e => (e.confidenceScore ?? e.confidence ?? 0) >= 65).length;
-  })();
-  const totalIndicators = (latestReport?.evidenceMapping ?? []).length;
-  const auditStatus = !latestReport ? null
-    : highCount > 0 ? { label: '즉시 조치 필요', cls: 'text-red-400', dot: 'bg-red-400' }
-    : medCount  > 0 ? { label: '개선 권장',     cls: 'text-amber-400', dot: 'bg-amber-400' }
-    : { label: '양호',              cls: 'text-emerald-400', dot: 'bg-emerald-400' };
+  // ── KPI 셀 컴포넌트 (재사용) ──────────────────────────────────────
+  const kpiCellBase = 'bg-white px-5 py-4 transition-colors';
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900" style={{ fontFamily: "'Pretendard', sans-serif" }}>
+    <div className="min-h-screen" style={{ background: '#F7F8FA', fontFamily: "'Pretendard', sans-serif" }}>
 
-      {/* ══════════════════════════════════════════════════════════════
-           HERO — Dark surface, Vercel/Linear/Palantir style
-      ══════════════════════════════════════════════════════════════ */}
-      <div style={{ background: '#0F172A' }} className="w-full">
-        <div className="max-w-7xl mx-auto px-8 pt-7 pb-8">
-
-          {/* Top bar */}
-          <div className="flex items-center justify-between mb-7">
-            <div className="flex items-center gap-3">
-              <span className="w-8 h-8 rounded-xl bg-emerald-600/90 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-900/40">
-                <Cpu size={14} className="text-white" />
-              </span>
-              <div>
-                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.14em]">AI ESG Audit Command Center</p>
-                <p className="text-[14px] font-semibold text-white leading-snug tracking-tight">
-                  {latestReport?.companyName ?? '기업 ESG 현황'}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={loadAll}
-                disabled={loading}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/8 text-[12px] font-medium text-slate-400 hover:text-white transition-all duration-150 disabled:opacity-40"
-              >
-                <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
-                새로고침
-              </button>
-              <button
-                onClick={() => navigate('/analysis')}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-[12px] font-semibold text-white transition-all duration-150 shadow-sm shadow-emerald-900/30"
-              >
-                <Plus size={12} />
-                신규 분석
-              </button>
-            </div>
+      {/* ── 1. Greeting Header ───────────────────────────────────────── */}
+      <div className="bg-white border-b border-gray-200">
+        <div style={wrapStyle} className="px-8 py-5 flex items-center justify-between gap-6 flex-wrap">
+          <div>
+            <h1 className="text-[26px] font-black text-gray-900 tracking-tight leading-snug">
+              안녕하세요,{' '}
+              <span style={{ color: gradeAccent }}>
+                {kpis?.companyName ?? user?.nickname ?? '기업'}
+              </span>{' '}
+              관리자님!
+            </h1>
+            <p className="text-[13px] text-gray-400 mt-1 leading-snug">
+              ESG 분석 현황과 점수 변화를 확인해보세요.
+            </p>
+            <p className="text-[11px] text-gray-300 mt-1.5 flex items-center gap-2 flex-wrap">
+              {kpis?.finalGrade && (
+                <span className="font-semibold" style={{ color: gradeAccent }}>
+                  최신 등급 {kpis.finalGrade}
+                </span>
+              )}
+              {kpis?.finalGrade && historyData.length > 0 && (
+                <span className="text-gray-200">·</span>
+              )}
+              {historyData.length > 0
+                ? `총 ${historyData.length}회 분석 이력`
+                : '아직 분석 이력이 없습니다.'}
+            </p>
           </div>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {fmtDateTime(kpis?.analyzedAt) && (
+              <span className="text-[11px] text-gray-400 flex items-center gap-1.5">
+                <Clock size={10} />
+                마지막 분석 {fmtDateTime(kpis.analyzedAt)}
+              </span>
+            )}
+            <button
+              onClick={loadAll} disabled={loading}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-[12px] font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-40"
+            >
+              <RefreshCw size={11} className={loading ? 'animate-spin' : ''} />
+              새로고침
+            </button>
+            <button
+              onClick={() => navigate('/analysis')}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gray-900 hover:bg-gray-800 text-[12px] font-semibold text-white transition-all"
+            >
+              <Plus size={12} /> 새 분석 시작
+            </button>
+          </div>
+        </div>
+      </div>
 
-          {/* Hero KPI strip */}
-          {loading && !latestReport ? (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {[1,2,3,4].map(i => <HeroStatSkeleton key={i} />)}
+      {/* ── Content ──────────────────────────────────────────────────── */}
+      <div style={wrapStyle} className="px-8 py-5 space-y-4">
+
+        {/* ── 2. Hero KPI — light executive summary card ───────────── */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          {(loading && !hasData) ? (
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-px bg-gray-100 p-px">
+              {[1,2,3,4,5].map(i => <KpiSkeleton key={i} />)}
             </div>
-          ) : latestReport ? (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          ) : hasData ? (
+            // gap-px + bg-gray-100/70 = 1px separators between cells
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-px bg-gray-100/70">
 
-              {/* ESG Grade */}
-              <div className="hero-card px-6 py-5 cursor-pointer" onClick={() => navigate('/analysis/report')}>
-                <p className="kpi-label text-slate-500 mb-3">ESG 종합 등급</p>
-                <div className="flex items-end gap-3 mb-3">
-                  <span className="kpi-number text-5xl" style={{ color: gradeAccent }}>
-                    {latestReport.finalGrade ?? '—'}
+              {/* ESG 종합 등급 */}
+              <div className={`${kpiCellBase} cursor-pointer hover:bg-gray-50/70`}
+                onClick={() => toResult('summary')}>
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-1.5">
+                  ESG 종합 등급
+                </p>
+                <div className="flex items-baseline gap-2 mb-1.5">
+                  <span className="text-4xl font-black font-mono leading-none"
+                    style={{ color: gradeAccent }}>
+                    {kpis.finalGrade ?? '—'}
                   </span>
-                  {totalScore != null && (
-                    <span className="text-slate-400 text-sm font-mono mb-0.5 tabular-nums">
-                      {totalScore}점
+                  {kpis.totalScore > 0 && (
+                    <span className="text-[15px] font-semibold font-mono tabular-nums"
+                      style={{ color: gradeAccent, opacity: 0.7 }}>
+                      {Math.round(kpis.totalScore)}점
                     </span>
                   )}
                 </div>
-                {totalScore != null && (
-                  <div className="h-0.5 bg-white/10 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full progress-bar-fill" style={{ width: `${totalScore}%`, background: gradeAccent }} />
+                {kpis.totalScore > 0 && (
+                  <div className="h-[3px] bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full"
+                      style={{ width: `${Math.min(kpis.totalScore, 100)}%`, background: gradeAccent, opacity: 0.45 }} />
                   </div>
                 )}
-                <p className="text-[10px] text-slate-600 mt-2">K-ESG 기준 · 클릭해서 상세 보기</p>
+                <p className="text-[10px] text-gray-300 mt-1">K-ESG 기준</p>
               </div>
 
-              {/* E/S/G scores */}
-              <div className="hero-card px-6 py-5">
-                <p className="kpi-label text-slate-500 mb-3">카테고리 점수</p>
+              {/* E / S / G */}
+              <div className={kpiCellBase}>
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-1.5">
+                  E / S / G 점수
+                </p>
                 <div className="flex items-end gap-5">
                   {[
-                    { cat: 'E', v: scores.E, color: '#34d399' },
-                    { cat: 'S', v: scores.S, color: '#60a5fa' },
-                    { cat: 'G', v: scores.G, color: '#fbbf24' },
+                    { cat: 'E', v: kpis.eScore, color: '#059669' },
+                    { cat: 'S', v: kpis.sScore, color: '#2563eb' },
+                    { cat: 'G', v: kpis.gScore, color: '#d97706' },
                   ].map(({ cat, v, color }) => (
                     <div key={cat}>
-                      <p className="text-[9px] font-bold uppercase mb-1.5 tracking-widest" style={{ color }}>{cat}</p>
-                      <span className="kpi-number text-3xl" style={{ color: v != null ? color : '#334155' }}>
-                        {v != null ? Math.round(v) : '—'}
+                      <p className="text-[9px] font-bold uppercase tracking-widest mb-0.5"
+                        style={{ color, opacity: 0.8 }}>{cat}</p>
+                      <span className="text-[23px] font-black font-mono leading-none"
+                        style={{ color: v > 0 ? color : '#e2e8f0' }}>
+                        {v > 0 ? Math.round(v) : '—'}
                       </span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Verified indicators */}
-              <div className="hero-card px-6 py-5">
-                <p className="kpi-label text-slate-500 mb-3">검증 완료 지표</p>
-                <div className="flex items-end gap-2 mb-2">
-                  <span className="kpi-number text-4xl text-white">
-                    {verifiedCount}
-                  </span>
-                  {totalIndicators > 0 && (
-                    <span className="text-slate-500 text-base mb-0.5 tabular-nums font-mono">
-                      / {totalIndicators}
+              {/* 분석 신뢰도 */}
+              <div className={kpiCellBase}>
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-1.5">
+                  분석 신뢰도
+                </p>
+                <span className={`text-3xl font-black font-mono leading-none ${confStyle.text}`}>
+                  {kpis.confidence != null ? `${kpis.confidence}%` : '—'}
+                </span>
+                {confLevel && (
+                  <div className="mt-1.5">
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded border ${confStyle.badge}`}>
+                      {confLevel}
                     </span>
-                  )}
-                </div>
-                {totalIndicators > 0 && (
-                  <div className="h-0.5 bg-white/10 rounded-full overflow-hidden mb-2">
-                    <div className="h-full rounded-full bg-emerald-400 progress-bar-fill"
-                      style={{ width: `${Math.round((verifiedCount / totalIndicators) * 100)}%` }} />
                   </div>
                 )}
-                <p className="text-[10px] text-slate-600">신뢰도 65%+ 근거 확인</p>
               </div>
 
-              {/* Audit status */}
-              <div className="hero-card px-6 py-5">
-                <p className="kpi-label text-slate-500 mb-3">Audit 상태</p>
-                {auditStatus ? (
-                  <>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`w-2 h-2 rounded-full shrink-0 ${auditStatus.dot}`}
-                        style={{ boxShadow: `0 0 6px currentColor` }} />
-                      <span className={`text-[15px] font-semibold ${auditStatus.cls}`}>{auditStatus.label}</span>
-                    </div>
-                    {risks.length > 0 ? (
-                      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                        {highCount > 0 && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 border border-red-500/25">
-                            HIGH {highCount}
-                          </span>
-                        )}
-                        {medCount > 0 && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25">
-                            MED {medCount}
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="text-[10px] text-emerald-400/80 mt-1 flex items-center gap-1">
-                        <CheckCircle size={10} /> 조치 항목 없음
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-slate-600 text-sm">분석 결과 없음</p>
-                )}
+              {/* EcoPoint 현황 */}
+              <div className={`${kpiCellBase} cursor-pointer hover:bg-gray-50/70`}
+                onClick={() => navigate('/community')}>
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-1.5">
+                  EcoPoint 현황
+                </p>
+                <div className="flex items-baseline gap-1.5 mb-1.5">
+                  <span className="text-3xl font-black font-mono leading-none text-emerald-600">
+                    {ecoPool != null
+                      ? Number(ecoPool.esgPoints).toLocaleString()
+                      : '—'}
+                  </span>
+                  {ecoPool != null && (
+                    <span className="text-[12px] text-emerald-400 font-semibold">EP</span>
+                  )}
+                </div>
+                <p className="text-[10px] text-gray-300 mt-1 flex items-center gap-1">
+                  <Leaf size={9} className="text-emerald-400 shrink-0" />
+                  회사 누적 ESG 포인트
+                </p>
+              </div>
+
+              {/* 근거 확인 현황 */}
+              <div className={`${kpiCellBase} cursor-pointer hover:bg-gray-50/70`}
+                onClick={() => toResult('evidence')}>
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-1.5">
+                  근거 확인
+                </p>
+                <div className="flex items-baseline gap-1.5 mb-1.5">
+                  <span className="text-3xl font-black font-mono leading-none text-gray-900">
+                    {kpis.verifiedCount}
+                  </span>
+                  <span className="text-[12px] text-gray-400 font-mono">/ {kpis.totalIndicators}</span>
+                </div>
+                <div className="h-[3px] bg-gray-100 rounded-full overflow-hidden mb-2">
+                  <div
+                    className="h-full bg-emerald-500 rounded-full transition-all duration-700"
+                    style={{ width: `${kpis.totalIndicators > 0 ? Math.round(kpis.verifiedCount / kpis.totalIndicators * 100) : 0}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-gray-400">지표 근거 확인 완료</p>
               </div>
 
             </div>
           ) : (
-            /* No report state */
-            <div className="hero-card px-8 py-12 text-center">
-              <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/8 flex items-center justify-center mx-auto mb-4">
-                <BarChart2 size={22} className="text-slate-500" />
-              </div>
-              <p className="text-slate-300 font-semibold mb-1.5">아직 분석 결과가 없습니다</p>
-              <p className="text-slate-500 text-[13px] mb-6">첫 번째 AI ESG Audit를 시작해보세요.</p>
-              <button
-                onClick={() => navigate('/analysis')}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold text-white transition-all duration-150 shadow-sm shadow-emerald-900/30"
-              >
-                <Plus size={14} /> 분석 시작
+            <div className="text-center py-12 px-6">
+              {error
+                ? <p className="text-red-500 text-[13px] mb-4">{error}</p>
+                : <p className="text-gray-400 text-[13px] mb-5">아직 분석 결과가 없습니다.</p>
+              }
+              <button onClick={() => navigate('/analysis')}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-gray-900 hover:bg-gray-800 text-[13px] font-semibold text-white transition-all">
+                <Plus size={13} /> 첫 분석 시작
               </button>
             </div>
           )}
-
-        </div>
-      </div>
-
-      {/* ══════════════════════════════════════════════════════════════
-           CONTENT AREA
-      ══════════════════════════════════════════════════════════════ */}
-      <div className="max-w-7xl mx-auto px-8 py-8 space-y-6">
-
-        {/* ── Secondary KPI Cards ───────────────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          {loading && !latestReport
-            ? Array.from({ length: 4 }).map((_, i) => <KPISkeleton key={i} />)
-            : kpiCards.map((card) => (
-                <div
-                  key={card.id}
-                  className={`saas-card p-6 group ${card.onClick ? 'cursor-pointer' : ''}`}
-                  onClick={card.onClick}
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <p className="kpi-label">{card.label}</p>
-                      <p className="text-[11px] text-gray-400 mt-1">{card.sub}</p>
-                    </div>
-                    <span className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: card.iconBg }}>
-                      {card.icon}
-                    </span>
-                  </div>
-
-                  {card.value !== null && (
-                    <div className="mb-2">
-                      <span
-                        className={card.valueClass ?? 'kpi-number text-3xl'}
-                        style={{ ...(card.valueColor ? { color: card.valueColor } : {}), fontFamily: "'Inter', sans-serif", letterSpacing: '-0.03em' }}
-                      >
-                        {card.value}
-                      </span>
-                    </div>
-                  )}
-
-                  {card.bar && (
-                    <div className="h-1 bg-gray-100 rounded-full overflow-hidden mt-2 mb-2">
-                      <div
-                        className="h-full rounded-full progress-bar-fill"
-                        style={{ width: `${Math.min(100, card.bar.value)}%`, background: card.bar.color }}
-                      />
-                    </div>
-                  )}
-
-                  {card.extra}
-
-                  {card.onClick && (
-                    <div className="mt-4 pt-3 border-t border-gray-100 flex items-center gap-1 text-[11px] text-gray-400 group-hover:text-emerald-600 transition-colors duration-150">
-                      <span>상세 결과 보기</span>
-                      <ChevronRight size={10} />
-                    </div>
-                  )}
-                </div>
-              ))}
         </div>
 
-        {/* ── Middle: History + Risk ───────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+        {/* ── Row 1: AI Action Center + ESG Snapshot ───────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-4 items-stretch">
 
-          {/* Left: 최근 분석 기록 */}
-          <div className="saas-card overflow-hidden">
-            <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-100">
-              <span className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-                <Clock size={13} className="text-gray-500" />
-              </span>
-              <span className="section-title">최근 ESG 분석 기록</span>
-              <span className="ml-auto text-[11px] text-gray-400 font-medium">Analysis History</span>
-            </div>
+          {/* EcoPoint 참여 현황 */}
+          <div className="bg-white rounded-xl border border-emerald-200 shadow-sm overflow-hidden flex flex-col">
 
-            {!latestReport ? (
-              <div className="empty-state">
-                <div className="empty-icon">
-                  <FileText size={18} className="text-gray-400" />
-                </div>
-                <p className="text-[13px] font-medium text-gray-600">분석 기록이 없습니다</p>
-                <p className="text-[12px] text-gray-400">신규 분석을 시작하면 결과가 여기 표시됩니다.</p>
-                <button
-                  onClick={() => navigate('/analysis')}
-                  className="flex items-center gap-1.5 text-[12px] font-semibold text-emerald-600 hover:text-emerald-700 transition-colors duration-150"
-                >
-                  <Plus size={12} /> 첫 분석 시작하기
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-[1fr_64px_60px_68px_80px_76px] px-6 py-2.5 bg-gray-50/80 border-b border-gray-100 gap-3">
-                  {['날짜 / 기업', '점수', '등급', '신뢰도', 'E / S / G', ''].map(h => (
-                    <span key={h} className="text-[10px] font-semibold text-gray-400 uppercase tracking-[0.08em]">{h}</span>
-                  ))}
-                </div>
-
-                <div
-                  className="grid grid-cols-[1fr_64px_60px_68px_80px_76px] px-6 py-4 gap-3 items-center hover:bg-gray-50/60 transition-colors duration-150 cursor-pointer border-b border-gray-100 group/row"
-                  onClick={() => navigate('/analysis/report')}
-                >
-                  <div>
-                    <p className="text-[13px] font-semibold text-gray-800">
-                      {latestReport.companyName ?? '기업 분석'}
-                    </p>
-                    <p className="text-[11px] text-gray-400 mt-0.5 tabular-nums" style={{ fontFamily: "'Inter', sans-serif" }}>
-                      {fmtDate(new Date().toISOString())} · 최신
-                    </p>
-                  </div>
-                  <span className="text-[15px] font-bold tabular-nums" style={{ color: gradeAccent, fontFamily: "'Inter', sans-serif", letterSpacing: '-0.02em' }}>
-                    {totalScore ?? '—'}
-                  </span>
-                  <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-lg border w-fit ${gradeCls}`} style={{ fontFamily: "'Inter', sans-serif" }}>
-                    {latestReport.finalGrade ?? '—'}
-                  </span>
-                  <span className="text-[12px] text-gray-500 tabular-nums" style={{ fontFamily: "'Inter', sans-serif" }}>
-                    {totalScore != null ? `~${Math.min(95, totalScore + 5)}%` : '—'}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    {[
-                      { c: 'E', v: scores.E, col: '#059669' },
-                      { c: 'S', v: scores.S, col: '#3b82f6' },
-                      { c: 'G', v: scores.G, col: '#f59e0b' },
-                    ].map(({ c, v, col }) => (
-                      <span key={c} className="text-[12px] font-bold tabular-nums" style={{ color: v != null ? col : '#d1d5db', fontFamily: "'Inter', sans-serif" }}>
-                        {fmtScore(v)}
-                      </span>
-                    ))}
-                  </div>
-                  <button className="flex items-center gap-1 text-[11px] text-gray-400 group-hover/row:text-emerald-600 transition-colors duration-150 font-medium">
-                    상세 <ChevronRight size={10} />
-                  </button>
-                </div>
-
-                <div className="px-6 py-3">
-                  <button
-                    onClick={() => navigate('/analysis/report')}
-                    className="flex items-center gap-1.5 text-[12px] font-medium text-gray-400 hover:text-emerald-600 transition-colors duration-150"
-                  >
-                    <ArrowUpRight size={13} /> 전체 분석 결과 보기
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Right: 즉시 조치 필요 */}
-          <div className="saas-card overflow-hidden flex flex-col">
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-              <span className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
-                <AlertTriangle size={13} className="text-red-500" />
+            {/* 헤더 */}
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-emerald-100 bg-emerald-50/30">
+              <span className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+                <Leaf size={13} className="text-emerald-600" />
               </span>
               <div>
-                <p className="section-title">즉시 조치 필요</p>
-                <p className="text-[11px] text-gray-400 mt-0.5">Audit Recommendations</p>
+                <p className="text-[13px] font-semibold text-gray-900">EcoPoint 참여 현황</p>
+                <p className="text-[11px] text-gray-400">직원 친환경 활동 기반 참여 현황</p>
               </div>
-              {risks.length > 0 && (
-                <div className="ml-auto flex items-center gap-1.5">
-                  {highCount > 0 && <span className="badge badge-high">HIGH {highCount}</span>}
-                  {medCount  > 0 && <span className="badge badge-medium">MED {medCount}</span>}
-                </div>
+              {ecoPool?.esgPoints > 0 && (
+                <span className="ml-auto text-[10px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg whitespace-nowrap">
+                  누적 활동 중
+                </span>
               )}
             </div>
 
-            <div className="flex-1">
-              {!latestReport ? (
-                <div className="empty-state py-10 gap-2">
-                  <div className="empty-icon w-9 h-9 rounded-xl">
-                    <AlertCircle size={16} className="text-gray-400" />
+            {/* 2열 지표 */}
+            <div className="grid grid-cols-2 divide-x divide-gray-100 border-b border-gray-100">
+              <div className="px-4 py-3 text-center">
+                <p className="text-[10px] text-gray-400 mb-1">참여 직원</p>
+                <p className="text-[20px] font-black text-gray-800 tabular-nums leading-none">
+                  {uniqueParticipants > 0 ? uniqueParticipants : '—'}
+                </p>
+                <p className="text-[9px] text-gray-300 mt-0.5">명</p>
+              </div>
+              <div className="px-4 py-3 text-center">
+                <p className="text-[10px] text-gray-400 mb-1">최근 활동</p>
+                <p className="text-[20px] font-black text-gray-800 tabular-nums leading-none">
+                  {recentPosts.length > 0 ? recentPosts.length : '—'}
+                </p>
+                <p className="text-[9px] text-gray-300 mt-0.5">건 확인</p>
+              </div>
+            </div>
+
+            {/* 최근 활동 피드 */}
+            <div className="px-5 py-3 flex-1 flex flex-col">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-2">최근 참여 활동</p>
+              {recentPosts.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center py-6 gap-2 text-center">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+                    <Leaf size={16} className="text-emerald-400" />
                   </div>
-                  <p className="text-[12px] text-gray-400">분석 결과 로드 후 표시됩니다.</p>
-                </div>
-              ) : risks.length === 0 ? (
-                <div className="empty-state py-10 gap-2">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center">
-                    <CheckCircle2 size={18} className="text-emerald-500" />
-                  </div>
-                  <p className="text-[13px] font-semibold text-emerald-700">조치 필요 항목 없음</p>
-                  <p className="text-[11px] text-gray-400">현재 분석에서 즉각 조치가<br/>필요한 항목이 없습니다.</p>
+                  <p className="text-[12px] text-gray-400">아직 친환경 활동 참여 내역이 없습니다.</p>
+                  <button
+                    onClick={() => navigate('/community')}
+                    className="text-[11px] text-emerald-600 font-medium hover:underline"
+                  >
+                    활동 참여하기 →
+                  </button>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-100">
-                  {risks.map((rec, i) => {
-                    const SEV = {
-                      HIGH: { bar: 'bg-red-400',    badge: 'badge badge-high',   action: '즉시 수정' },
-                      MED:  { bar: 'bg-amber-400',  badge: 'badge badge-medium', action: '개선 권장' },
-                      LOW:  { bar: 'bg-gray-200',   badge: 'badge badge-gray',   action: '참고' },
-                    };
-                    const s = SEV[rec.sev] ?? SEV.LOW;
-                    return (
-                      <div key={i} className="flex items-stretch hover:bg-gray-50/50 transition-colors duration-150">
-                        <div className={`w-1 shrink-0 ${s.bar} rounded-r-full`} />
-                        <div className="px-5 py-4 flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2 flex-wrap">
-                            <span className={s.badge}>{rec.sev}</span>
-                            <span className="text-[10px] font-mono text-gray-300 tracking-wider">{rec.code}</span>
-                            <span className="text-[12px] font-semibold text-gray-800">{rec.title}</span>
-                          </div>
-                          <p className="text-[11px] text-gray-500 leading-relaxed mb-2.5">{rec.desc}</p>
-                          <span className={s.badge}>{s.action}</span>
-                        </div>
+                <div className="divide-y divide-gray-50">
+                  {recentPosts.slice(0, 4).map((post, i) => (
+                    <div key={post.id ?? i} className="flex items-center gap-3 py-2.5">
+                      <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 text-[11px] font-bold text-emerald-700">
+                        {(post.nickname ?? '?')[0]}
                       </div>
-                    );
-                  })}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-semibold text-gray-800 leading-snug">
+                          {maskNickname(post.nickname)}
+                        </p>
+                        <p className="text-[10px] text-gray-400 truncate">
+                          {post.aiResult ?? post.title ?? '친환경 활동 인증'}
+                        </p>
+                      </div>
+                      <span className="text-[9px] text-gray-300 shrink-0 tabular-nums">
+                        {fmtFeedTime(post.createdDate)}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               )}
+              <div className="pt-2.5 border-t border-gray-100 mt-auto">
+                <button
+                  onClick={() => navigate('/community')}
+                  className="flex items-center gap-1 text-[11px] font-medium text-gray-400 hover:text-emerald-600 transition-colors"
+                >
+                  <ArrowUpRight size={12} /> 커뮤니티에서 전체 활동 보기
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* ESG Score Snapshot */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+              <span className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
+                <BarChart2 size={13} className="text-indigo-500" />
+              </span>
+              <div>
+                <p className="text-[13px] font-semibold text-gray-900">ESG 점수 현황</p>
+                <p className="text-[11px] text-gray-400">카테고리별 현황</p>
+              </div>
             </div>
 
-            <div className="px-5 py-3 border-t border-gray-100">
-              <button
-                onClick={() => navigate('/analysis/report')}
-                className="flex items-center gap-1.5 text-[12px] font-medium text-gray-400 hover:text-emerald-600 transition-colors duration-150"
-              >
-                <ArrowUpRight size={12} /> 전체 Evidence 확인
-              </button>
-            </div>
+            {!hasData ? (
+              <div className="flex flex-col items-center justify-center py-14 gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
+                  <Activity size={16} className="text-gray-400" />
+                </div>
+                <p className="text-[13px] text-gray-400 font-medium">분석 결과 없음</p>
+              </div>
+            ) : (
+              <div className="px-5 py-4 space-y-3 flex flex-col flex-1">
+                {[
+                  { cat: 'E', label: '환경',     v: kpis.eScore, color: '#059669', bg: '#05966910', Icon: Leaf },
+                  { cat: 'S', label: '사회',     v: kpis.sScore, color: '#2563eb', bg: '#2563eb10', Icon: Users },
+                  { cat: 'G', label: '지배구조', v: kpis.gScore, color: '#d97706', bg: '#d9770610', Icon: Building2 },
+                ].map(({ cat, label, v, color, bg, Icon }) => {
+                  // 업종 평균 대비 diff: E는 실데이터 우선, S/G는 참조값 기반
+                  const diffPct = cat === 'E' && kpis.envBenchmarkDiffPct != null
+                    ? kpis.envBenchmarkDiffPct
+                    : null;
+                  const isAbove = diffPct != null && diffPct >= 0;
+                  return (
+                  <div key={cat}>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="w-[18px] h-[18px] rounded flex items-center justify-center shrink-0"
+                          style={{ background: bg }}>
+                          <Icon size={10} style={{ color, opacity: 0.9 }} />
+                        </span>
+                        <span className="text-[11px] font-medium text-gray-500">{cat} · {label}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {diffPct != null && (
+                          <span className={`text-[10px] font-medium ${isAbove ? 'text-emerald-500' : 'text-red-400'} opacity-90`}>
+                            {isAbove ? '▲' : '▼'}{Math.abs(diffPct).toFixed(1)}%
+                          </span>
+                        )}
+                        <span className="text-[20px] font-black font-mono tabular-nums leading-none"
+                          style={{ color: v > 0 ? color : '#e2e8f0' }}>
+                          {v > 0 ? Math.round(v) : '—'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="h-[3px] bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-700"
+                        style={{ width: `${v > 0 ? Math.min(v, 100) : 0}%`, background: color, opacity: 0.5 }} />
+                    </div>
+                    {diffPct != null && (
+                      <p className="text-[9px] text-gray-400 mt-0.5 tabular-nums">
+                        업종 평균 대비{' '}
+                        <span className={isAbove ? 'text-emerald-500' : 'text-red-400'}>
+                          {isAbove ? '+' : ''}{diffPct.toFixed(1)}%
+                        </span>
+                      </p>
+                    )}
+                  </div>
+                  );
+                })}
+
+                {kpis.benchmarkIndustry && (
+                  <div className="pt-2.5 border-t border-gray-100">
+                    <p className="text-[10px] text-gray-400 flex items-center gap-1">
+                      <TrendingUp size={9} className="text-violet-400 shrink-0" />
+                      <span className="text-gray-400 opacity-80">{kpis.benchmarkIndustry}</span>
+                      {kpis.benchmarkRegion && <span className="opacity-70">· {kpis.benchmarkRegion}</span>}
+                    </p>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => toResult('summary')}
+                  className="mt-auto w-full flex items-center justify-center gap-1 py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-[11px] font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  상세 결과 보기 <ChevronRight size={10} />
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* ── Bottom: AI 인사이트 ─────────────────────────────── */}
-        <div className="saas-card overflow-hidden">
-          <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-100">
-            <span className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
-              <Cpu size={13} className="text-emerald-600" />
-            </span>
-            <div>
-              <p className="section-title">AI 추천 인사이트</p>
-              <p className="text-[11px] text-gray-400 mt-0.5">분석 결과 기반 자동 생성</p>
+        {/* ── Row 2: ESG 변화 추이 + 최근 감사 활동 ──────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+          {/* ESG 변화 추이 */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="flex items-center gap-2.5 px-5 py-3 border-b border-gray-100">
+              <span className="w-6 h-6 rounded-md bg-violet-50 flex items-center justify-center shrink-0">
+                <TrendingUp size={11} className="text-violet-500" />
+              </span>
+              <p className="text-[12px] font-semibold text-gray-800">ESG 점수 추이</p>
+              <span className="ml-auto text-[10px] text-gray-400 tabular-nums">
+                최근 {Math.max(historyData.length, 1)}회
+              </span>
             </div>
-          </div>
-          <div className="px-6 py-5">
-            {!latestReport ? (
-              <div className="empty-state py-8">
-                <div className="empty-icon">
-                  <Cpu size={18} className="text-gray-400" />
-                </div>
-                <p className="text-[12px] text-gray-500 font-medium">분석 결과 없음</p>
-                <p className="text-[12px] text-gray-400">분석 결과 로드 후 인사이트가 표시됩니다.</p>
+
+            {historyData.length < 2 ? (
+              <div className="flex items-center gap-2 py-5 px-5">
+                <span className="w-6 h-6 rounded-md bg-violet-50 flex items-center justify-center shrink-0">
+                  <TrendingUp size={11} className="text-violet-400" />
+                </span>
+                <p className="text-[11px] text-gray-400">
+                  분석 이력이 누적되면 ESG 변화 추이를 확인할 수 있습니다.
+                  <span className="text-gray-300 ml-1.5">
+                    {historyData.length}회 완료 · 2회부터 표시
+                  </span>
+                </p>
+              </div>
+            ) : !trendMetrics.some(m => m.data.some(v => v > 0)) ? (
+              <div className="flex items-center gap-2 py-5 px-5">
+                <span className="w-6 h-6 rounded-md bg-gray-100 flex items-center justify-center shrink-0">
+                  <TrendingUp size={11} className="text-gray-400" />
+                </span>
+                <p className="text-[11px] text-gray-400">분석 데이터가 충분하지 않습니다.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {insights.map((ins, i) => {
-                  const styles = {
-                    strength: { bg: 'bg-emerald-50/80 border-emerald-100', text: 'text-emerald-700', iconCls: 'text-emerald-500', label: 'STRENGTH', Icon: CheckCircle },
-                    risk:     { bg: 'bg-red-50/80 border-red-100',         text: 'text-red-700',     iconCls: 'text-red-500',     label: 'RISK',     Icon: AlertCircle },
-                    action:   { bg: 'bg-amber-50/80 border-amber-100',     text: 'text-amber-700',   iconCls: 'text-amber-500',   label: 'ACTION',   Icon: Zap },
-                    info:     { bg: 'bg-gray-50 border-gray-200',          text: 'text-gray-600',    iconCls: 'text-gray-400',    label: 'INFO',     Icon: Shield },
-                  };
-                  const s = styles[ins.type] ?? styles.info;
+              <div className="divide-y divide-gray-50">
+                {trendMetrics.map(({ label, data, current, color, delta }) => {
+                  const ds = delta == null ? null
+                    : delta > 0 ? { cls: 'text-emerald-600', sym: '▲' }
+                    : delta < 0 ? { cls: 'text-red-500',     sym: '▼' }
+                    :             { cls: 'text-gray-400',     sym: '—' };
+                  const lineColor = delta == null || delta === 0 ? color
+                    : delta > 0 ? color : '#ef4444';
+                  const [cat, labelShort] = label.split(' · ');
                   return (
-                    <div key={i} className={`flex items-start gap-3 px-4 py-4 rounded-xl border ${s.bg} transition-all duration-150 hover:shadow-sm`}>
-                      <s.Icon size={14} className={`${s.iconCls} shrink-0 mt-0.5`} />
-                      <div>
-                        <span className={`text-[10px] font-semibold uppercase tracking-[0.08em] block mb-1.5 ${s.text}`}>{s.label}</span>
-                        <p className={`text-[12px] leading-relaxed ${s.text}`}>{ins.text}</p>
+                    <div key={label} className="px-5 py-1.5 flex items-center gap-3">
+
+                      {/* 1. Label */}
+                      <span className="text-[10px] font-semibold text-gray-400 shrink-0 w-[72px]">
+                        <span className="font-black" style={{ color }}>{cat}</span>
+                        {' · '}{labelShort}
+                      </span>
+
+                      {/* 2. Sparkline */}
+                      <div className="flex-1 min-w-0">
+                        <Sparkline data={data} color={lineColor} vbWidth={240} height={36} dotRadius={2.5} />
+                      </div>
+
+                      {/* 3. Score + delta */}
+                      <div className="flex items-center gap-1.5 shrink-0 w-[62px] justify-end">
+                        <span className="text-[20px] font-black font-mono tabular-nums leading-none"
+                          style={{ color }}>
+                          {current != null ? Math.round(current) : '—'}
+                        </span>
+                        {ds && delta != null && (
+                          <span className={`text-[10px] font-bold tabular-nums leading-none ${ds.cls}`}>
+                            {delta === 0 ? '—' : `${ds.sym}${Math.abs(delta)}`}
+                          </span>
+                        )}
                       </div>
                     </div>
                   );
@@ -715,30 +697,129 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {latestReport && (
-            <div className="px-6 py-5 border-t border-gray-100">
-              <p className="kpi-label mb-4">카테고리 점수 요약</p>
-              <div className="grid grid-cols-3 gap-8">
-                {[
-                  { label: '환경 (E)', value: scores.E, color: '#059669' },
-                  { label: '사회 (S)', value: scores.S, color: '#3b82f6' },
-                  { label: '지배구조 (G)', value: scores.G, color: '#f59e0b' },
-                ].map(({ label, value, color }) => (
-                  <div key={label}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[12px] text-gray-600">{label}</span>
-                      <span className="text-[14px] font-bold tabular-nums" style={{ color: value != null ? color : '#d1d5db', fontFamily: "'Inter', sans-serif", letterSpacing: '-0.02em' }}>
-                        {fmtScore(value)}
-                      </span>
-                    </div>
-                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full progress-bar-fill" style={{ width: `${value ?? 0}%`, background: color }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
+          {/* 최근 감사 활동 */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="flex items-center gap-2.5 px-5 py-3 border-b border-gray-100">
+              <span className="w-6 h-6 rounded-md bg-slate-100 flex items-center justify-center shrink-0">
+                <Clock size={11} className="text-slate-500" />
+              </span>
+              <p className="text-[12px] font-semibold text-gray-800">최근 분석 이력</p>
+              {hasData && (
+                <button
+                  onClick={() => toResult('audit-log')}
+                  className="ml-auto text-[10px] text-gray-400 hover:text-emerald-600 transition-colors flex items-center gap-0.5"
+                >
+                  전체 이력 <ChevronRight size={9} />
+                </button>
+              )}
             </div>
-          )}
+
+            {auditEvents.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 gap-2.5 text-center px-6">
+                <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
+                  <Clock size={16} className="text-gray-400" />
+                </div>
+                <p className="text-[13px] text-gray-400 font-medium">아직 분석 이력이 없습니다</p>
+                <p className="text-[11px] text-gray-400">분석을 시작하면 활동 이력이 표시됩니다.</p>
+                <button
+                  onClick={() => navigate('/analysis')}
+                  className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 transition-colors mt-1"
+                >
+                  <Plus size={11} /> 분석 시작하기
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="px-5 py-2.5 space-y-2">
+                  {(showAllHistory ? auditEvents : auditEvents.slice(0, 5)).map((ev, i, arr) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <div className="flex flex-col items-center shrink-0 mt-0.5">
+                        <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${ev.dotCls}`} />
+                        {i < arr.length - 1 && (
+                          <div className="w-px bg-gray-100 mt-1" style={{ height: '14px' }} />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] font-semibold text-gray-800 leading-tight">{ev.label}</span>
+                          <span className={`text-[9px] font-bold px-1 rounded border ${ev.badge.cls}`}>
+                            {ev.badge.text}
+                          </span>
+                          {fmtDateTime(ev.time) && (
+                            <span className="text-[9px] text-gray-300 ml-auto tabular-nums shrink-0">
+                              {fmtDateTime(ev.time)}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-gray-400 leading-snug mt-0.5 truncate">{ev.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="px-5 py-2 border-t border-gray-100 flex items-center gap-3">
+                  {[
+                    { cls: 'bg-emerald-400', label: '완료' },
+                    { cls: 'bg-amber-400',   label: '주의' },
+                    { cls: 'bg-red-400',     label: '위험' },
+                  ].map(({ cls, label }) => (
+                    <span key={label} className="flex items-center gap-1 text-[9px] text-gray-400">
+                      <span className={`w-1.5 h-1.5 rounded-full ${cls}`} />
+                      {label}
+                    </span>
+                  ))}
+                  {auditEvents.length > 5 && (
+                    <button
+                      onClick={() => setShowAllHistory(v => !v)}
+                      className="ml-auto text-[9px] font-semibold text-gray-400 hover:text-emerald-600 transition-colors flex items-center gap-0.5"
+                    >
+                      {showAllHistory
+                        ? <><ChevronRight size={9} style={{ transform: 'rotate(270deg)' }} /> 접기</>
+                        : <><ChevronRight size={9} style={{ transform: 'rotate(90deg)' }} /> 전체 이력 보기 ({auditEvents.length - 5}개 더)</>
+                      }
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* ── Row 3: Quick Navigation — full width utility bar ─────── */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+            <span className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+              <LayoutDashboard size={13} className="text-emerald-600" />
+            </span>
+            <div>
+              <p className="text-[13px] font-semibold text-gray-900">바로가기</p>
+              <p className="text-[11px] text-gray-400">결과 페이지 바로 가기</p>
+            </div>
+          </div>
+          <div className="px-4 py-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+            {quickNavItems.map((item, i) => (
+              <button
+                key={i}
+                onClick={() => item.action ? item.action() : toResult(item.tab)}
+                disabled={!hasData && item.tab !== null}
+                className="group flex flex-col items-start gap-1.5 p-3 rounded-lg border border-gray-200
+                  bg-gray-50/40 text-left cursor-pointer
+                  transition-all duration-150
+                  hover:-translate-y-0.5 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:border-gray-300 hover:bg-white
+                  disabled:opacity-40 disabled:pointer-events-none"
+              >
+                <span className="w-6 h-6 rounded-md flex items-center justify-center"
+                  style={{ background: `${item.color}12` }}>
+                  <item.Icon size={11} style={{ color: item.color }} />
+                </span>
+                <div>
+                  <p className="text-[11px] font-semibold text-gray-700 group-hover:text-gray-900 transition-colors leading-tight">
+                    {item.label}
+                  </p>
+                  <p className="text-[10px] text-gray-400 mt-0.5 leading-snug">{item.desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
 
       </div>

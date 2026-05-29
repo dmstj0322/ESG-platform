@@ -59,6 +59,10 @@ public class EsgIndicatorSeeder {
                         "사내 ESG·환경 활동 임직원 참여 비율",
                         0.25,
                         "임직원 참여율 참여비율 참여 활동 임직원활동 에코 자원봉사 캠페인"),
+                build("S", "S-205", "지역사회 봉사활동 여부",
+                        "임직원 지역사회 봉사 및 사회공헌 활동 실시 여부",
+                        0.25,
+                        "지역사회 봉사활동 자원봉사 사회공헌 봉사시간 봉사 활동 지역사회공헌 임직원봉사 봉사프로그램 환경정화 취약계층 community service social contribution"),
 
                 // ── G (지배구조) ──────────────────────────────────────────────────
                 build("G", "G-301", "윤리경영 정책 존재 여부",
@@ -72,7 +76,15 @@ public class EsgIndicatorSeeder {
                 build("G", "G-303", "ESG 담당 조직 존재 여부",
                         "ESG 전담 조직 또는 위원회 운영 여부",
                         0.34,
-                        "ESG 담당 조직 ESG위원회 지속가능경영 담당부서 ESG전담 ESG팀 위원회")
+                        "ESG 담당 조직 ESG위원회 지속가능경영 담당부서 ESG전담 ESG팀 위원회"),
+                build("G", "G-304", "외부 감사 수행 여부",
+                        "외부 회계감사 또는 독립적 감사 수행 여부",
+                        0.33,
+                        "외부감사 회계감사 외부회계감사 감사수행 감사위원회 외부감사인 독립감사 감사절차 audit external audit accounting audit independent audit"),
+                build("G", "G-305", "이사회 독립성 정책 여부",
+                        "사외이사 중심의 이사회 독립성 정책 수립 및 운영 여부",
+                        0.33,
+                        "이사회독립성 사외이사 독립이사 이사회구성 독립적의사결정 이사회정책 board independence outside director independent director board policy")
         );
 
         int saved = 0;

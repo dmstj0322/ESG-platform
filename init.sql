@@ -30,3 +30,27 @@ CREATE TABLE IF NOT EXISTS environment_data (
 -- ALTER TABLE environment_benchmarks ADD COLUMN IF NOT EXISTS carbon_source     VARCHAR(100);
 -- ALTER TABLE environment_benchmarks ADD COLUMN IF NOT EXISTS waste_source      VARCHAR(100);
 -- ALTER TABLE environment_benchmarks ADD COLUMN IF NOT EXISTS water_source      VARCHAR(100);
+
+-- ── point-service 전용 테이블 (esg_db 공유) ─────────────────────────────
+
+-- 회사 ESG 활동 누적 풀: Kafka ESG 이벤트(TUMBLER/TRANSPORT/RECYCLE)로 적립,
+-- ESG 분석 성공 후 Social 가산점 반영분 차감. 개인 point_balance 와 완전 분리.
+CREATE TABLE IF NOT EXISTS company_esg_pool (
+    company_id    BIGINT       NOT NULL,
+    esg_points    BIGINT       NOT NULL DEFAULT 0,
+    version       BIGINT       NOT NULL DEFAULT 0,
+    created_date  DATETIME(6)  NULL,
+    modified_date DATETIME(6)  NULL,
+    PRIMARY KEY (company_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='회사 ESG 활동 누적 포인트 풀 — ESG 분석 시 차감 대상';
+
+-- Kafka ESG 이벤트 중복 처리 방지 (at-least-once → exactly-once).
+-- eventId = PostCreatedEvent.postId.
+CREATE TABLE IF NOT EXISTS processed_event (
+    event_id      BIGINT       NOT NULL,
+    created_date  DATETIME(6)  NULL,
+    modified_date DATETIME(6)  NULL,
+    PRIMARY KEY (event_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Kafka ESG 이벤트 중복 처리 방지 이력';

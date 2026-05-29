@@ -89,7 +89,9 @@ public class NumericExtractionService {
         METRIC_KOR_KEYWORDS.put("waste", List.of(
                 "폐기물발생량",  // 폐기물발생량
                 "폐기물 발생량", // 폐기물 발생량
-                "폐기물"                     // 폐기물
+                "폐기물",        // 폐기물
+                "waste_kg",      // CSV 컬럼 alias — line-level 전략에서 인식
+                "waste"          // 영문 직접 매칭
         ));
         METRIC_KOR_KEYWORDS.put("water", List.of(
                 "수자원",    // 수자원
@@ -360,6 +362,7 @@ public class NumericExtractionService {
         if (targetColIdx < 0) return Optional.empty();
 
         List<Double> values = new ArrayList<>();
+        boolean anyNumericFound = false; // 컬럼에서 숫자 파싱 성공 여부 (0 포함)
         for (int i = headerLineIdx + 1; i < tableLines.size(); i++) {
             String line = tableLines.get(i);
             if (isSeparatorRow(line)) continue;
@@ -369,6 +372,7 @@ public class NumericExtractionService {
                 String valStr = cols.get(targetColIdx).replaceAll("[,，]", "");
                 try {
                     double val = Double.parseDouble(valStr);
+                    anyNumericFound = true;
                     if (val > 0) {
                         values.add(val);
                         log.info("[NumericMatch] data row metric={} col_idx={} value={}",
@@ -378,7 +382,14 @@ public class NumericExtractionService {
             }
         }
 
-        if (values.isEmpty()) return Optional.empty();
+        // 컬럼은 찾았으나 모든 값이 0 → 0.0 반환 (CSV waste_kg=0 케이스 — 발생량 없음으로 인정)
+        if (values.isEmpty()) {
+            if (anyNumericFound) {
+                log.info("[NumericMatch] metric={} col_idx={} all-zero → returning 0.0", metric, targetColIdx);
+                return Optional.of(0.0);
+            }
+            return Optional.empty();
+        }
 
         double total = values.stream().mapToDouble(Double::doubleValue).sum();
         log.info("[NumericMatch] parsed {}={} ({}rows summed)", metric, total, values.size());

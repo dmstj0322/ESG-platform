@@ -213,13 +213,14 @@ public class AnalysisApiService {
                     String dataSource;
 
                     if (!userInputMetrics.isEmpty()) {
-                        // Priority 1: 사용자가 직접 입력한 값 사용
+                        // Priority 1: 사용자가 직접 입력한 값 사용 (없는 항목은 extractedValue fallback 포함)
                         compElec  = userInputMetrics.get("electricity");
                         compGas   = userInputMetrics.get("gas");
                         compCarb  = userInputMetrics.get("carbon");
                         compWaste = userInputMetrics.get("waste");
                         compWater = userInputMetrics.get("water");
                         dataSource = "USER_INPUT";
+                        log.debug("[BenchmarkCompany] water={} (null이면 벤치마크 미표시)", compWater);
                         log.info("[BenchmarkCompany] 사용자 입력값 사용 analysisId={} keys={}", analysisId, userInputMetrics.keySet());
                     } else {
                         // Priority 2: environment_data 테이블 (CSV 업로드 기반 실측 데이터)
@@ -364,6 +365,10 @@ public class AnalysisApiService {
                 .ecoPoints(ecoPoints > 0 ? ecoPoints : null)
                 .carbonReductionKg(carbonKg > 0 ? carbonKg : null)
                 .equivalentTrees(trees > 0 ? trees : null)
+                .ecoSBonus(cache.getEcoSBonus() != null && cache.getEcoSBonus() > 0 ? cache.getEcoSBonus() : null)
+                .esgPoolBefore(cache.getEsgPoolBefore() != null && cache.getEsgPoolBefore() > 0 ? cache.getEsgPoolBefore() : null)
+                .ecoUsedPoints(cache.getEcoUsedPoints() != null && cache.getEcoUsedPoints() > 0 ? cache.getEcoUsedPoints() : null)
+                .esgPoolAfter(cache.getEsgPoolAfter() != null ? cache.getEsgPoolAfter() : null)
                 .fullReport(cache.getFullReport())
                 .overallOpinion(cache.getOverallOpinion())
                 .riskOpportunity(cache.getRiskOpportunity())
@@ -454,6 +459,9 @@ public class AnalysisApiService {
             if (metric == null) continue;
             if (dto.getInputValue() != null && dto.getInputValue() > 0) {
                 result.putIfAbsent(metric, dto.getInputValue());
+            } else if (dto.getExtractedValue() != null && dto.getExtractedValue() > 0) {
+                // inputValue 미입력 시 OCR 추출값으로 벤치마크 비교에만 사용 (fallback)
+                result.putIfAbsent(metric, dto.getExtractedValue());
             }
         }
         return result;
@@ -466,7 +474,7 @@ public class AnalysisApiService {
             EnvironmentBenchmarkService.EnvironmentValues ind) {
         return List.of(
                 metricOf("전력 사용량",   "kWh",  cElec,  ind.getElectricityKwh(), ind.getElectricitySource()),
-                metricOf("가스 사용량",   "m³",   cGas,   ind.getGasMj(),          ind.getGasSource()),
+                metricOf("가스 사용량",   "Nm³",  cGas, ind.getGasMj(), ind.getGasSource()),
                 metricOf("탄소 배출량",   "tCO₂", cCarb,  ind.getCarbonTco2(),     ind.getCarbonSource()),
                 metricOf("폐기물 발생량", "kg",   cWaste, ind.getWasteKg(),        ind.getWasteSource()),
                 metricOf("용수 사용량",   "m³",   cWater, ind.getWaterM3(),        ind.getWaterSource())
@@ -578,8 +586,9 @@ public class AnalysisApiService {
             Long userPoints = 0L;
             try {
                 userPoints = pointServiceClient.getMemberPointBalance(userId);
+                log.info("[POINT-BALANCE-BEFORE] userId={} balance={}EP (분석 시작 직전)", userId, userPoints);
             } catch (Exception e) {
-                log.error("[point-service] 호출 실패 → 0점으로 진행: {}", e.getMessage());
+                log.error("[POINT-BALANCE-BEFORE] userId={} 조회 실패 → 0EP로 진행: {}", userId, e.getMessage());
             }
 
             // ── 8. PENDING 레코드 DB 저장 ────────────────────────────────

@@ -1,5 +1,6 @@
 package com.esg.analysis.service;
 
+import com.esg.analysis.client.PointServiceClient;
 import com.esg.analysis.dto.AnalysisRequestDto;
 import com.esg.analysis.dto.AnalysisResultCache;
 import com.esg.analysis.dto.EcoCommitRequestDto;
@@ -47,6 +48,7 @@ public class AnalysisConsumer {
     private final ESGScoreCalculator scoreCalculator;
     private final ConfidenceService confidenceService;
     private final ESGEvidenceMatchRepository evidenceMatchRepository;
+    private final PointServiceClient pointServiceClient;
 
     private static final long FRAUD_POINT_THRESHOLD = 1_000_000L;
     private static final String LOCK_PREFIX = "analysis:processing:";
@@ -200,6 +202,34 @@ public class AnalysisConsumer {
 
             log.info("[STEP] DB 저장 완료 analysisId={} grade={}", analysisId, resultDto.getFinalGrade());
 
+            // ── 포인트 차감: 분석에 실제 반영된 bonus만큼만 소모 ─────────────
+            long appliedBonus = Math.min(socialBonus, EcoPointConverter.MAX_S_BONUS);
+            log.info("[ESG-SCORE-FORMULA] analysisId={} rawSScore={} socialBonus={} appliedBonus={} finalSScore={}",
+                    analysisId,
+                    resultDto.getSScore() - appliedBonus,   // rawSScore
+                    socialBonus, appliedBonus,
+                    resultDto.getSScore());
+            if (appliedBonus > 0) {
+                long usedPoints = appliedBonus * EcoPointConverter.EP_PER_S_POINT;
+                Long memberId = reportSnapshot.getMemberId();
+                log.info("[ESG-CONSUME-START] memberId={} usedPoints={}EP appliedBonus={}점 analysisId={}",
+                        memberId, usedPoints, appliedBonus, analysisId);
+                try {
+                    pointServiceClient.consumeEsgPool(
+                            companyId, usedPoints,
+                            "ESG 분석 에코활동 반영 — Social +" + appliedBonus + "점 가산");
+
+                    log.info("[ESG-CONSUME-SUCCESS] companyId={} usedPoints={}EP analysisId={}",
+                            companyId, usedPoints, analysisId);
+                } catch (Exception ex) {
+                    log.warn("[ESG-CONSUME-FAIL] memberId={} usedPoints={}EP analysisId={} 원인={} — 분석 결과는 유지됨",
+                            memberId, usedPoints, analysisId, ex.getMessage());
+                }
+            } else {
+                log.info("[ESG-CONSUME-SKIP] analysisId={} socialBonus={}EP → appliedBonus=0, 차감 없음",
+                        analysisId, socialBonus * EcoPointConverter.EP_PER_S_POINT);
+            }
+
             // 8. Redis 캐시 저장 (30일) — 실패해도 DB 저장은 이미 완료
             try {
                 redisTemplate.opsForValue().set("analysis:cache:" + fileHash, resultDto, 30, TimeUnit.DAYS);
@@ -334,7 +364,7 @@ public class AnalysisConsumer {
 
             if (callIndex > 0) {
                 try {
-                    Thread.sleep(1500);
+                    Thread.sleep(500);
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                     log.warn("[Analyze] 인터럽트 — 분석 중단 at indicator={}", code);

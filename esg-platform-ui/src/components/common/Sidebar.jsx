@@ -8,8 +8,8 @@ const SECTIONS = [
     label: '분석',
     items: [
       { to: '/analysis/dashboard', icon: LayoutDashboard, label: '대시보드' },
-      { to: '/analysis',            icon: ScanSearch,       label: 'AI ESG Audit', exact: true },
-      { to: '/analysis/report',    icon: ClipboardList,    label: 'Audit 기록' },
+      { to: '/analysis',            icon: ScanSearch,       label: 'AI ESG 분석', exact: true },
+      { to: '/analysis/report',    icon: ClipboardList,    label: '분석 기록' },
     ],
   },
 ];

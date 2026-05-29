@@ -1,23 +1,26 @@
-import React, { useState, useRef, useCallback, useEffect, useId } from 'react';
+﻿import React, { useState, useRef, useCallback, useEffect, useId } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 import api from '../../api/api';
-import { useAnalysis } from '../../context/AnalysisContext';
+import { useAnalysis, BASE_URL } from '../../context/AnalysisContext';
 import { useAuth } from '../../context/AuthContext';
 import {
   Upload, FileText, CheckCircle2, AlertCircle, AlertTriangle,
   Loader2, ArrowRight, ArrowLeft, X,
   Users, Building2, Leaf, Zap, MapPin, Briefcase,
-  ChevronDown, ChevronUp, TrendingUp,
+  ChevronDown, ChevronUp, TrendingUp, Activity,
 } from 'lucide-react';
+import RealtimeAuditPanel from '../../components/analysis/RealtimeAuditPanel';
 
 
 // ── 체크리스트 상수 ───────────────────────────────────────────────────────
 const SOCIAL_ITEMS = [
-  { key: 's1', label: '산업안전 교육 실시 여부' },
-  { key: 's2', label: 'ESG 교육 실시 여부' },
-  { key: 's3', label: '산업재해 발생 여부' },
-  { key: 's4', label: '임직원 참여 프로그램 운영 여부' },
-  { key: 's5', label: '지역사회 봉사활동 여부' },
+  { key: 's1', label: '산업안전 교육 정기 실시' },
+  { key: 's2', label: 'ESG 교육 프로그램 운영' },
+  { key: 's3', label: '중대 사고 이력 없음' },
+  { key: 's4', label: '임직원 참여 프로그램 운영' },
+  { key: 's5', label: '지역사회 봉사 활동 참여' },
 ];
 
 const GOV_ITEMS = [
@@ -77,8 +80,6 @@ const WIZARD_STEPS = [
   { key: 'eco',     label: 'EcoPoint',    shortLabel: 'Eco',  Icon: Zap,        color: '#059669' },
   { key: 'run',     label: '최종 결과',   shortLabel: '결과', Icon: ArrowRight, color: '#059669' },
 ];
-
-const MOCK_ECO = { ecoPoints: 3240, carbonReductionKg: 12500, equivalentTrees: 47 };
 
 // ── 업종별 Dynamic Weighting (EsgScoreConstants 미러) ────────────────────
 const INDUSTRY_TYPE_MAP = {
@@ -161,28 +162,37 @@ function ChecklistStep({ items, answers, setAnswers, accentColor, disabled }) {
   return (
     <div>
       {items.map((item, idx) => {
-        const checked = !!answers[item.key];
+        const checked    = !!answers[item.key];
+        const showDanger = item.dangerText && !checked;
         return (
           <div
             key={item.key}
-            className={`flex items-center justify-between py-3.5 transition-colors duration-150 ${
+            className={`flex items-start justify-between py-3.5 transition-colors duration-150 ${
               idx < items.length - 1 ? 'border-b border-gray-100' : ''
             }`}
           >
-            <span className={`text-[13px] select-none transition-colors duration-150 ${checked ? 'text-gray-800 font-medium' : 'text-gray-500'}`}>
-              {item.label}
-            </span>
+            <div className="flex-1 min-w-0 pr-3">
+              <span className={`text-[13px] select-none transition-colors duration-150 ${checked ? 'text-gray-800 font-medium' : 'text-gray-500'}`}>
+                {item.label}
+              </span>
+              {showDanger && (
+                <p className="flex items-center gap-1 mt-0.5 text-[10px] text-red-500">
+                  <AlertTriangle size={9} className="shrink-0" />
+                  {item.dangerText}
+                </p>
+              )}
+            </div>
             <button
               type="button"
               disabled={disabled}
               onClick={() => setAnswers(p => ({ ...p, [item.key]: !p[item.key] }))}
-              className="relative ml-4 w-11 h-6 rounded-full shrink-0 transition-all duration-200 focus:outline-none"
+              className="relative mt-0.5 w-11 h-6 rounded-full shrink-0 transition-colors duration-200 focus:outline-none"
               style={{ background: checked ? accentColor : '#d1d5db' }}
               role="switch"
               aria-checked={checked}
             >
-              <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200 ${
-                checked ? 'translate-x-5' : 'translate-x-0.5'
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+                checked ? 'translate-x-5' : 'translate-x-0'
               }`} />
             </button>
           </div>
@@ -200,10 +210,10 @@ const SIM_TIER_STYLE = {
 };
 
 const MISMATCH_BADGE = {
-  'CHECKLIST_NO_EVIDENCE':    { label: 'NO EVIDENCE',   cls: 'bg-red-50 text-red-600 border-red-200' },
-  'EVIDENCE_CONTRADICTION':   { label: 'CONTRADICTION', cls: 'bg-red-50 text-red-600 border-red-200' },
-  'NEGATIVE_SIGNAL_DETECTED': { label: 'NEG. SIGNAL',   cls: 'bg-red-50 text-red-600 border-red-200' },
-  'NUMERIC_LOW':              { label: 'MISMATCH',      cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+  'CHECKLIST_NO_EVIDENCE':    { label: '증빙 없음',   cls: 'bg-red-50 text-red-600 border-red-200' },
+  'EVIDENCE_CONTRADICTION':   { label: '불일치 감지', cls: 'bg-red-50 text-red-600 border-red-200' },
+  'NEGATIVE_SIGNAL_DETECTED': { label: '부정 신호',   cls: 'bg-red-50 text-red-600 border-red-200' },
+  'NUMERIC_LOW':              { label: '수치 오차',      cls: 'bg-amber-50 text-amber-700 border-amber-200' },
 };
 
 function IndicatorVerificationCard({ bd }) {
@@ -246,13 +256,13 @@ function IndicatorVerificationCard({ bd }) {
           </span>
         )}
         {bd.evidenceCount > 0 && (
-          <span className="text-[9px] text-gray-400">ev {bd.evidenceCount}건</span>
+          <span className="text-[9px] text-gray-400">{bd.evidenceCount}건 근거</span>
         )}
         {bd.uniquePageCount > 0 && (
           <span className="text-[9px] text-gray-400">· {bd.uniquePageCount}p</span>
         )}
         {bd.similarityTier === 'LOW' && (
-          <span className="text-[8px] italic text-orange-500">Weak evidence</span>
+          <span className="text-[8px] italic text-orange-500">근거 부족</span>
         )}
         {!bd.hasEvidence && !bd.mismatchType && (
           <span className="text-[8px] text-gray-400 italic">근거 없음</span>
@@ -291,7 +301,7 @@ function IndicatorEvidenceSection({ breakdowns }) {
       >
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 hover:text-gray-600 transition-colors">
-            Evidence Verification
+            근거 검증
           </span>
           <span className="text-[9px] font-mono bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
             {evidenced.length}/{breakdowns.length} 검증
@@ -359,12 +369,12 @@ function IntegratedEsgSummary({ finalSummary, eResult, sResult, gResult }) {
   const aiComment = (() => {
     const gradeDesc = { S: '최고 수준', A: '우수', B: '양호', C: '보통', D: '미흡' }[finalGrade] ?? '';
     const conNote = contradictions > 0 ? ` 다만 ${contradictions}건의 증거 불일치가 감지되어 일부 항목에 대한 추가 검토가 권장됩니다.` : '';
-    const noEvNote = noEvidence > 0 ? ` ${noEvidence}개 지표는 RAG 검증 근거가 부족하여 신뢰도가 제한됩니다.` : '';
-    return `종합 ESG 등급 ${finalGrade}(${gradeDesc}) — 해당 기업은 ${strongest.label} 영역에서 강점을 보이며, ${weakest.label} 영역의 개선이 필요합니다.${conNote}${noEvNote} AI 검증 신뢰도: ${confidence}%.`;
+    const noEvNote = noEvidence > 0 ? ` ${noEvidence}개 지표는 감사 근거가 부족하여 신뢰도가 제한됩니다.` : '';
+    return `종합 ESG 등급 ${finalGrade}(${gradeDesc}) — 해당 기업은 ${strongest.label} 영역에서 강점을 보이며, ${weakest.label} 영역의 개선이 필요합니다.${conNote}${noEvNote} 분석 신뢰도: ${confidence}%.`;
   })();
 
   return (
-    <div className="bg-white border border-gray-100 shadow-sm rounded-2xl overflow-hidden">
+    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
       {/* 헤더 */}
       <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3"
         style={{ background: `${gc}07` }}>
@@ -374,7 +384,7 @@ function IntegratedEsgSummary({ finalSummary, eResult, sResult, gResult }) {
         </span>
         <div>
           <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: gc }}>종합 결과</p>
-          <p className="text-sm font-semibold text-gray-800">Final ESG Score</p>
+          <p className="text-sm font-semibold text-gray-800">종합 ESG 결과</p>
         </div>
       </div>
 
@@ -382,7 +392,7 @@ function IntegratedEsgSummary({ finalSummary, eResult, sResult, gResult }) {
         {/* 메인 점수 */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Total Score</p>
+            <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">종합 점수</p>
             <div className="flex items-end gap-3">
               <span className="text-5xl font-black tabular-nums leading-none" style={{ color: gc }}>{totalScore}</span>
               <span className="text-2xl font-black pb-1" style={{ color: gc }}>{finalGrade}</span>
@@ -390,7 +400,7 @@ function IntegratedEsgSummary({ finalSummary, eResult, sResult, gResult }) {
           </div>
           {/* Confidence */}
           <div className="text-right">
-            <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1.5">AI Confidence</p>
+            <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1.5">검증 신뢰도</p>
             <div className="flex items-center gap-2 justify-end">
               <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                 <div className="h-full rounded-full transition-all duration-700"
@@ -435,9 +445,9 @@ function IntegratedEsgSummary({ finalSummary, eResult, sResult, gResult }) {
         {/* 통계 그리드 */}
         <div className="grid grid-cols-3 gap-2">
           {[
-            { label: 'Total Evidence', value: totalEvidence, color: '#16a34a' },
-            { label: 'Contradictions', value: contradictions, color: contradictions > 0 ? '#dc2626' : '#9ca3af' },
-            { label: 'No Evidence',    value: noEvidence,    color: noEvidence > 0 ? '#d97706' : '#9ca3af' },
+            { label: '확인 근거', value: totalEvidence, color: '#16a34a' },
+            { label: '불일치 감지', value: contradictions, color: contradictions > 0 ? '#dc2626' : '#9ca3af' },
+            { label: '미확인 지표',    value: noEvidence,    color: noEvidence > 0 ? '#d97706' : '#9ca3af' },
           ].map(stat => (
             <div key={stat.label} className="rounded-xl bg-gray-50 border border-gray-100 p-2.5 text-center">
               <p className="text-xs font-bold tabular-nums" style={{ color: stat.color }}>{stat.value}</p>
@@ -449,21 +459,21 @@ function IntegratedEsgSummary({ finalSummary, eResult, sResult, gResult }) {
         {/* Strongest / Weakest */}
         <div className="grid grid-cols-2 gap-2">
           <div className="px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-100">
-            <p className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 mb-0.5">Strongest</p>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 mb-0.5">강점 영역</p>
             <p className="text-xs font-semibold text-emerald-700">{strongest.label}</p>
             <p className="text-[10px] text-emerald-500 tabular-nums">{strongest.result?.score}점 · {strongest.result?.grade}</p>
           </div>
           <div className="px-3 py-2 rounded-xl bg-amber-50 border border-amber-100">
-            <p className="text-[9px] font-bold uppercase tracking-wider text-amber-600 mb-0.5">Needs Work</p>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-amber-600 mb-0.5">개선 필요</p>
             <p className="text-xs font-semibold text-amber-700">{weakest.label}</p>
             <p className="text-[10px] text-amber-500 tabular-nums">{weakest.result?.score}점 · {weakest.result?.grade}</p>
           </div>
         </div>
 
-        {/* AI 종합 의견 */}
+        {/* 종합 의견 */}
         <div className="px-3 py-3 rounded-xl bg-gray-50 border border-gray-100">
-          <p className="text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">AI Analysis</p>
-          <p className="text-xs text-gray-500 leading-relaxed">{aiComment}</p>
+          <p className="text-[10px] font-semibold text-gray-500 mb-2">종합 의견</p>
+          <p className="text-[12px] text-gray-600 leading-relaxed">{aiComment}</p>
         </div>
 
         {ecoBonus > 0 && (
@@ -477,6 +487,8 @@ function IntegratedEsgSummary({ finalSummary, eResult, sResult, gResult }) {
   );
 }
 
+// generateInsights 제거 — 주요 현황 bullet 섹션 단순화로 미사용
+
 // ── MiniScoreCard ─────────────────────────────────────────────────────────
 function MiniScoreCard({ result, label, color }) {
   const [showEvidence, setShowEvidence] = useState(false);
@@ -485,11 +497,14 @@ function MiniScoreCard({ result, label, color }) {
   const hasWarning   = !!result.warning || result.lowMismatchCount > 0;
   const isSimulation = result.isSimulation === true;
 
-  // confidence 색상: 90+ 강조, 70~89 정상, 50~69 주의, ~49 경고
+  // confidence 색상/라벨: 90+ 안정, 70~89 양호, 50~69 보완권장, ~49 주의
   const confColor = result.confidence >= 90 ? '#059669'
                   : result.confidence >= 70 ? '#3b82f6'
                   : result.confidence >= 50 ? '#f59e0b'
                   : '#ef4444';
+  const confLabel = result.confidence >= 80 ? 'HIGH'
+                  : result.confidence >= 60 ? 'MEDIUM'
+                  : result.confidence != null ? 'LOW' : '—';
 
   const realEvidences = result.evidences?.filter(ev => ev.similarity != null) ?? [];
   const hasBreakdown  = result.indicatorBreakdowns?.length > 0;
@@ -512,9 +527,6 @@ function MiniScoreCard({ result, label, color }) {
           {result.lowMismatchCount > 0 && (
             <span className="badge badge-high" style={{ fontSize: '10px' }}>LOW {result.lowMismatchCount}건</span>
           )}
-          {result.ragBased && (
-            <span className="badge badge-low" style={{ fontSize: '10px' }}>RAG</span>
-          )}
         </div>
       </div>
 
@@ -532,90 +544,66 @@ function MiniScoreCard({ result, label, color }) {
       )}
 
       {/* 핵심 지표 그리드 */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-3 gap-3">
         {[
-          { label: '점수',     value: `${result.score}점`,          color: gc        },
-          { label: '등급',     value: result.grade,                 color: gc        },
-          { label: '신뢰도',   value: `${result.confidence ?? '—'}%`, color: confColor },
-          { label: 'Evidence', value: `${result.evidenceCount ?? 0}건`, color: '#059669' },
+          { label: '점수', value: `${result.score}점`, color: gc },
+          { label: '등급', value: result.grade,        color: gc },
         ].map(c => (
-          <div key={c.label} className="text-center">
+          <div key={c.label} className="text-center bg-gray-50 rounded-lg py-2.5">
             <p className="text-[10px] text-gray-400 mb-1">{c.label}</p>
             <p className="text-[16px] font-bold leading-none" style={{ color: c.color, fontFamily: "'Inter', sans-serif" }}>{c.value}</p>
           </div>
         ))}
-      </div>
-
-      {/* ── Evidence Snippets ──────────────────────────────────────────────── */}
-      {realEvidences.length > 0 && (
-        <div className="mt-3 border-t border-gray-100 pt-3">
-          <button
-            type="button"
-            onClick={() => setShowEvidence(v => !v)}
-            className="flex items-center justify-between w-full text-[9px] font-bold uppercase tracking-wider text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <span>Evidence Snippets ({realEvidences.length}건)</span>
-            {showEvidence ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
-          </button>
-          {showEvidence && (
-            <div className="mt-2 space-y-2">
-              {realEvidences.slice(0, 3).map((ev, i) => (
-                <div key={i} className="rounded-lg bg-gray-50 border border-gray-100 px-2.5 py-2">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <span className="text-[9px] font-mono font-bold text-gray-400">{ev.indicatorCode}</span>
-                    {ev.indicatorTitle && (
-                      <span className="text-[9px] text-gray-400 truncate max-w-[100px]">{ev.indicatorTitle}</span>
-                    )}
-                    {ev.pageNumber > 0 && (
-                      <span className="ml-auto text-[9px] font-mono text-blue-500 shrink-0">p.{ev.pageNumber}</span>
-                    )}
-                    {ev.similarity != null && (
-                      <span className="text-[9px] font-mono text-emerald-600 shrink-0">
-                        sim {(ev.similarity * 100).toFixed(0)}%
-                      </span>
-                    )}
-                    {ev.confidenceLevel && (
-                      <span className={`text-[8px] font-bold px-1 rounded shrink-0 ${
-                        ev.confidenceLevel === 'HIGH'   ? 'bg-emerald-50 text-emerald-600' :
-                        ev.confidenceLevel === 'MEDIUM' ? 'bg-amber-50 text-amber-600' :
-                                                          'bg-red-50 text-red-500'
-                      }`}>{ev.confidenceLevel}</span>
-                    )}
-                  </div>
-                  <p className="text-[10px] text-gray-500 italic leading-relaxed line-clamp-2">
-                    &ldquo;{ev.evidenceText?.substring(0, 120)}{ev.evidenceText?.length > 120 ? '…' : ''}&rdquo;
-                  </p>
-                </div>
-              ))}
-            </div>
+        {/* 분석 신뢰도 — % + HIGH/MEDIUM/LOW badge */}
+        <div className="text-center bg-gray-50 rounded-lg py-2.5">
+          <p className="text-[10px] text-gray-400 mb-1">분석 신뢰도</p>
+          <p className="text-[16px] font-bold leading-none" style={{ color: confColor, fontFamily: "'Inter', sans-serif" }}>
+            {result.confidence != null ? `${result.confidence}%` : '—'}
+          </p>
+          {confLabel && (
+            <span className={`inline-block text-[8px] font-bold px-1.5 py-0.5 rounded border mt-1.5 ${
+              result.confidence >= 80 ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
+              result.confidence >= 60 ? 'bg-blue-50 text-blue-600 border-blue-200' :
+                                        'bg-amber-50 text-amber-600 border-amber-200'
+            }`}>{confLabel}</span>
           )}
         </div>
-      )}
+      </div>
 
-      {/* ── Evidence Verification ──────────────────────────────────────────── */}
-      {hasBreakdown && <IndicatorEvidenceSection breakdowns={result.indicatorBreakdowns} />}
+      {/* 주요 현황 bullet 제거 — 핵심 KPI(점수·등급·분석상태) 중심 구조 */}
+
+      {/* Evidence/Verification 상세 패널 — summary형 카드로 대체됨 */}
 
     </div>
   );
 }
 
 // ── MiniUpload ─────────────────────────────────────────────────────────────
-function MiniUpload({ file, onFile, label, allowCsv = false }) {
+function MiniUpload({ file, onFile, label, allowCsv = false, csvOnly = false }) {
   const uid = useId();
-  const [csvError, setCsvError] = useState(null);
+  const [fileError, setFileError] = useState(null);
 
   const handleChange = (e) => {
     const f = e.target.files[0];
     if (!f) return;
-    if (!allowCsv && f.name.toLowerCase().endsWith('.csv')) {
-      setCsvError('S/G 분석은 PDF 증빙 파일만 업로드 가능합니다.');
+    const name = f.name.toLowerCase();
+    if (csvOnly && !name.endsWith('.csv')) {
+      setFileError('CSV 파일(.csv)만 업로드 가능합니다.');
       e.target.value = '';
       return;
     }
-    setCsvError(null);
+    if (!allowCsv && !csvOnly && name.endsWith('.csv')) {
+      setFileError('S/G 분석은 PDF 증빙 파일만 업로드 가능합니다.');
+      e.target.value = '';
+      return;
+    }
+    setFileError(null);
     onFile(f);
     e.target.value = '';
   };
+
+  const acceptAttr = csvOnly ? '.csv' : allowCsv ? '.pdf,.csv' : '.pdf';
+  const placeholder = csvOnly ? 'CSV 파일 선택 (.csv)' : allowCsv ? 'PDF 또는 CSV 선택' : 'PDF 파일 선택';
 
   return (
     <div className="mt-4">
@@ -626,7 +614,7 @@ function MiniUpload({ file, onFile, label, allowCsv = false }) {
           <span className="text-[12px] text-gray-700 font-medium flex-1 truncate">{file.name}</span>
           <button
             type="button"
-            onClick={() => { onFile(null); setCsvError(null); }}
+            onClick={() => { onFile(null); setFileError(null); }}
             className="text-gray-300 hover:text-gray-500 transition-colors duration-150 p-0.5 rounded-md hover:bg-gray-100"
           >
             <X size={12} />
@@ -640,21 +628,21 @@ function MiniUpload({ file, onFile, label, allowCsv = false }) {
         >
           <Upload size={13} className="text-gray-300 group-hover:text-emerald-400 transition-colors duration-150" />
           <span className="text-[12px] text-gray-400 group-hover:text-gray-600 transition-colors duration-150">
-            {allowCsv ? 'PDF 또는 CSV 선택' : 'PDF 파일 선택'}
+            {placeholder}
           </span>
           <input
             id={uid}
             type="file"
-            accept={allowCsv ? '.pdf,.csv' : '.pdf'}
+            accept={acceptAttr}
             className="hidden"
             onChange={handleChange}
           />
         </label>
       )}
-      {csvError && (
+      {fileError && (
         <div className="flex items-center gap-1.5 mt-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200">
           <AlertCircle size={11} className="text-red-500 shrink-0" />
-          <p className="text-[11px] text-red-600">{csvError}</p>
+          <p className="text-[11px] text-red-600">{fileError}</p>
         </div>
       )}
     </div>
@@ -724,7 +712,26 @@ export default function AnalysisPage() {
 
   // ── 위저드 state
   const [wizardStep, setWizardStep] = useState(0);
-  const [ecoLinked, setEcoLinked]   = useState(false);
+  const [ecoLinked, setEcoLinked]     = useState(false);
+  const [userPoints, setUserPoints]   = useState(0);  // 회사 전체 포인트 합산
+
+  // 회사 ESG Pool 조회 → 포인트 있으면 자동 연동 (SUM(balance) 방식 제거)
+  useEffect(() => {
+    const cId = localStorage.getItem('companyId');
+    if (!cId) return;
+    const poolUrl = `/points/company/${cId}/esg-pool`;
+    console.log('[POOL-REQUEST-URL]', poolUrl, '→ proxy: localhost:9000 → POINT-SERVICE');
+    api.get(poolUrl)
+      .then(res => {
+        console.log('[POOL-RESPONSE]', res.data);
+        const pts = Number(res.data?.esgPoints) || 0;
+        setUserPoints(pts);
+        if (pts > 0) setEcoLinked(true);
+      })
+      .catch(err => {
+        console.error('[POOL-REQUEST-FAIL]', err?.response?.status, err?.message);
+      });
+  }, []);
 
   // ── 단계별 분석 완료 state
   const [eCompleted, setECompleted] = useState(false);
@@ -743,6 +750,14 @@ export default function AnalysisPage() {
   const [sFile, setSFile] = useState(null);
   const [gFile, setGFile] = useState(null);
 
+  // ── 최종 파이프라인 (WS 기반)
+  const [finalPipelineActive, setFinalPipelineActive] = useState(false);
+  const stompRef        = useRef(null);
+  const pipelineDoneRef = useRef(false);
+
+  // WS 연결 해제 (언마운트 시)
+  useEffect(() => () => { stompRef.current?.deactivate(); }, []);
+
   // ── E 파일 업로드 상태 추적 (진단용) ──────────────────────────────────────
   useEffect(() => {
     console.log('[E-DEBUG] eFile state changed →',
@@ -758,12 +773,10 @@ export default function AnalysisPage() {
   const [eValidationError, setEValidationError] = useState(null);
 
   const handleEnvironmentAnalysis = useCallback(async () => {
-    // ── 사전 validation ────────────────────────────────────────────────────
-    const hasFile    = !!eFile;
-    const hasMetrics = ENV_FIELDS.some(f => Number(manualEnv[f.key]) > 0);
-    if (!hasFile && !hasMetrics) {
-      setEValidationError('환경 데이터를 최소 1개 이상 입력해주세요. (CSV/PDF 업로드 또는 수치 직접 입력)');
-      addLog('E-STEP', '[VALIDATION] 데이터 없음 — API 호출 중단', 'error');
+    // ── 사전 validation: CSV 파일 필수 ──────────────────────────────────────
+    if (!eFile) {
+      setEValidationError('환경 데이터 증빙 서류(CSV)를 업로드해야 분석을 시작할 수 있습니다.');
+      addLog('E-STEP', '[VALIDATION] CSV 파일 없음 — API 호출 중단', 'error');
       return;
     }
     setEValidationError(null);
@@ -831,7 +844,6 @@ export default function AnalysisPage() {
         `환경(E) 분석 완료 — ${result.score}점 / ${result.grade}등급 / 신뢰도 ${result.confidence}%` +
         (result.lowMismatchCount ? ` / LOW ${result.lowMismatchCount}건` : ''),
         result.lowMismatchCount ? 'error' : 'success');
-      setTimeout(() => setWizardStep(2), 600);
     } catch (e) {
       const status = e.response?.status;
       const msg    = e.response?.data?.message ?? e.message;
@@ -886,7 +898,6 @@ export default function AnalysisPage() {
       setSResult(result);
       setSCompleted(true);
       addLog('S-STEP', `사회(S) RAG 완료 — ${result.score}점 / ${result.grade}등급 / Evidence ${result.evidenceCount}건 / 신뢰도 ${result.confidence}%`, 'success');
-      setTimeout(() => setWizardStep(3), 600);
     } catch (e) {
       const msg = e.response?.data?.message ?? e.message;
       addLog('S-STEP', `RAG 분석 실패 (${msg}). 증빙 문서를 확인하고 다시 시도해주세요.`, 'error');
@@ -934,7 +945,6 @@ export default function AnalysisPage() {
       setGResult(result);
       setGCompleted(true);
       addLog('G-STEP', `지배구조(G) RAG 완료 — ${result.score}점 / ${result.grade}등급 / Evidence ${result.evidenceCount}건 / 신뢰도 ${result.confidence}%`, 'success');
-      setTimeout(() => setWizardStep(4), 600);
     } catch (e) {
       const msg = e.response?.data?.message ?? e.message;
       addLog('G-STEP', `RAG 분석 실패 (${msg}). 증빙 문서를 확인하고 다시 시도해주세요.`, 'error');
@@ -949,7 +959,8 @@ export default function AnalysisPage() {
     setErr(null);
     setSubmitting(true);
 
-    const ecoBonus   = ecoLinked ? 4 : 0;
+    // 1,000 EP = Social +1점, 최대 +5점 (백엔드 EcoPointConverter.EP_PER_S_POINT 동일)
+    const ecoBonus = ecoLinked ? Math.min(5, Math.floor(userPoints / 1000)) : 0;
     const adjSScore  = Math.min(100, sResult.score + ecoBonus);
     const iw         = getIndustryWeights(companyProfile.ksicCode);
     const totalScore = Math.round(eResult.score * iw.E + adjSScore * iw.S + gResult.score * iw.G);
@@ -959,6 +970,13 @@ export default function AnalysisPage() {
     );
 
     const userId = localStorage.getItem('memberId');
+    console.log('[SUBMIT-CHECK] ecoLinked=', ecoLinked, 'userPoints=', userPoints, 'ecoBonus=', ecoBonus, 'companyId=', companyId);
+    console.log('[ECO-POOL-SOURCE] companyId=', companyId,
+      '| displayedPool=', userPoints, 'EP',
+      '| bonusCalculatedFrom=', userPoints, 'EP',
+      '| calculatedBonus=', ecoBonus, '점',
+      '| usedPoints=', ecoBonus * 1000, 'EP',
+      '| consumeTargetPool=company_esg_pool(backend)');
     const allEvidences = [
       ...(eResult?.evidences ?? []),
       ...(sResult?.evidences ?? []),
@@ -972,9 +990,10 @@ export default function AnalysisPage() {
         evidenceCount: eResult.evidenceCount,
         ragBased: eResult.ragBased ?? false,
       },
-      socialResult:      { score: adjSScore,     grade: sResult.grade, confidence: sResult.confidence, evidenceCount: sResult.evidenceCount, ragBased: sResult.ragBased ?? false },
+      socialResult:      { score: sResult.score, grade: sResult.grade, confidence: sResult.confidence, evidenceCount: sResult.evidenceCount, ragBased: sResult.ragBased ?? false },
       governanceResult:  { score: gResult.score, grade: gResult.grade, confidence: gResult.confidence, evidenceCount: gResult.evidenceCount, ragBased: gResult.ragBased ?? false },
       ecoPointApplied: ecoLinked,
+      // ecoSBonus: 백엔드가 회사 전체 포인트 기반으로 직접 계산하므로 프론트 전송 제거
       totalScore,
       finalGrade,
       confidence,
@@ -983,9 +1002,9 @@ export default function AnalysisPage() {
       ksicCode: companyProfile.ksicCode || undefined,
     };
 
+    console.log('[SUBMIT-PAYLOAD] ecoPointApplied=', body.ecoPointApplied, 'ksicCode=', body.ksicCode);
+    let sessionId;
     try {
-      // Step 1: 세션만 생성 (분석 실행 안 함)
-      // Step 2: PipelinePage mount → WS ready → startAnalysis(sessionId) 순서로 실행됨
       const res = await api.post('/api/v1/analysis/session', body, {
         headers: {
           'Content-Type': 'application/json',
@@ -993,23 +1012,93 @@ export default function AnalysisPage() {
           'X-CompanyId': String(companyId ?? ''),
         },
       });
-      const sessionId = res.data?.sessionId ?? res.data;
-      console.debug('[PIPELINE] session created sessionId=%s companyId=%s', sessionId, companyId);
-      navigate(`/analysis/pipeline/${sessionId}`, { state: { companyId } });
+      sessionId = res.data?.sessionId ?? res.data;
     } catch (e) {
       setSubmitting(false);
       const status    = e.response?.status;
       const serverMsg = e.response?.data?.message ?? e.response?.data ?? e.message;
-      console.error('[SESSION CREATE ERROR]', { status, url: e.config?.url, responseData: e.response?.data });
       setErr(`세션 생성 실패 (${status ?? 'ERR'}): ${serverMsg}`);
+      return;
     }
-  }, [eResult, sResult, gResult, ecoLinked, companyId, companyProfile.ksicCode, navigate]);
 
-  const busy       = eLoading || sLoading || gLoading || submitting;
+    // 세션 생성 완료 → Audit Stream에서 파이프라인 로그 스트리밍 시작
+    setFinalPipelineActive(true);
+
+    const onCompleted = (analysisId) => {
+      if (pipelineDoneRef.current) return;
+      pipelineDoneRef.current = true;
+      const targetId = (analysisId && String(analysisId) !== 'undefined') ? analysisId : sessionId;
+      localStorage.setItem('esg_latest_analysis_id', String(targetId));
+      setFinalPipelineActive(false);
+      setTimeout(() => navigate(`/analysis/result/${targetId}`), 1800);
+    };
+
+    const onFailed = () => {
+      setFinalPipelineActive(false);
+      setSubmitting(false);
+      setErr('분석 파이프라인 실패 — 입력 데이터를 확인하고 다시 시도해주세요');
+    };
+
+    // WebSocket 연결
+    stompRef.current?.deactivate();
+    const client = new Client({
+      webSocketFactory: () => new SockJS(`${BASE_URL}ws-esg`),
+      reconnectDelay: 3000,
+      onConnect: () => {
+        client.subscribe(`/topic/analysis/${companyId}`, (frame) => {
+          const status = frame.body?.trim();
+          if (!status) return;
+          if (status.startsWith('COMPLETED') || status === 'COMPLETE') {
+            const parts = status.split(':');
+            onCompleted(parts[1]?.trim() || sessionId);
+          } else if (status === 'FAILED') {
+            onFailed();
+          }
+        });
+        // 구독 완료 후 분석 실행 요청
+        api.post(`/api/v1/analysis/session/${sessionId}/start`, null, {
+          headers: { 'X-CompanyId': String(companyId) },
+        }).catch(() => onFailed());
+      },
+      onStompError: () => onFailed(),
+    });
+    client.activate();
+    stompRef.current = client;
+
+    // 폴링 fallback (WS 이벤트 누락 안전망)
+    const pollDelays = [35000, 65000, 110000, 180000];
+    pollDelays.forEach(delay => {
+      setTimeout(async () => {
+        if (pipelineDoneRef.current) return;
+        try {
+          const r = await api.get(`/api/v1/analysis/${sessionId}/result`);
+          if (r.status === 200 && r.data) onCompleted(sessionId);
+        } catch {}
+      }, delay);
+    });
+  }, [eResult, sResult, gResult, ecoLinked, userPoints, manualEnv, companyId, companyProfile.ksicCode, navigate]);
+
+  const busy       = eLoading || sLoading || gLoading || submitting || finalPipelineActive;
   const isLastStep = wizardStep === WIZARD_STEPS.length - 1;
   const stepDef    = WIZARD_STEPS[wizardStep];
   const StepIcon   = stepDef.Icon;
   const allDone    = eCompleted && sCompleted && gCompleted;
+
+  const computedEcoBonus = (() => {
+    if (!ecoLinked) return 0;
+    // 포인트 잔액 기반 산출 (백엔드 공식과 동일: 1000 EP = +1점, cap 5점)
+    if (userPoints > 0) return Math.min(5, Math.floor(userPoints / 1000));
+    const carbonInput = Number(manualEnv.carbon) || 0;
+    let pts = 0;
+    if (carbonInput > 0) {
+      const rate = eResult ? Math.max(0.05, Math.min(0.22, eResult.score / 450)) : 0.10;
+      pts = Math.round(Math.round(carbonInput * rate * 1000) / 3.5);
+    } else if (eResult) {
+      pts = Math.round(Math.round(eResult.score * 115) / 3.5);
+    }
+    return Math.min(5, Math.floor(pts / 1000));
+  })();
+
 
 
   return (
@@ -1017,16 +1106,19 @@ export default function AnalysisPage() {
       <div className="max-w-6xl mx-auto px-8 py-10">
 
         <div className="mb-8">
-          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] mb-1.5">AI ESG Audit</p>
-          <h1 className="text-[22px] font-bold text-gray-900 tracking-tight leading-none">ESG AI 분석</h1>
+          <p className="text-[11px] font-semibold text-emerald-600 uppercase tracking-[0.1em] mb-1.5">GreenTrace ESG 감사</p>
+          <h1 className="text-[22px] font-bold text-gray-900 tracking-tight leading-none">ESG 감사 진단</h1>
           <p className="text-[13px] text-gray-500 mt-2">
-            환경(E) · 사회(S) · 지배구조(G) 핵심 ESG 지표를 기반으로 AI 분석을 수행합니다
+            환경(E) · 사회(S) · 지배구조(G) 핵심 ESG 지표를 기반으로 증빙 문서 감사를 수행합니다
           </p>
         </div>
 
         <WizardStepper currentStep={wizardStep} />
 
-        <div className="max-w-xl">
+        {/* ── Two-column: left = wizard, right = audit panel ── */}
+        <div className="lg:grid lg:grid-cols-[1fr_300px] gap-8 items-start">
+
+          {/* ── Left column ── */}
           <div className="flex flex-col gap-5">
 
             <div className="saas-card overflow-hidden">
@@ -1112,7 +1204,7 @@ export default function AnalysisPage() {
                           />
                         </div>
                       ))}
-                      <MiniUpload file={eFile} onFile={setEFile} label="환경 데이터 증빙 (CSV / PDF, 선택)" allowCsv />
+                      <MiniUpload file={eFile} onFile={setEFile} label="환경 데이터 증빙 서류 (CSV, 필수)" csvOnly />
                     </div>
 
                     {/* E 분석 시작 / 결과 */}
@@ -1122,13 +1214,13 @@ export default function AnalysisPage() {
                           <button
                             type="button"
                             onClick={handleEnvironmentAnalysis}
-                            disabled={eLoading}
+                            disabled={eLoading || eCompleted}
                             className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white
                               font-semibold text-sm transition-colors duration-150 flex items-center justify-center gap-2
                               disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
                           >
                             {eLoading
-                              ? <><Loader2 size={14} className="animate-spin" /> 수치 검증 분석 중...</>
+                              ? <><Loader2 size={14} className="animate-spin" /> 환경 분석 중...</>
                               : <><Leaf size={14} /> 환경(E) 분석 시작</>}
                           </button>
                           {eValidationError && (
@@ -1187,8 +1279,8 @@ export default function AnalysisPage() {
                             disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
                         >
                           {sLoading
-                            ? <><Loader2 size={14} className="animate-spin" /> OCR + RAG 분석 중...</>
-                            : <><Users size={14} /> Social(S) RAG 분석 시작</>
+                            ? <><Loader2 size={14} className="animate-spin" /> 문서 분석 중...</>
+                            : <><Users size={14} /> Social(S) 분석 시작</>
                           }
                         </button>
                       ) : (
@@ -1240,8 +1332,8 @@ export default function AnalysisPage() {
                             disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
                         >
                           {gLoading
-                            ? <><Loader2 size={14} className="animate-spin" /> OCR + RAG 분석 중...</>
-                            : <><Building2 size={14} /> Governance(G) RAG 분석 시작</>
+                            ? <><Loader2 size={14} className="animate-spin" /> 문서 분석 중...</>
+                            : <><Building2 size={14} /> Governance(G) 분석 시작</>
                           }
                         </button>
                       ) : (
@@ -1264,15 +1356,39 @@ export default function AnalysisPage() {
                 {wizardStep === 4 && (
                   <div className="space-y-5">
                     <p className="text-xs text-gray-500 leading-relaxed">
-                      과거 탄소 절감 활동을 ESG 점수에 반영합니다.
-                      연동 시 <span className="text-emerald-600 font-semibold">Social(S) 점수 가산</span>이 예정됩니다.
+                      친환경 활동으로 적립한 에코 포인트를 ESG 점수에 반영합니다.
+                      연동 시 <span className="text-emerald-600 font-semibold">Social(S) 점수 가산</span>이 적용되고, 반영된 포인트는 차감됩니다.
                     </p>
+                    {userPoints > 0 && (
+                      <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-100 text-[11px]">
+                        <span className="text-emerald-700 font-semibold">회사 전체 보유 에코 포인트</span>
+                        <span className="text-emerald-600 tabular-nums font-bold">{userPoints.toLocaleString()} EP</span>
+                      </div>
+                    )}
+                    {userPoints > 0 && computedEcoBonus > 0 && (
+                      <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 border border-gray-100 text-[11px]">
+                        <span className="text-gray-500">분석 반영 시 차감 (관리자 계정)</span>
+                        <span className="text-gray-700 tabular-nums">
+                          {(computedEcoBonus * 1000).toLocaleString()} EP 차감 예정
+                        </span>
+                      </div>
+                    )}
+                    {!eResult && (
+                      <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-amber-50 border border-amber-100">
+                        <AlertTriangle size={12} className="text-amber-500 shrink-0" />
+                        <p className="text-[11px] text-amber-600">Environment(E) 분석을 완료하면 실제 데이터 기반으로 산출됩니다.</p>
+                      </div>
+                    )}
                     <div className="grid grid-cols-3 gap-3">
-                      {[
-                        { label: '에코 포인트', value: MOCK_ECO.ecoPoints.toLocaleString(),            unit: 'P',    color: '#059669' },
-                        { label: '탄소 절감',   value: (MOCK_ECO.carbonReductionKg / 1000).toFixed(1), unit: 'tCO₂', color: '#3b82f6' },
-                        { label: '나무 환산',   value: MOCK_ECO.equivalentTrees.toLocaleString(),      unit: '그루', color: '#f59e0b' },
-                      ].map(card => (
+                      {(() => {
+                        const poolBonus = Math.min(5, Math.floor(userPoints / 1000));
+                        const poolUsed  = poolBonus * 1000;
+                        return [
+                          { label: '회사 ESG Pool', value: userPoints.toLocaleString(),  unit: 'EP',   color: '#059669' },
+                          { label: 'S 가산점',       value: `+${poolBonus}`,              unit: '점',   color: '#3b82f6' },
+                          { label: '차감 예정 EP',   value: poolUsed.toLocaleString(),    unit: 'EP',   color: '#f59e0b' },
+                        ];
+                      })().map(card => (
                         <div
                           key={card.label}
                           className="rounded-xl border p-3 text-center bg-white"
@@ -1307,12 +1423,28 @@ export default function AnalysisPage() {
                         </button>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-100">
-                        <CheckCircle2 size={15} className="text-emerald-500 shrink-0" />
-                        <div>
-                          <p className="text-sm font-semibold text-emerald-700">EcoPoint 연동 완료</p>
-                          <p className="text-[10px] text-emerald-500 mt-0.5">S 점수 +4 반영 예정</p>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-100">
+                          <CheckCircle2 size={15} className="text-emerald-500 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-emerald-700">EcoPoint 연동 완료</p>
+                            <p className="text-[10px] text-emerald-500 mt-0.5">
+                              {computedEcoBonus > 0 && sResult
+                                ? `사회(S) ${sResult.score}점 → ${Math.min(100, sResult.score + computedEcoBonus)}점 보정 (+${computedEcoBonus})`
+                                : computedEcoBonus > 0
+                                ? `Social(S) +${computedEcoBonus}점 반영 예정`
+                                : '탄소 배출량 입력 시 S 점수 가산 적용'}
+                            </p>
+                          </div>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => setWizardStep(v => v + 1)}
+                          className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white
+                            font-semibold text-sm transition-colors duration-150 flex items-center justify-center gap-2 shadow-sm"
+                        >
+                          다음 단계로 <ArrowRight size={14} />
+                        </button>
                       </div>
                     )}
                   </div>
@@ -1328,7 +1460,7 @@ export default function AnalysisPage() {
                         { label: 'Environment (E)', done: eCompleted, score: eResult ? `${eResult.score}점 · ${eResult.grade}등급` : null },
                         { label: 'Social (S)',       done: sCompleted, score: sResult ? `${sResult.score}점 · ${sResult.grade}등급` : null },
                         { label: 'Governance (G)',   done: gCompleted, score: gResult ? `${gResult.score}점 · ${gResult.grade}등급` : null },
-                        { label: 'EcoPoint',         done: ecoLinked,  score: ecoLinked ? 'S +4 반영됨' : '미연동' },
+                        { label: 'EcoPoint',         done: ecoLinked,  score: ecoLinked && computedEcoBonus > 0 && sResult ? `사회(S) ${sResult.score}→${Math.min(100, sResult.score + computedEcoBonus)}점` : ecoLinked ? '연동됨 (가산 없음)' : '미연동' },
                       ].map(row => (
                         <div
                           key={row.label}
@@ -1415,9 +1547,26 @@ export default function AnalysisPage() {
               ) : <div />}
             </div>
 
+          </div>{/* end left column */}
 
+          {/* ── Right column: sticky audit panel (desktop only) ── */}
+          <div className="hidden lg:block">
+            <div className="sticky top-24">
+              <RealtimeAuditPanel
+                eLoading={eLoading}
+                sLoading={sLoading}
+                gLoading={gLoading}
+                finalPipelineActive={finalPipelineActive}
+                eFile={eFile}
+                sFile={sFile}
+                gFile={gFile}
+                socialAnswers={socialAnswers}
+                governanceAnswers={governanceAnswers}
+              />
+            </div>
           </div>
-        </div>
+
+        </div>{/* end two-column grid */}
       </div>
     </div>
   );

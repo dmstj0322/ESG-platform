@@ -31,6 +31,25 @@ export default defineConfig({
         target: 'http://localhost:9000',
         changeOrigin: true,
       },
+      // point-service → API Gateway (9000) → lb://POINT-SERVICE
+      '/points': {
+        target: 'http://localhost:9000',
+        changeOrigin: true,
+      },
+      // community-service → API Gateway (9000)
+      '/community': {
+        target: 'http://localhost:9000',
+        changeOrigin: true,
+      },
+      '/posts': {
+        target: 'http://localhost:9000',
+        changeOrigin: true,
+      },
+      // market-service → API Gateway (9000)
+      '/market': {
+        target: 'http://localhost:9000',
+        changeOrigin: true,
+      },
     },
   },
 })

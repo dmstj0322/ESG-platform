@@ -8,7 +8,7 @@ import api from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
 
 const NAV_ADMIN = [
-  { to: '/analysis', label: 'ESG Audit',  icon: BarChart3,  matchPrefix: '/analysis' },
+  { to: '/analysis', label: 'ESG 분석',  icon: BarChart3,  matchPrefix: '/analysis' },
   { to: '/community', label: '커뮤니티',   icon: Users,       matchPrefix: '/community' },
   { to: '/market',    label: 'ESG 마켓',   icon: ShoppingBag, matchPrefix: '/market' },
 ];

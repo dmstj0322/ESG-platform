@@ -39,7 +39,60 @@
     { "indicatorCode": "E-102", "indicatorTitle": "가스 사용량",   "numericMatchLevel": "MEDIUM", "numericDiffPercent": 11.2, "inputValue": 980,   "extractedValue": 1090,  "unit": "GJ",  "isValidEvidence": true,  "confidenceLevel": "MEDIUM" },
     { "indicatorCode": "E-103", "indicatorTitle": "탄소 배출량",   "numericMatchLevel": "LOW",    "numericDiffPercent": 28.4, "inputValue": 2100,  "extractedValue": 2696,  "unit": "tCO₂","isValidEvidence": false, "confidenceLevel": "LOW" },
     { "indicatorCode": "E-104", "indicatorTitle": "폐기물 발생량", "numericMatchLevel": "HIGH",   "numericDiffPercent": 1.5,  "inputValue": 87,    "extractedValue": 88,    "unit": "ton", "isValidEvidence": true,  "confidenceLevel": "HIGH" },
+    { "indicatorCode": "E-105", "indicatorTitle": "용수 사용량",  "numericMatchLevel": "MEDIUM", "numericDiffPercent": 13.6, "inputValue": 15500, "extractedValue": 17608, "unit": "m³",  "isValidEvidence": true,  "confidenceLevel": "MEDIUM" },
     { "indicatorCode": "S-201", "indicatorTitle": "산업안전 교육", "similarity": 0.58, "finalScore": 0.55, "evidenceText": "직원 교육 프로그램 운영 현황입니다.", "isValidEvidence": true, "confidenceLevel": "LOW", "pageNumber": 7 }
   ],
-  "fullReport": "### ESG 종합 총평\n\n스마트솔루션 주식회사는 환경 데이터 일부와 S/G 증빙 부족으로 평가 정확도에 제한이 있습니다.\n\n### 위험 요소\n\n- 탄소 배출량 수치 불일치 감지\n- S/G 지표 5개 항목 증빙 미제출\n\n### 개선 권고\n\n- ESG 관련 정책 문서 제출 필요\n- 사회·지배구조 관련 공시 자료 보완 권장"
+  "fullReport": "### ESG 종합 총평\n\n스마트솔루션 주식회사는 환경 데이터 일부와 S/G 증빙 부족으로 평가 정확도에 제한이 있습니다.\n\n### 위험 요소\n\n- 탄소 배출량 수치 불일치 감지\n- S/G 지표 5개 항목 증빙 미제출\n\n### 개선 권고\n\n- ESG 관련 정책 문서 제출 필요\n- 사회·지배구조 관련 공시 자료 보완 권장",
+  "benchmarkComparison": {
+    "industry": "IT/소프트웨어",
+    "regionName": "서울특별시",
+    "companyDataSource": "ACTUAL",
+    "companyElectricityKwh": 4200000,
+    "industryAvgElectricityKwh": 5600000,
+    "companyGasMj": 980000,
+    "industryAvgGasMj": 1380000,
+    "companyCarbonTco2": 2100,
+    "industryAvgCarbonTco2": 1750,
+    "companyWasteKg": 87000,
+    "industryAvgWasteKg": 118000,
+    "companyWaterM3": 15500,
+    "industryAvgWaterM3": 9200,
+    "metrics": [
+      {
+        "name": "전력 사용량",
+        "unit": "kWh",
+        "company": 4200000,
+        "industryAvg": 5600000,
+        "source": "한국에너지공단 업종별 에너지소비 통계 2023"
+      },
+      {
+        "name": "가스 사용량",
+        "unit": "MJ",
+        "company": 980000,
+        "industryAvg": 1380000,
+        "source": "에너지경제연구원 업종별 에너지원단위 2023"
+      },
+      {
+        "name": "탄소 배출량",
+        "unit": "tCO₂",
+        "company": 2100,
+        "industryAvg": 1750,
+        "source": "환경부 온실가스 종합정보센터 2023"
+      },
+      {
+        "name": "폐기물 발생량",
+        "unit": "kg",
+        "company": 87000,
+        "industryAvg": 118000,
+        "source": "환경부 사업장 폐기물 발생 및 처리현황 2022"
+      },
+      {
+        "name": "용수 사용량",
+        "unit": "m³",
+        "company": 15500,
+        "industryAvg": 9200,
+        "source": "K-water 산업용수 수요 통계 2023"
+      }
+    ]
+  }
 }

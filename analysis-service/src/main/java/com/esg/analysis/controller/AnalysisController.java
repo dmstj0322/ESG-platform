@@ -67,7 +67,7 @@ public class AnalysisController {
     /**
      * [GET] 완료된 분석 이력 목록 조회 (최신 20건)
      */
-    @GetMapping("/analysis/history")
+    @GetMapping("/history")
     public ResponseEntity<?> getAnalysisHistory(@RequestHeader("X-Company-Id") Long companyId) {
         log.info(">>>> [API 호출] 기업 ID {}의 분석 이력 조회", companyId);
 
@@ -87,17 +87,41 @@ public class AnalysisController {
                         try {
                             Map<String, Object> parsed = objectMapper.readValue(
                                     content, new TypeReference<Map<String, Object>>() {});
-                            if (parsed.containsKey("eScore"))   item.put("eScore",   parsed.get("eScore"));
-                            if (parsed.containsKey("sScore"))   item.put("sScore",   parsed.get("sScore"));
-                            if (parsed.containsKey("gScore"))   item.put("gScore",   parsed.get("gScore"));
-                            if (parsed.containsKey("totalScore")) item.put("totalScore", parsed.get("totalScore"));
-                            if (parsed.containsKey("confidence")) item.put("confidence", parsed.get("confidence"));
+                            if (parsed.containsKey("totalScore"))       item.put("totalScore",       parsed.get("totalScore"));
+                            if (parsed.containsKey("overallConfidence")) item.put("overallConfidence", parsed.get("overallConfidence"));
+                            // E/S/G: 최상위 키 우선 (null 방어 포함), 없거나 null이면 sections[] fallback
+                            boolean eFromTop = parsed.containsKey("eScore") && parsed.get("eScore") != null;
+                            boolean sFromTop = parsed.containsKey("sScore") && parsed.get("sScore") != null;
+                            boolean gFromTop = parsed.containsKey("gScore") && parsed.get("gScore") != null;
+                            if (eFromTop) item.put("eScore", parsed.get("eScore"));
+                            if (sFromTop) item.put("sScore", parsed.get("sScore"));
+                            if (gFromTop) item.put("gScore", parsed.get("gScore"));
+                            // 하나라도 최상위에서 못 가져왔으면 sections[] 에서 보완
+                            if (!eFromTop || !sFromTop || !gFromTop) {
+                                Object sectionsObj = parsed.get("sections");
+                                if (sectionsObj instanceof java.util.List<?> sectionList) {
+                                    for (Object sObj : sectionList) {
+                                        if (sObj instanceof Map<?, ?> sec) {
+                                            Object cat = sec.get("category");
+                                            Object sc  = sec.get("score");
+                                            if (sc == null) continue;
+                                            if (!eFromTop && "Environment".equals(cat)) item.put("eScore", sc);
+                                            else if (!sFromTop && "Social".equals(cat)) item.put("sScore", sc);
+                                            else if (!gFromTop && "Governance".equals(cat)) item.put("gScore", sc);
+                                        }
+                                    }
+                                }
+                            }
                         } catch (Exception ignored) {}
                     }
+                    log.debug("[History] id={} grade={} eScore={} sScore={} gScore={} totalScore={}",
+                            item.get("analysisId"), item.get("grade"),
+                            item.get("eScore"), item.get("sScore"), item.get("gScore"), item.get("totalScore"));
                     return item;
                 })
                 .collect(Collectors.toList());
 
+        log.info("[History] 응답 {}건 companyId={}", history.size(), companyId);
         return ResponseEntity.ok(history);
     }
 

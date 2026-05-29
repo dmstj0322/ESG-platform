@@ -183,7 +183,7 @@ export default function EvidenceTracePage() {
                 <h1 className="text-xl font-bold text-gray-900">Evidence Trace</h1>
               </div>
               <p className="text-[13px] text-gray-500 mt-0.5">
-                K-ESG 18개 지표별 AI 검색 근거 및 유사도 추적
+                K-ESG 18개 지표별 감사 근거 및 적합도 추적
                 {analysisId && (
                   <span className="ml-2 text-gray-400 font-mono text-[11px]">#{analysisId}</span>
                 )}
@@ -340,7 +340,7 @@ export default function EvidenceTracePage() {
                           <ThCol label="카테고리"   col={null}         className="w-20"  />
                           <ThCol label="지표 코드"  col="indicatorCode" className="w-24"  />
                           <ThCol label="Evidence 텍스트" col={null}    className="min-w-[240px]" />
-                          <ThCol label="유사도"     col="similarity"   className="w-24"  />
+                          <ThCol label="근거 적합도"     col="similarity"   className="w-24"  />
                           <ThCol label="신뢰도"     col={null}         className="w-24"  />
                           <ThCol label="출처 파일"  col="source"       className="w-36"  />
                           <ThCol label="페이지"     col="page"         className="w-16"  />
@@ -470,7 +470,7 @@ export default function EvidenceTracePage() {
                         {/* metrics */}
                         <div className="grid grid-cols-2 gap-2">
                           <div className="bg-gray-50 rounded-lg p-3">
-                            <div className="text-[11px] text-gray-400 mb-1">유사도</div>
+                            <div className="text-[11px] text-gray-400 mb-1">근거 적합도</div>
                             <div className="text-lg font-bold text-gray-800">
                               {row.similarity != null ? (row.similarity * 100).toFixed(1) + '%' : '—'}
                             </div>

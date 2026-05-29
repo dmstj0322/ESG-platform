@@ -53,6 +53,14 @@ public class AnalysisResultResponse {
     private Long   ecoPoints;
     private Double carbonReductionKg;
     private Double equivalentTrees;
+    /** EcoPoint 보정으로 가산된 S 점수 (0~5). null=미적용 또는 구버전. 프론트 before/after 표시용. */
+    private Integer ecoSBonus;
+    /** 분석 전 회사 ESG Pool (company_esg_pool.esg_points) */
+    private Long esgPoolBefore;
+    /** ESG 분석에 실제 차감된 EcoPoint (ecoSBonus × 1000) */
+    private Long ecoUsedPoints;
+    /** 차감 후 회사 ESG Pool 잔액 */
+    private Long esgPoolAfter;
 
     // ── 리포트 본문 ───────────────────────────────────────────────────────
     /** 마크다운 전체 리포트 (## [종합 소견] / ## [지표별 정밀 진단] / ## [Risk & Opportunity]) */

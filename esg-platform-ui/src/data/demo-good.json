@@ -47,5 +47,57 @@
     { "indicatorCode": "G-301", "indicatorTitle": "윤리경영 정책 수립",   "similarity": 0.86, "finalScore": 0.88, "evidenceText": "윤리경영 방침 및 행동강령을 수립하고 전 임직원에게 고지하였습니다.", "isValidEvidence": true, "confidenceLevel": "HIGH", "pageNumber": 22 },
     { "indicatorCode": "G-303", "indicatorTitle": "ESG 담당 조직 여부",   "similarity": 0.79, "finalScore": 0.84, "evidenceText": "ESG위원회를 설치하고 ESG 전담부서를 운영 중입니다.", "isValidEvidence": true, "confidenceLevel": "HIGH", "pageNumber": 28 }
   ],
-  "fullReport": "### ESG 종합 총평\n\n에코테크 주식회사는 전반적으로 우수한 ESG 관리 역량을 보여주고 있습니다.\n\n### 주요 강점\n\n- E 카테고리 수치 검증 결과 대부분 HIGH 수준으로 데이터 신뢰도가 높음\n- 윤리경영 체계 및 ESG 담당 조직 구비\n\n### 개선 권고\n\n- 용수 사용량 데이터 정확도 향상 필요\n- S 카테고리 evidence 보완 권장"
+  "fullReport": "### ESG 종합 총평\n\n에코테크 주식회사는 전반적으로 우수한 ESG 관리 역량을 보여주고 있습니다.\n\n### 주요 강점\n\n- E 카테고리 수치 검증 결과 대부분 HIGH 수준으로 데이터 신뢰도가 높음\n- 윤리경영 체계 및 ESG 담당 조직 구비\n\n### 개선 권고\n\n- 용수 사용량 데이터 정확도 향상 필요\n- S 카테고리 evidence 보완 권장",
+  "benchmarkComparison": {
+    "industry": "제조업",
+    "regionName": "경기도",
+    "companyDataSource": "ACTUAL",
+    "companyElectricityKwh": 12500000,
+    "industryAvgElectricityKwh": 15200000,
+    "companyGasMj": 3200000,
+    "industryAvgGasMj": 4850000,
+    "companyCarbonTco2": 8400,
+    "industryAvgCarbonTco2": 10300,
+    "companyWasteKg": 540000,
+    "industryAvgWasteKg": 623000,
+    "companyWaterM3": 19200,
+    "industryAvgWaterM3": 23800,
+    "metrics": [
+      {
+        "name": "전력 사용량",
+        "unit": "kWh",
+        "company": 12500000,
+        "industryAvg": 15200000,
+        "source": "한국에너지공단 업종별 에너지소비 통계 2023"
+      },
+      {
+        "name": "가스 사용량",
+        "unit": "MJ",
+        "company": 3200000,
+        "industryAvg": 4850000,
+        "source": "에너지경제연구원 업종별 에너지원단위 2023"
+      },
+      {
+        "name": "탄소 배출량",
+        "unit": "tCO₂",
+        "company": 8400,
+        "industryAvg": 10300,
+        "source": "환경부 온실가스 종합정보센터 2023"
+      },
+      {
+        "name": "폐기물 발생량",
+        "unit": "kg",
+        "company": 540000,
+        "industryAvg": 623000,
+        "source": "환경부 사업장 폐기물 발생 및 처리현황 2022"
+      },
+      {
+        "name": "용수 사용량",
+        "unit": "m³",
+        "company": 19200,
+        "industryAvg": 23800,
+        "source": "K-water 산업용수 수요 통계 2023"
+      }
+    ]
+  }
 }

@@ -111,14 +111,15 @@ public class EnvironmentCsvService {
     }
 
     private int[] resolveColumnIndices(String[] headers) {
-        // [0]=month, [1]=electricity_kwh, [2]=gas_mj, [3]=carbon_tco2, [4]=waste_kg, [5]=water_m3
-        int[] idx = {-1, -1, -1, -1, -1, -1};
+        // [0]=month, [1]=electricity_kwh, [2]=gas(MJ 또는 Nm³), [3]=carbon_tco2, [4]=waste_kg, [5]=water_m3, [6]=gas단위(0=MJ,1=Nm³)
+        int[] idx = {-1, -1, -1, -1, -1, -1, 0};
         for (int i = 0; i < headers.length; i++) {
             String h = headers[i].trim().toLowerCase();
             switch (h) {
                 case "month"           -> idx[0] = i;
                 case "electricity_kwh" -> idx[1] = i;
-                case "gas_mj"          -> idx[2] = i;
+                case "gas_mj"          -> { idx[2] = i; idx[6] = 0; }  // MJ 단위
+                case "gas_nm3", "gas_nm³" -> { idx[2] = i; idx[6] = 1; }  // Nm³ 단위 → MJ로 변환 필요
                 case "carbon_tco2"     -> idx[3] = i;
                 case "waste_kg"        -> idx[4] = i;
                 case "water_m3"        -> idx[5] = i;
@@ -132,7 +133,7 @@ public class EnvironmentCsvService {
         return EnvironmentDataRow.builder()
                 .month(        getString(cols, idx[0]))
                 .electricityKwh(getDouble(cols, idx[1]))
-                .gasMj(         getDouble(cols, idx[2]))
+                .gasMj(         getDouble(cols, idx[2]))  // gas_nm3 컬럼이면 Nm³ 값 그대로 저장
                 .carbonTco2(    getDouble(cols, idx[3]))
                 .wasteKg(       getDouble(cols, idx[4]))
                 .waterM3(       getDouble(cols, idx[5]))
