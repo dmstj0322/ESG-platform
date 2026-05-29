@@ -1,7 +1,7 @@
 package com.esg.communityservice.service;
 
+import com.esg.common.domain.ActivityType;
 import com.esg.communityservice.domain.AIStatus;
-import com.esg.communityservice.domain.ActivityType;
 import com.esg.communityservice.domain.ImageFile;
 import com.esg.communityservice.repository.ImageFileRepository;
 import com.esg.infra.s3.S3Uploader;
@@ -14,6 +14,7 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.util.Arrays;
 
 @Service
 @RequiredArgsConstructor
@@ -25,7 +26,7 @@ public class ImageUploadService {
   public ImageFile uploadImage(MultipartFile file, Long memberId, ActivityType activityType) throws IOException {
     String pHash = calculatePHash(file);
 
-    if (imageFileRepository.existsByMemberIdAndFileHashAndAiStatus(memberId, pHash, AIStatus.SUCCESS)) {
+    if (imageFileRepository.existsByMemberIdAndFileHashAndAiStatusIn(memberId, pHash, Arrays.asList(AIStatus.SUCCESS, AIStatus.REVIEW_NEEDED))) {
       throw new IllegalArgumentException("이미 사용하신 인증 사진입니다. 새로운 사진을 촬영해 주세요!");
     }
 

@@ -1,7 +1,7 @@
 package com.esg.communityservice.controller;
 
+import com.esg.common.domain.ActivityType;
 import com.esg.common.security.AuthUser;
-import com.esg.communityservice.domain.ActivityType;
 import com.esg.communityservice.dto.CommentResponseDto;
 import com.esg.communityservice.dto.PostRequestDto;
 import com.esg.communityservice.dto.PostResponseDto;

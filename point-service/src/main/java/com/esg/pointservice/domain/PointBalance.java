@@ -16,6 +16,13 @@ public class PointBalance extends BaseTimeEntity {
 
   private Long balance;
 
+  @Column(nullable = false)
+  private Long totalCo2Reduction = 0L; // 누적 탄소 저감량
+
+  public void addCo2Reduction(long amount) {
+    this.totalCo2Reduction += amount;
+  }
+
   @Version
   private Long version;
 

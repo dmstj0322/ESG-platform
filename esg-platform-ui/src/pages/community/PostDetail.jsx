@@ -4,6 +4,23 @@ import api from '../../api/api';
 import CommentSection from '../../components/community/CommentSection';
 import { useAuth } from '../../context/AuthContext';
 import PostImageSlider from '../../components/community/PostImageSlider';
+import { toast } from 'react-toastify';
+
+const BADGE_EMOJI_MAP = {
+  '텀블러 새싹': '🌱', '텀블러 프로': '🌿', '텀블러 마스터': '🌳',
+  '에코 뚜벅이': '👟', '에코 라이더': '🚲', '대중교통 마스터': '🚇',
+  '분리배출 요정': '♻️', '지구 방위대': '🌍', '환경부 장관': '👑'
+};
+
+const getActivityName = (type) => {
+  const map = { 
+    TUMBLER: '텀블러 사용', 
+    TRANSPORT: '대중교통 이용', 
+    RECYCLE: '분리배출',
+    FAIL: '인증 실패' 
+  };
+  return map[type] || 'ESG 활동';
+};
 
 const PostDetails = () => {
   const { id } = useParams();
@@ -19,17 +36,22 @@ const PostDetails = () => {
 
   const fetchPost = useCallback(async () => {
     try {
-      const headers = targetCompanyId ? { 'X-Company-Id': targetCompanyId } : {};
-      const res = await api.get(`/community/posts/${id}`, { headers });
+      const currentMemberId = user?.memberId || localStorage.getItem('memberId');
+      const headers = {
+        ...(targetCompanyId ? { 'X-Company-Id': targetCompanyId } : {}),
+        ...(currentMemberId ? { 'X-Member-Id': currentMemberId } : {})
+      };
+      const res = await api.get(`/community/posts/${id}`, {});
       setPost(res.data);
       setIsLiked(res.data.isLiked);
       setLikeCount(res.data.likeCount);
     } catch (err) {
       console.error("데이터 로드 실패:", err);
-      alert("존재하지 않거나 접근 권한이 없는 게시글입니다.");
+      // alert("존재하지 않거나 접근 권한이 없는 게시글입니다.");
+      toast.error("존재하지 않거나 접근 권한이 없는 게시글입니다.", { containerId: 'main-toast' });
       navigate('/community');
     }
-  }, [id, targetCompanyId, navigate]);
+  }, [id, targetCompanyId, navigate, user]);
 
   useEffect(() => {
     fetchPost();
@@ -40,17 +62,20 @@ const PostDetails = () => {
     try {
       const headers = targetCompanyId ? { 'X-Company-Id': targetCompanyId } : {};
       await api.delete(`/community/posts/${id}`, { headers });
-      alert("삭제되었습니다.");
+      // alert("삭제되었습니다.");
+      toast.success("🗑️ 게시글이 삭제되었습니다.", { pcontainerId: 'main-toast' });
       navigate('/community');
     } catch (err) {
       console.error("삭제 실패:", err);
-      alert("삭제 권한이 없거나 오류가 발생했습니다.");
+      // alert("삭제 권한이 없거나 오류가 발생했습니다.");
+      toast.error("삭제 권한이 없거나 오류가 발생했습니다.", { containerId: 'main-toast' });
     }
   };
 
   const handleLike = async () => {
     if (!isLoggedIn) {
-      alert("로그인이 필요합니다.");
+      // alert("로그인이 필요합니다.");
+      toast.info("로그인이 필요합니다.", { containerId: 'main-toast' });
       return;
     }
     try {
@@ -58,7 +83,8 @@ const PostDetails = () => {
       setIsLiked(res.data.liked);
       setLikeCount(res.data.count);
     } catch (err) {
-      alert("좋아요 처리에 실패했습니다.");
+      // alert("좋아요 처리에 실패했습니다.");
+      toast.info("좋아요 처리에 실패했습니다.", { containerId: 'main-toast' });
     }
   };
 
@@ -70,8 +96,7 @@ const PostDetails = () => {
   // 🌟 배지 데이터 계산
   const getBadgeInfo = () => {
     if (post.adminStatus === 'APPROVED') return { text: '✅ 인증 완료', color: '#339af0', bgColor: '#e7f5ff' };
-    if (post.adminStatus === 'REJECTED') return { text: '❌ 관리자 반려', color: '#fa5252', bgColor: '#fff5f5' };
-    if (post.adminStatus === 'AUTO_REJECTED') return { text: '🤖❌ AI 자동 반려', color: '#fa5252', bgColor: '#fff5f5' };
+    if (post.adminStatus === 'REJECTED') return { text: '❌ 인증 반려', color: '#fa5252', bgColor: '#fff5f5' };
     if (post.aiStatus === 'PROCESSING') return { text: '🤖 분석 중', color: '#adb5bd', bgColor: '#f8f9fa' };
     return { text: '⏳ 심사 대기', color: '#fd7e14', bgColor: '#fff4e6' };
   };
@@ -82,7 +107,9 @@ const PostDetails = () => {
       <div style={headerSectionStyle}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           {isAuthor ? (
-            <div style={activityBadgeStyle}>{post.aiResult || '🌱 ESG 활동'}</div>
+            <div style={activityBadgeStyle}>
+              {getActivityName(post.activityType || post.aiResult)}
+            </div>
           ) : (
             <div style={{ height: '30px' }} />
           )}
@@ -101,6 +128,11 @@ const PostDetails = () => {
         <div style={authorInfoStyle}>
           <div style={miniAvatarStyle}>{post.nickname?.substring(0, 1)}</div>
           <div style={{ textAlign: 'left' }}>
+            {post.authorBadgeType && BADGE_EMOJI_MAP[post.authorBadgeType] && (
+              <span style={{ fontSize: '15px', marginRight: '5px' }}>
+                {BADGE_EMOJI_MAP[post.authorBadgeType]}
+              </span>
+            )}
             <span style={{ fontWeight: 'bold', fontSize: '15px' }}>{post.nickname}</span>
             <span style={{ margin: '0 8px', color: '#dee2e6' }}>|</span>
             <span style={{ color: '#adb5bd', fontSize: '13px' }}>{new Date(post.createdDate).toLocaleDateString()}</span>
@@ -116,7 +148,7 @@ const PostDetails = () => {
         <p style={paragraphStyle}>{post.content}</p>
 
         {/* 🌟 반려 사유 (본인 + REJECTED 상태일 때) */}
-        {isAuthor && ['REJECTED', 'AUTO_REJECTED'].includes(post.adminStatus) && (
+        {isAuthor && post.adminStatus === 'REJECTED' && (
           <div style={{
             marginTop: '30px', padding: '20px', backgroundColor: '#fff5f5',
             borderRadius: '12px', border: '1px solid #ffc9c9', color: '#fa5252'

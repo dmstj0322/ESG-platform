@@ -43,15 +43,27 @@ const NotificationPanel = ({ memberId, onClose, onRead }) => {
 
   // 2. 메시지 타입별 아이콘 매핑
   const getIcon = (n) => {
-    if (n.type?.includes('EARN')) return '💰';
-    if (n.type?.includes('USED')) return '💸';
-    if (n.message.includes('반려')) return '❌';
-    if (n.message.includes('승인')) return '✅';
-    return '🔔';
+    switch (n.type) {
+      case 'POINT_EARNED':
+        return '💰';
+      case 'POINT_USED':
+        return '💸';
+      case 'ACTIVITY_PENDING':
+        return '⏳';
+      case 'ACTIVITY_APPROVED':
+        return '🌱';
+      case 'ACTIVITY_REJECTED':
+        return '❌';
+      case 'BADGE_EARNED':
+        return '🎖️';
+      default:
+        return '🔔';
+    }
   };
 
   // 3. 클릭 시 읽음 처리 + 페이지 이동
   const handleItemClick = async (n) => {
+    console.log(n.targetId);
     const isReadStatus = n.isRead || n.read;
     if (!isReadStatus) {
       try {
@@ -60,21 +72,33 @@ const NotificationPanel = ({ memberId, onClose, onRead }) => {
       } catch (err) { console.error(err); }
     }
 
-    const isMarketOrPoint = 
-      n.type?.includes('USE') ||
-      n.message.includes('사용') || 
-      n.message.includes('구매') || 
-      n.message.includes('취소') || 
-      n.message.includes('환불');
+    // const isMarketOrPoint = 
+    //   n.type?.includes('USE') ||
+    //   n.message.includes('사용') || 
+    //   n.message.includes('구매') || 
+    //   n.message.includes('취소') || 
+    //   n.message.includes('환불');
 
-    // 알림 클릭 시 해당 타겟(게시글 등)으로 이동
-    if (isMarketOrPoint) {
-      navigate('/mypage'); // 포인트 관련은 마이페이지로
-    } else if (n.targetId) {
-      navigate(`/posts/${n.targetId}`);
-    } else {
-      navigate('/mypage');
-    }
+    // // 알림 클릭 시 해당 타겟(게시글 등)으로 이동
+    // if (isMarketOrPoint) {
+    //   navigate('/mypage'); // 포인트 관련은 마이페이지로
+    // } else if (n.targetId) {
+    //   navigate(`/posts/${n.targetId}`);
+    // } else {
+    //   navigate('/mypage');
+    // }
+
+    let navigatePath = '/mypage';
+
+    if (n.type === 'ACTIVITY_PENDING' || n.type === 'ACTIVITY_APPROVED' || n.type === 'ACTIVITY_REJECTED' || n.type === 'POINT_EARNED') {
+      navigatePath = n.targetId ? `/posts/${n.targetId}` : '/community';
+    } else if (n.type === 'POINT_USED' || n.type === 'POINT_REFUNDED') {
+      navigatePath = '/mypage';
+    } else if (n.type === 'BADGE_EARNED') {
+      navigatePath = '/mypage';
+    } 
+    
+    navigate(navigatePath);
 
     onClose(); // 알림창 닫기
     fetchData(); // 상태 갱신

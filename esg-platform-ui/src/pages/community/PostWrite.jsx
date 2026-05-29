@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
 import imageCompression from 'browser-image-compression';
+import { toast } from 'react-toastify';
 
 const PostWrite = () => {
   const [title, setTitle] = useState('');
@@ -15,12 +16,25 @@ const PostWrite = () => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
 
+  const ACTIVITY_NAME_MAP = {
+    'TUMBLER': '텀블러 사용',
+    'TRANSPORT': '대중교통 이용',
+    'RECYCLE': '분리배출',
+    'FAIL': '인증 실패 (다시 시도해주세요)'
+  };
+
   const handleFileChange = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
 
+    if (previews.length + files.length > 3) {
+      toast.warning("이미지는 최대 3장까지만 업로드 가능합니다.", { containerId: 'main-toast' });
+      setIsAnalyzing(false);
+      return;
+    }
+
     setIsAnalyzing(true);
-    
+
     try {
       // 🌟 이미지 압축 설정
       const options = {
@@ -64,28 +78,35 @@ const PostWrite = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (selectedFiles.length === 0) {
-      alert("인증샷을 첨부해주세요!");
+    // if (selectedFiles.length === 0) {
+    //   alert("인증샷을 첨부해주세요!");
+    //   return;
+    // }
+
+    if (!title || !content || selectedFiles.length === 0) {
+      toast.warning("제목, 내용, 이미지를 모두 입력해주세요.", { containerId: 'main-toast' });
       return;
     }
 
     const nickname = user?.nickname || "익명회원";
     const formData = new FormData();
-    
+
     // JSON 데이터 전송을 위한 Blob 객체 생성
     const dto = { title, content, activityType, nickname };
     const blob = new Blob([JSON.stringify(dto)], { type: 'application/json' });
     formData.append('dto', blob);
-    
+
     // 이미 압축된 selectedFiles를 사용하여 전송
     selectedFiles.forEach((file) => formData.append("files", file));
 
     try {
       await api.post('/community/posts', formData);
-      alert("성공적으로 등록되었습니다!");
+      // alert("성공적으로 등록되었습니다!");
+      toast.success("🌱 게시글이 성공적으로 등록되었습니다!", { containerId: 'main-toast' });
       navigate('/community');
     } catch (err) {
-      alert("작성 실패: " + (err.response?.data?.message || "서버 오류"));
+      // alert("작성 실패: " + (err.response?.data?.message || "서버 오류"));
+      toast.error("게시글 등록에 실패했습니다.", { containerId: 'main-toast' });
     }
   };
 
@@ -123,7 +144,7 @@ const PostWrite = () => {
             color: isAnalyzing ? '#868e96' : '#2b8a3e',
             borderColor: isAnalyzing ? '#e9ecef' : '#d3f9d8'
           }}>
-            {isAnalyzing ? "🔄 분석 중..." : `✨ ${activityType}`}
+            {isAnalyzing ? "🔄 분석 중..." : `✨ ${ACTIVITY_NAME_MAP[activityType] || 'ESG 활동'}`}
           </div>
         </div>
 

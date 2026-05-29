@@ -1,6 +1,6 @@
 package com.esg.communityservice.dto;
 
-import com.esg.communityservice.domain.ActivityType;
+import com.esg.common.domain.ActivityType;
 
 public record PostRequestDto(
   String title,

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
 import ImagePlaceholder from '../../components/market/ImagePlaceholder';
+import { toast } from 'react-toastify';
 
 const ProductDetail = () => {
   const { productId } = useParams();
@@ -29,7 +30,8 @@ const ProductDetail = () => {
 
   const handleOrder = async () => {
     if (!user) {
-      alert("로그인이 필요합니다.");
+      // alert("로그인이 필요합니다.");
+      toast.info("로그인이 필요합니다.", { containerId: 'main-toast' });
       return navigate('/login');
     }
 
@@ -40,19 +42,16 @@ const ProductDetail = () => {
     if (!window.confirm(confirmMsg)) return;
 
     try {
-      await api.post('/market/orders', {
-        productId: product.id,
-        count: 1
-      }, {
-        headers: {
-          'X-Member-Id': user.memberId,
-          'X-Company-Id': user.companyId
-        }
+      await api.post('/market/orders', { productId: product.id, count: 1 }, {
+        headers: { 'X-Member-Id': user.memberId, 'X-Company-Id': user.companyId }
       });
-      alert('주문이 완료되었습니다! 마이페이지에서 확인하세요.');
+      // alert('주문이 완료되었습니다! 마이페이지에서 확인하세요.');
+      const successMsg = product.category === 'GIFTICON' ? "🎁 구매가 완료되었습니다!" : "💙 기부가 완료되었습니다! 감사합니다.";
+      toast.success(successMsg, { containerId: 'main-toast' });
       navigate('/mypage');
     } catch (error) {
-      alert(error.response?.data?.message || "포인트가 부족하거나 처리 중 오류가 발생했습니다.");
+      // alert(error.response?.data?.message || "포인트가 부족하거나 처리 중 오류가 발생했습니다.");
+      toast.error(err.response?.data?.message || "결제에 실패했습니다.", { containerId: 'main-toast' });
     }
   };
 

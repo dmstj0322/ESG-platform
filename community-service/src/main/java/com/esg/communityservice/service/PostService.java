@@ -7,6 +7,7 @@ import com.esg.communityservice.domain.Post;
 import com.esg.communityservice.dto.PostRequestDto;
 import com.esg.communityservice.dto.PostResponseDto;
 import com.esg.communityservice.event.PostCreatedEvent;
+import com.esg.communityservice.repository.MemberBadgeRepository;
 import com.esg.communityservice.repository.PostLikeRepository;
 import com.esg.communityservice.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +36,19 @@ public class PostService {
   private final PostLikeRepository postLikeRepository;
   private final ImageUploadService imageUploadService;
   private final KafkaTemplate<String, Object> kafkaTemplate;
+  private final MemberBadgeRepository memberBadgeRepository;
+
+  private String getRepresentativeBadgeEmoji(Long memberId) {
+    return memberBadgeRepository.findByMemberIdAndIsRepresentativeTrue(memberId)
+      .map(mb -> mb.getBadge().getName())
+      .orElse(null);
+  }
+
+  private Map<Long, String> getBadgeMap(Page<Post> posts) {
+    Set<Long> memberIds = posts.stream().map(Post::getMemberId).collect(Collectors.toSet());
+    return memberBadgeRepository.findByMemberIdInAndIsRepresentativeTrue(memberIds)
+      .stream().collect(Collectors.toMap(mb -> mb.getMemberId(), mb -> mb.getBadge().getName()));
+  }
 
   @Transactional
   public PostResponseDto createPost(PostRequestDto requestDto, Long memberId, Long companyId, List<MultipartFile> files) throws IOException {
@@ -81,7 +98,8 @@ public class PostService {
       });
     }
 
-    return PostResponseDto.of(post, false);
+    String badgeEmoji = getRepresentativeBadgeEmoji(memberId);
+    return PostResponseDto.of(post, false, badgeEmoji);
   }
 
   @Transactional
@@ -94,18 +112,21 @@ public class PostService {
     }
 
     boolean isLiked = postLikeRepository.existsByPostIdAndMemberId(id, memberId);
-
     post.increaseViewCount();
-    return PostResponseDto.of(post, isLiked);
+
+    String badgeEmoji = getRepresentativeBadgeEmoji(post.getMemberId());
+    return PostResponseDto.of(post, isLiked, badgeEmoji);
   }
 
   @Transactional(readOnly = true)
   public Page<PostResponseDto> getPosts(Long memberId, Long companyId, String role, Pageable pageable) {
-    Page<Post> posts =  postRepository.findAllByCompanyIdOrderByCreatedDateDesc(companyId, pageable);
+    Page<Post> posts = postRepository.findAllByCompanyIdOrderByCreatedDateDesc(companyId, pageable);
+
+    Map<Long, String> badgeMap = getBadgeMap(posts);
 
     return posts.map(post -> {
       boolean isLiked = postLikeRepository.existsByPostIdAndMemberId(post.getId(), memberId);
-      return PostResponseDto.of(post, isLiked);
+      return PostResponseDto.of(post, isLiked, badgeMap.get(post.getMemberId()));
     });
   }
 
@@ -125,7 +146,9 @@ public class PostService {
     post.update(requestDto.title(), requestDto.content());
 
     boolean isLiked = postLikeRepository.existsByPostIdAndMemberId(postId, memberId);
-    return PostResponseDto.of(post, isLiked);
+
+    String badgeEmoji = getRepresentativeBadgeEmoji(post.getMemberId());
+    return PostResponseDto.of(post, isLiked, badgeEmoji);
   }
 
   @Transactional
@@ -148,25 +171,28 @@ public class PostService {
   public Page<PostResponseDto> searchPosts(Long memberId, Long companyId, String keyword, Pageable pageable) {
     Page<Post> posts = postRepository.findByCompanyIdAndTitleContainingOrContentContaining(companyId, keyword, keyword, pageable);
 
+    Map<Long, String> badgeMap = getBadgeMap(posts);
+
     return posts.map(post -> {
       boolean isLiked = postLikeRepository.existsByPostIdAndMemberId(post.getId(), memberId);
-      return PostResponseDto.of(post, isLiked);
+      return PostResponseDto.of(post, isLiked, badgeMap.get(post.getMemberId()));
     });
   }
 
   @Transactional(readOnly = true)
   public Page<PostResponseDto> getMyPosts(Long memberId, Long companyId, Pageable pageable) {
     // 본인 작성 게시글 조회
-    return postRepository.findAllByMemberIdAndCompanyIdOrderByCreatedDateDesc(memberId, companyId, pageable)
-      .map(post -> PostResponseDto.of(post, true));
+    Page<Post> posts = postRepository.findAllByMemberIdAndCompanyIdOrderByCreatedDateDesc(memberId, companyId, pageable);
+    Map<Long, String> badgeMap = getBadgeMap(posts);
+    return posts.map(post -> PostResponseDto.of(post, true, badgeMap.get(post.getMemberId())));
   }
 
   @Transactional(readOnly = true)
   public Page<PostResponseDto> getLikedPosts(Long memberId, Long companyId, Pageable pageable) {
     // 좋아요 리포지토리를 통해 본인이 좋아요 누른 게시글 목록 조회
-    return postLikeRepository.findPostsByMemberIdAndCompanyId(memberId, companyId, pageable)
-      .map(post -> PostResponseDto.of(post, true));
-  }
+    Page<Post> posts = postLikeRepository.findPostsByMemberIdAndCompanyId(memberId, companyId, pageable);
+    Map<Long, String> badgeMap = getBadgeMap(posts);
+    return posts.map(post -> PostResponseDto.of(post, true, badgeMap.get(post.getMemberId())));  }
 
   @Transactional(readOnly = true)
   public Page<PostResponseDto> getAdminPosts(Long companyId, String status, Pageable pageable) {
@@ -186,6 +212,10 @@ public class PostService {
       posts = postRepository.findAllByCompanyIdAndAdminStatusOrderByCreatedDateDesc(companyId, enumStatus, pageable);
     }
 
-    return posts.map(post -> PostResponseDto.of(post, false));
+    Map<Long, String> badgeMap = getBadgeMap(posts);
+
+    return posts.map(post -> {
+      return PostResponseDto.of(post, false, badgeMap.get(post.getMemberId()));
+    });
   }
 }

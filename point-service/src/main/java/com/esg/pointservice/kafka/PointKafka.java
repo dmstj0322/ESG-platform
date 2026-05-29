@@ -20,7 +20,10 @@ public class PointKafka {
 
       String description = String.format("ESG 활동 인증 성공: [%s] 활동으로 100 포인트 지급",
         event.activityType().getDescription());
-      pointService.earnPoints(event.memberId(), event.companyId(), 100L, description, event.postId());
+
+      int earnedCo2 = event.activityType().getCo2ReductionGram();
+
+      pointService.earnPoints(event.memberId(), event.companyId(), 100L, description, event.postId(), earnedCo2);
 
     } catch (Exception e) {
       log.error("포인트 지급 비즈니스 로직 처리 중 에러 발생: Post ID {}", event.postId(), e);

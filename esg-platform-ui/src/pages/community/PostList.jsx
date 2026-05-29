@@ -5,6 +5,12 @@ import api from '../../api/api';
 import '../../styles/Feed.css';
 import PostImageSlider from '../../components/community/PostImageSlider';
 
+const BADGE_EMOJI_MAP = {
+  '텀블러 새싹': '🌱', '텀블러 프로': '🌿', '텀블러 마스터': '🌳',
+  '에코 뚜벅이': '👟', '에코 라이더': '🚲', '대중교통 마스터': '🚇',
+  '분리배출 요정': '♻️', '지구 방위대': '🌍', '환경부 장관': '👑'
+};
+
 const PostList = () => {
   const [posts, setPosts] = useState([]);
   const { isLoggedIn, user } = useAuth();
@@ -21,10 +27,10 @@ const PostList = () => {
   const observerRef = useRef(null);
 
   const activityMap = {
-    'tumbler': '🥤 텀블러 사용',
-    'transport': '🚲 대중교통 이용',
-    'recycle': '♻️ 분리배출',
-    'fail': '❌ 인증 실패'
+    'tumbler': '텀블러 사용',
+    'transport': '대중교통 이용',
+    'recycle': '분리배출',
+    'fail': '인증 실패'
   };
 
   // 🌟 페이지 단위로 데이터를 불러오는 함수 (초기화 or 이어붙이기)
@@ -115,11 +121,7 @@ const PostList = () => {
       badgeColor = '#339af0';
       badgeBg = '#e7f5ff';
     } else if (post.adminStatus === 'REJECTED') {
-      badgeText = '❌ 관리자 반려';
-      badgeColor = '#fa5252';
-      badgeBg = '#fff5f5';
-    } else if (post.adminStatus === 'AUTO_REJECTED') {
-      badgeText = '🤖❌ AI 자동 반려';
+      badgeText = '❌ 인증 반려';
       badgeColor = '#fa5252';
       badgeBg = '#fff5f5';
     } else if (post.aiStatus === 'PROCESSING') {
@@ -176,6 +178,11 @@ const PostList = () => {
                     {post.nickname ? post.nickname.substring(0, 1) : '?'}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center' }}>
+                    {post.authorBadgeType && BADGE_EMOJI_MAP[post.authorBadgeType] && (
+                      <span style={{ fontSize: '15px', marginRight: '5px' }}>
+                        {BADGE_EMOJI_MAP[post.authorBadgeType]}
+                      </span>
+                    )}
                     <span className="username" style={{ fontWeight: 'bold', fontSize: '14px' }}>
                       {post.nickname || `Member #${post.memberId}`}
                     </span>
@@ -184,7 +191,7 @@ const PostList = () => {
                 </div>
                 {String(user?.memberId) === String(post.memberId) && (
                   <span style={activityBadgeStyle}>
-                    {activityMap[post.aiResult?.toLowerCase()] || 'ESG 활동'}
+                    {activityMap[(post.activityType || post.aiResult)?.toLowerCase()] || '🌱 ESG 활동'}
                   </span>
                 )}
               </div>

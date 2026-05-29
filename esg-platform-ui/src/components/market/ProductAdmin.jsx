@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import api from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
 import ImagePlaceholder from './ImagePlaceholder';
+import { toast } from 'react-toastify';
 
 const ProductAdmin = () => {
   const { user } = useAuth();
@@ -79,18 +80,23 @@ const ProductAdmin = () => {
     try {
       if (isEditing) {
         await api.put(`/market/admin/products/${editId}`, sendData, { headers: { 'X-Company-Id': companyId } });
-        alert("성공적으로 수정되었습니다.");
+        // alert("성공적으로 수정되었습니다.");
+        toast.success("✅ 상품이 성공적으로 수정되었습니다.", { containerId: 'main-toast' });
       } else {
         if (formData.category === 'GIFTICON' && voucherText) {
           voucherText.split('\n').filter(v => v.trim() !== "").forEach(v => sendData.append("vouchers", v));
         }
         await api.post('/market/admin/products', sendData, { headers: { 'X-Company-Id': companyId } });
-        alert("성공적으로 등록되었습니다.");
+        // alert("성공적으로 등록되었습니다.");
+        toast.success("✅ 상품이 성공적으로 등록되었습니다.", { containerId: 'main-toast' });
         setPage(0); // 🌟 신규 등록 시 첫 번째 페이지(최신글 목록)로 이동시키는 UX
       }
       resetForm();
       fetchProducts();
-    } catch (err) { alert("작업 처리에 실패했습니다."); }
+    } catch (err) {
+      // alert("작업 처리에 실패했습니다.");
+      toast.error("작업 처리에 실패했습니다.", { containerId: 'main-toast' });
+    }
   };
 
   const handleEdit = (p) => {
@@ -113,16 +119,24 @@ const ProductAdmin = () => {
       await api.patch(`/market/admin/products/${productId}/status`, JSON.stringify(newStatus), {
         headers: { 'X-Company-Id': companyId, 'Content-Type': 'application/json' }
       });
+      toast.success("상태가 변경되었습니다.", { containerId: 'main-toast' });
       fetchProducts();
-    } catch (err) { alert("상태 변경 실패"); }
+    } catch (err) {
+      toast.error("상태 변경에 실패했습니다.", { containerId: 'main-toast' });
+    }
   };
 
   const handleAddVouchers = async () => {
     const vouchers = addVoucherText.split('\n').filter(v => v.trim() !== "");
-    if (vouchers.length === 0) return alert("추가할 핀번호를 입력하세요.");
+    if (vouchers.length === 0) {
+      toast.warning("추가할 핀번호를 입력하세요.", { containerId: 'main-toast' });
+      return;
+    }
+
     try {
       await api.post(`/market/admin/products/${editId}/vouchers`, vouchers, { headers: { 'X-Company-Id': companyId } });
-      alert("바우처가 성공적으로 보충되었습니다.");
+      // alert("바우처가 성공적으로 보충되었습니다.");
+      toast.success("🎁 바우처가 성공적으로 보충되었습니다.", { containerId: 'main-toast' });
 
       setFormData(prev => ({
         ...prev,
@@ -132,20 +146,28 @@ const ProductAdmin = () => {
       setAddVoucherText('');
       fetchProducts();
       fetchExistingVouchers(editId);
-    } catch (err) { alert("보충 실패"); }
+    } catch (err) {
+      // alert("보충 실패"); 
+      toast.error("바우처 보충에 실패했습니다.", { containerId: 'main-toast' });
+    }
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm("정말 삭제하시겠습니까? (주문 내역이 있으면 삭제 불가)")) return;
     try {
       await api.delete(`/market/admin/products/${id}`, { headers: { 'X-Company-Id': companyId } });
+      toast.success("🗑️ 삭제되었습니다.", { containerId: 'main-toast' });
+
       // 🌟 삭제 시 현재 페이지의 아이템이 0개가 되면 이전 페이지로 강제 이동시키는 안전장치
       if (products.length === 1 && page > 0) {
         setPage(p => p - 1);
       } else {
         fetchProducts();
       }
-    } catch (err) { alert(err.response?.data?.message || "삭제 실패"); }
+    } catch (err) {
+      // alert(err.response?.data?.message || "삭제 실패"); 
+      toast.error(err.response?.data?.message || "삭제에 실패했습니다.", { containerId: 'main-toast' });
+    }
   };
 
   const resetForm = () => {

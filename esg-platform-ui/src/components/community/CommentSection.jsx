@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
+import { toast } from 'react-toastify';
 
 const CommentSection = ({ postId, currentMemberId }) => {
   const [comments, setComments] = useState([]);
@@ -35,10 +36,12 @@ const CommentSection = ({ postId, currentMemberId }) => {
     try {
       await api.post(`/community/posts/${postId}/comments`, { content, nickname: user?.nickname });
       setContent(''); // 입력창 초기화
-      alert("댓글 작성 완료!");
+      // alert("댓글 작성 완료!");
+      toast.success("💬 댓글이 등록되었습니다!", { containerId: 'main-toast' });
       fetchComments(); // 목록 새로고침
     } catch (error) {
-      alert('댓글 작성 실패: ' + error.response?.data?.message || '권한이 없습니다.');
+      // alert('댓글 작성 실패: ' + error.response?.data?.message || '권한이 없습니다.');
+      toast.error('댓글 작성 실패: ' + (error.response?.data?.message || '권한이 없습니다.'), { containerId: 'main-toast' });
     }
   };
 
@@ -51,9 +54,11 @@ const CommentSection = ({ postId, currentMemberId }) => {
       });
       setReplyContent('');
       setReplyingToId(null);
+      toast.success("💬 답글이 등록되었습니다!", { containerId: 'main-toast' });
       fetchComments();
     } catch (error) {
-      alert('답글 작성 실패');
+      // alert('답글 작성 실패');
+      toast.error('답글 작성에 실패했습니다.', { containerId: 'main-toast' });
     }
   };
 
@@ -63,9 +68,11 @@ const CommentSection = ({ postId, currentMemberId }) => {
     try {
       const headers = { 'X-Company-Id': targetCompanyId };
       await api.delete(`/community/posts/${postId}/comments/${commentId}`, { headers });
+      toast.success("🗑️ 삭제되었습니다.", { containerId: 'main-toast' });
       fetchComments(); // 목록 새로고침
     } catch (error) {
-      alert('삭제 실패');
+      // alert('삭제 실패');
+      toast.error('삭제에 실패했습니다.', { containerId: 'main-toast' });
     }
   };
 
@@ -81,9 +88,11 @@ const CommentSection = ({ postId, currentMemberId }) => {
       await api.put(`/community/posts/${postId}/comments/${commentId}`, { content: editContent });
       setEditingId(null); // 수정 모드 해제
       setEditContent('');
+      toast.success("✅ 댓글이 수정되었습니다.", { containerId: 'main-toast' });
       fetchComments(); // 새로고침
     } catch (error) {
-      alert('수정 실패: ' + error.response?.data?.message);
+      // alert('수정 실패: ' + error.response?.data?.message);
+      toast.error('수정 실패: ' + (error.response?.data?.message || ''), { containerId: 'main-toast' });
     }
   };
 
@@ -92,8 +101,8 @@ const CommentSection = ({ postId, currentMemberId }) => {
   }, [fetchComments]);
 
   const renderComment = (comment, isReply = false) => (
-    <div key={comment.id} style={{ 
-      marginLeft: isReply ? '40px' : '0', 
+    <div key={comment.id} style={{
+      marginLeft: isReply ? '40px' : '0',
       borderLeft: isReply ? '2px solid #339af0' : 'none', // 답글은 파란 선으로 구분
       paddingLeft: isReply ? '15px' : '0',
       marginBottom: '20px',
@@ -112,10 +121,10 @@ const CommentSection = ({ postId, currentMemberId }) => {
       {/* 댓글 본문 및 수정 모드 */}
       {editingId === comment.id ? (
         <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
-          <input 
-            style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }} 
-            value={editContent} 
-            onChange={(e) => setEditContent(e.target.value)} 
+          <input
+            style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
           />
           <button onClick={() => handleSaveEdit(comment.id)}>저장</button>
           <button onClick={() => setEditingId(null)}>취소</button>
@@ -123,7 +132,7 @@ const CommentSection = ({ postId, currentMemberId }) => {
       ) : (
         <div style={{ fontSize: '15px', color: '#444', lineHeight: '1.5' }}>
           {comment.content}
-          
+
           {/* 버튼 영역 (왼쪽 정렬) */}
           <div style={{ marginTop: '8px', display: 'flex', gap: '12px' }}>
             {!isReply && isLoggedIn && (
@@ -144,9 +153,9 @@ const CommentSection = ({ postId, currentMemberId }) => {
       {/* 답글 입력창 (왼쪽 정렬) */}
       {replyingToId === comment.id && (
         <div style={{ marginTop: '12px', display: 'flex', gap: '8px', backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '4px' }}>
-          <input 
-            style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }} 
-            placeholder="답글 내용을 입력하세요..." 
+          <input
+            style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+            placeholder="답글 내용을 입력하세요..."
             value={replyContent}
             onChange={(e) => setReplyContent(e.target.value)}
           />
@@ -163,9 +172,9 @@ const CommentSection = ({ postId, currentMemberId }) => {
   );
 
   return (
-    <div className="comment-section" style={{ 
-      padding: '20px', 
-      backgroundColor: '#fff', 
+    <div className="comment-section" style={{
+      padding: '20px',
+      backgroundColor: '#fff',
       borderRadius: '12px',
       boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
       textAlign: 'left' // 👈 전체 컨테이너 왼쪽 정렬
@@ -173,15 +182,15 @@ const CommentSection = ({ postId, currentMemberId }) => {
       <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
         💬 댓글 <span style={{ color: '#339af0' }}>{comments.length}</span>
       </h3>
-      
+
       {/* 댓글 입력창 */}
       {isLoggedIn ? (
         <div style={{ marginBottom: '30px', display: 'flex', gap: '10px' }}>
-          <input 
+          <input
             style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #e9ecef', outline: 'none' }}
-            value={content} 
-            onChange={(e) => setContent(e.target.value)} 
-            placeholder="칭찬과 격려의 댓글은 큰 힘이 됩니다!" 
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="칭찬과 격려의 댓글은 큰 힘이 됩니다!"
           />
           <button style={{ padding: '0 20px', backgroundColor: '#339af0', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }} onClick={handleAddComment}>등록</button>
         </div>

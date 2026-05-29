@@ -105,17 +105,30 @@ function App() {
             </Route>
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
+          
           <ToastContainer
-            position="top-right"
-            autoClose={3000}
-            hideProgressBar={false}
-            newestOnTop={false}
+            containerId="main-toast"
+            position="top-center"
+            autoClose={2500}
+            hideProgressBar={true}
+            newestOnTop
             closeOnClick
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
             pauseOnHover
+            draggable
             theme="light"
+            style={{ marginTop: '70px' }}
+          />
+          <ToastContainer
+            containerId="notification-toast"
+            position="top-right"
+            autoClose={4000}
+            newestOnTop
+            closeOnClick
+            pauseOnHover
+            draggable
+            theme="light"
+            limit={3}
+            style={{ marginTop: '70px' }}
           />
         </BrowserRouter>
       </AnalysisProvider>

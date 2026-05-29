@@ -3,6 +3,7 @@ package com.esg.pointservice.service;
 import com.esg.pointservice.domain.PointBalance;
 import com.esg.pointservice.domain.PointHistory;
 import com.esg.pointservice.domain.PointType;
+import com.esg.pointservice.dto.PointDashboardDto;
 import com.esg.pointservice.kafka.NotificationProducer;
 import com.esg.pointservice.repository.PointBalanceRepository;
 import com.esg.pointservice.repository.PointHistoryRepository;
@@ -22,7 +23,7 @@ public class PointService {
   private final NotificationProducer notificationProducer;
 
   @Transactional
-  public void earnPoints(Long memberId, Long companyId, Long amount, String description, Long targetId) {
+  public void earnPoints(Long memberId, Long companyId, Long amount, String description, Long targetId, int earnedCo2) {
     if (pointHistoryRepository.existsByTargetIdAndType(targetId, PointType.EARN)) {
       log.warn("이미 처리된 포인트 지급 이벤트 - Post ID: {}", targetId);
       return;
@@ -32,6 +33,7 @@ public class PointService {
       .orElse(new PointBalance(memberId, companyId, 0L));
 
     balance.add(amount);
+    balance.addCo2Reduction(earnedCo2);
     pointBalanceRepository.save(balance);
 
     PointHistory history = PointHistory.builder()
@@ -107,6 +109,13 @@ public class PointService {
     );
 
     log.info("포인트 환불 완료 - 유저 ID: {}, 환불 금액: {} P", memberId, amount);
+  }
+
+  @Transactional(readOnly = true)
+  public PointDashboardDto getPointDashboard(Long memberId) {
+    PointBalance balance = pointBalanceRepository.findById(memberId)
+      .orElse(new PointBalance(memberId, null, 0L));
+    return new PointDashboardDto(balance.getBalance(), balance.getTotalCo2Reduction());
   }
 
   @Transactional(readOnly = true)

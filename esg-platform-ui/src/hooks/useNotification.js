@@ -48,24 +48,34 @@ export const useNotification = (memberId, onMessageReceived) => {
 
       // 토스트 팝업 띄우기 및 클릭 시 이동 로직
       toast.info(`🔔 ${data.message}`, {
-        position: "top-right",
-        autoClose: 4000,
-        style: { cursor: 'pointer' },
+        containerId: 'notification-toast',
         onClick: () => {
-          const isMarketOrPoint =
-            data.type?.includes('USE') ||
-            data.message.includes('사용') ||
-            data.message.includes('구매') ||
-            data.message.includes('취소') ||
-            data.message.includes('환불');
+          let navigatePath = '/mypage';
 
-          if (isMarketOrPoint) {
-            navigate('/mypage'); // 포인트 관련은 마이페이지로
-          } else if (data.targetId) {
-            navigate(`/posts/${data.targetId}`);
-          } else {
-            navigate('/mypage');
+          if (data.type === 'ACTIVITY_PENDING' || data.type === 'ACTIVITY_APPROVED' || data.type === 'ACTIVITY_REJECTED' || data.type === 'POINT_EARNED') {
+            navigatePath = data.targetId ? `/posts/${data.targetId}` : '/community';
+          } else if (data.type === 'POINT_USED' || data.type === 'POINT_REFUNDED') {
+            navigatePath = '/mypage';
+          } else if (data.type === 'BADGE_EARNED') {
+            navigatePath = '/mypage';
           }
+
+          navigate(navigatePath);
+
+          // const isMarketOrPoint =
+          //   data.type?.includes('USE') ||
+          //   data.message.includes('사용') ||
+          //   data.message.includes('구매') ||
+          //   data.message.includes('취소') ||
+          //   data.message.includes('환불');
+
+          // if (isMarketOrPoint) {
+          //   navigate('/mypage'); // 포인트 관련은 마이페이지로
+          // } else if (data.targetId) {
+          //   navigate(`/posts/${data.targetId}`);
+          // } else {
+          //   navigate('/mypage');
+          // }
         }
       });
 

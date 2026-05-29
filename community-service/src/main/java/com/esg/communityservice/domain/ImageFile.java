@@ -1,6 +1,7 @@
 package com.esg.communityservice.domain;
 
 import com.esg.common.BaseTimeEntity;
+import com.esg.common.domain.ActivityType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -40,11 +41,6 @@ public class ImageFile extends BaseTimeEntity {
   private AIStatus aiStatus = AIStatus.PENDING;
 
   public void updateAIStatus(AIStatus status) {
-    if (this.aiStatus == AIStatus.FAIL) {
-      log.warn("이미 처리가 완료된 이미지입니다.");
-      return;
-    }
-
     this.aiStatus = status;
   }
 

@@ -1,6 +1,7 @@
 package com.esg.communityservice.domain;
 
 import com.esg.common.BaseTimeEntity;
+import com.esg.common.domain.ActivityType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -65,7 +66,14 @@ public class Post extends BaseTimeEntity {
   private String aiResult;
 
   @Enumerated(EnumType.STRING)
+  private ActivityType activityType;
+
+  @Enumerated(EnumType.STRING)
   private AIStatus aiStatus;
+
+  public void setActivityType(ActivityType activityType) {
+    this.activityType = activityType;
+  }
 
   public void updateAiAnalysis(Double aiScore, String aiResult, AIStatus status) {
     this.aiScore = aiScore;
@@ -97,10 +105,10 @@ public class Post extends BaseTimeEntity {
     this.rejectionReason = reason;
   }
 
-  public void autoReject(String reason) {
-    this.adminStatus = AdminStatus.AUTO_REJECTED;
-    this.rejectionReason = reason;
-  }
+//  public void autoReject(String reason) {
+//    this.adminStatus = AdminStatus.AUTO_REJECTED;
+//    this.rejectionReason = reason;
+//  }
 
   public void update(String title, String content) {
     this.title = title;

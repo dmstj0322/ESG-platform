@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
+import { toast } from 'react-toastify';
 
 const ACTIVITY_CONFIG = {
   posts: { title: '내가 쓴 글', url: '/community/posts/my-posts' },
@@ -66,10 +67,12 @@ const MyActivityList = () => {
     if (!window.confirm(`[${productName}] 결제를 취소하시겠습니까?`)) return;
     try {
       await api.post(`/market/orders/${orderId}/cancel`, {}, { headers: { 'X-Member-Id': user.memberId } });
-      alert("취소 및 포인트 환불이 완료되었습니다.");
+      // alert("취소 및 포인트 환불이 완료되었습니다.");
+      toast.success("✅ 취소 및 포인트 환불이 완료되었습니다.", { containerId: 'main-toast' });
       setItems(prev => prev.map(item => (item.orderId === orderId) ? { ...item, status: 'CANCELED' } : item));
     } catch (err) {
-      alert(err.response?.data?.message || "취소가 불가능한 주문입니다.");
+      // alert(err.response?.data?.message || "취소가 불가능한 주문입니다.");
+      toast.error(err.response?.data?.message || "❌ 취소할 수 없는 주문입니다.", { containerId: 'main-toast' });
     }
   };
 
@@ -110,7 +113,7 @@ const MyActivityList = () => {
               const { canCancel, reason } = checkIsCancelable(item);
               return (
                 <div key={item.orderId || index} style={listCardStyle}>
-                  <div style={{ display: 'flex', alignItems: 'center',  gap: '15px', flex: 1, opacity: item.status === 'CANCELED' ? 0.5 : 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, opacity: item.status === 'CANCELED' ? 0.5 : 1 }}>
                     {/* 🌟 기존 코드에 뱃지만 추가 */}
                     {item.category === 'GIFTICON' ? (
                       <div style={iconCircleStyle('#e7f5ff', '#1c7ed6')}>🎁</div>
@@ -144,7 +147,7 @@ const MyActivityList = () => {
                       )
                     )}
                     {item.status === 'CANCELED' && (
-                       <span style={{ fontSize: '13px', color: '#adb5bd', paddingRight: '5px' }}>취소 완료</span>
+                      <span style={{ fontSize: '13px', color: '#adb5bd', paddingRight: '5px' }}>취소 완료</span>
                     )}
                   </div>
                 </div>

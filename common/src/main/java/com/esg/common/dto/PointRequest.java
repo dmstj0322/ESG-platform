@@ -5,6 +5,7 @@ public record PointRequest(
   Long companyId,
   Long amount,
   String description,
-  Long targetId
+  Long targetId,
+  int earnedCo2
 ) {
 }

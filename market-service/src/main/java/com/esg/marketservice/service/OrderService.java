@@ -73,7 +73,7 @@ public class OrderService {
 
       // 포인트 서비스 연동 (포인트 차감 요청)
       Long totalAmount = product.getPrice() * count;
-      pointClient.usePoints(new PointRequest(memberId, companyId, totalAmount, product.getName() + " 구매", productId));
+      pointClient.usePoints(new PointRequest(memberId, companyId, totalAmount, product.getName() + " 구매", productId, 0));
 
       try {
         // OrderItem 및 Order 생성 (내부에서 재고 차감 실행)
@@ -113,7 +113,7 @@ public class OrderService {
       } catch (Exception e) {
         log.error("주문 생성 중 진짜 에러 발생: ", e);
         log.error("주문 저장 실패, 포인트 환불 진행 - memberId: {}, amount: {}", memberId, totalAmount);
-        pointClient.refundPoints(new PointRequest(memberId, companyId, totalAmount, "주문 생성 실패로 인한 환불", productId));
+        pointClient.refundPoints(new PointRequest(memberId, companyId, totalAmount, "주문 생성 실패로 인한 환불", productId, 0));
         throw new RuntimeException("주문 처리 중 오류가 발생하여 결제가 취소되었습니다.");
       }
     } catch (InterruptedException e) {
@@ -178,7 +178,7 @@ public class OrderService {
     try {
       pointClient.refundPoints(new PointRequest(
         order.getMemberId(), order.getCompanyId(), order.getTotalPrice(),
-        "관리자 주문 취소 환불: " + order.getId(), product.getId()
+        "관리자 주문 취소 환불: " + order.getId(), product.getId(), 0
       ));
       log.info("포인트 환불 완료 - orderId: {}, amount: {}", orderId, order.getTotalPrice());
     } catch (Exception e) {
@@ -267,7 +267,7 @@ public class OrderService {
     try {
       pointClient.refundPoints(new PointRequest(
         order.getMemberId(), order.getCompanyId(), order.getTotalPrice(),
-        "회원 직접 취소 환불: " + order.getId(), product.getId()
+        "회원 직접 취소 환불: " + order.getId(), product.getId(), 0
       ));
       log.info("포인트 환절 완료 - orderId: {}, amount: {}", orderId, order.getTotalPrice());
     } catch (Exception e) {

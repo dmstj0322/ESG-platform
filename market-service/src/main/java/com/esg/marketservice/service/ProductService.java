@@ -102,7 +102,7 @@ public class ProductService {
       log.info("상품 이미지 변경 완료: {}", imageUrl);
     }
 
-    product.update(dto.name(), dto.price(), dto.stock(), dto.category(), dto.content(), imageUrl);
+    product.update(dto.name(), dto.price(), dto.stock(), dto.category(), dto.content(), imageUrl, dto.targetAmount());
 
     log.info("상품 상품 수정 완료 - ID: {}, Company: {}", productId, companyId);
   }

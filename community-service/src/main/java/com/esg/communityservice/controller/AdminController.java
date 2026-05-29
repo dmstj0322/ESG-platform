@@ -34,8 +34,9 @@ public class AdminController {
 
   @PreAuthorize("hasRole('ADMIN')")
   @PostMapping("/posts/{postId}/approve")
-  public ResponseEntity<String> approvePost(@PathVariable Long postId){
-    adminService.approvePost(postId);
+  public ResponseEntity<String> approvePost(@PathVariable Long postId, @RequestBody Map<String, String> request) {
+    String activityType = request.get("activityType");
+    adminService.approvePost(postId, activityType);
     return ResponseEntity.ok("승인 완료되었습니다.");
   }
 
@@ -45,5 +46,19 @@ public class AdminController {
     String reason = request.get("reason");
     adminService.rejectPost(postId, reason);
     return ResponseEntity.ok().build();
+  }
+
+  @PreAuthorize("hasRole('ADMIN')")
+  @PatchMapping("/posts/{postId}/type")
+  public ResponseEntity<String> updatePostType(
+    @PathVariable Long postId, @RequestBody Map<String, String> request) {
+    String activityType = request.get("activityType");
+
+    if (activityType == null || activityType.trim().isEmpty()) {
+      return ResponseEntity.badRequest().body("activityType 값이 누락되었습니다.");
+    }
+
+    adminService.updatePostType(postId, request.get("activityType"));
+    return ResponseEntity.ok("타입이 수정되었습니다.");
   }
 }

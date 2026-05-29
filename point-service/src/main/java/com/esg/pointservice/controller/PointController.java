@@ -2,6 +2,7 @@ package com.esg.pointservice.controller;
 
 import com.esg.common.dto.PointRequest;
 import com.esg.pointservice.domain.PointHistory;
+import com.esg.pointservice.dto.PointDashboardDto;
 import com.esg.pointservice.service.PointService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -18,7 +19,7 @@ public class PointController {
 
   @PostMapping("/earn")
   public ResponseEntity<Void> earnPoints(@RequestBody PointRequest pointRequest) {
-    pointService.earnPoints(pointRequest.memberId(), pointRequest.companyId(), pointRequest.amount(), pointRequest.description(), pointRequest.targetId());
+    pointService.earnPoints(pointRequest.memberId(), pointRequest.companyId(), pointRequest.amount(), pointRequest.description(), pointRequest.targetId(), pointRequest.earnedCo2());
     return ResponseEntity.ok().build();
   }
 
@@ -32,6 +33,11 @@ public class PointController {
   public ResponseEntity<Void> refundPoints(@RequestBody PointRequest pointRequest) {
     pointService.refundPoints(pointRequest.memberId(), pointRequest.companyId(), pointRequest.amount(), pointRequest.description(), pointRequest.targetId());
     return ResponseEntity.ok().build();
+  }
+
+  @GetMapping("/{memberId}/dashboard")
+  public ResponseEntity<PointDashboardDto> getPointDashboard(@PathVariable Long memberId) {
+    return ResponseEntity.ok(pointService.getPointDashboard(memberId));
   }
 
   @GetMapping("/{memberId}/balance")

@@ -12,11 +12,22 @@ const PostEdit = () => {
   const [content, setContent] = useState('');
   const [imageUrls, setImageUrls] = useState([]);
   const [aiResult, setAiResult] = useState('');
+  const [activityType, setActivityType] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   // 관리자 권한 확인 (System Admin일 경우 전체 수정을 위해 헤더 처리 필요 시 사용)
   const isSystemAdmin = user?.role === 'ROLE_SYSTEM_ADMIN' || user?.role === 'SYSTEM_ADMIN';
   const targetCompanyId = isSystemAdmin ? 0 : (user?.companyId || localStorage.getItem('companyId'));
+
+  const getActivityName = (type) => {
+    const map = {
+      TUMBLER: '텀블러 사용',
+      TRANSPORT: '대중교통 이용',
+      RECYCLE: '분리배출',
+      FAIL: '인증 실패'
+    };
+    return map[type] || 'ESG 활동';
+  };
 
   const fetchPost = useCallback(async () => {
     try {
@@ -26,6 +37,7 @@ const PostEdit = () => {
       setContent(res.data.content);
       setImageUrls(res.data.imageUrls || []);
       setAiResult(res.data.aiResult);
+      setActivityType(res.data.activityType);
     } catch (err) {
       alert("글을 불러오지 못했습니다.");
       navigate(-1);
@@ -64,8 +76,10 @@ const PostEdit = () => {
         {/* 1. 인증 정보 (수정 불가 강조) */}
         <div style={infoBoxStyle}>
           <div style={labelStyle}>활동 분류</div>
-          <div style={activityBadgeStyle}>{aiResult || 'ESG 활동'}</div>
-          <div style={{marginBottom: '20px'}} />
+          <div style={activityBadgeStyle}>
+            {getActivityName(activityType || aiResult)}
+          </div>
+          <div style={{ marginBottom: '20px' }} />
           {/* 4. 이미지 미리보기 (수정 불가 상태로 노출) */}
           <div style={imageSectionStyle}>
             <label style={labelStyle}>인증 사진</label>

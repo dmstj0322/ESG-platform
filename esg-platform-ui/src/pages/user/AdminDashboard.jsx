@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
+import { toast } from 'react-toastify';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -11,7 +12,7 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('POSTS');
   const [posts, setPosts] = useState([]);
   const [orders, setOrders] = useState([]);
-  
+
   // 인증글 필터링 상태
   const [postFilter, setPostFilter] = useState('ALL');
 
@@ -22,32 +23,43 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(false);
 
   // 🌟 카운트 상태
-  const [totalPostsCount, setTotalPostsCount] = useState(0); // 필터링된 인증글 개수
-  const [allPostsCount, setAllPostsCount] = useState(0);     // 전체 인증글 개수 (배지 고정용)
+  const [totalPostsCount, setTotalPostsCount] = useState(0);
+  const [allPostsCount, setAllPostsCount] = useState(0);
 
-  const [orderTotalCount, setOrderTotalCount] = useState(0); // 필터링된 주문 개수
-  const [allOrdersCount, setAllOrdersCount] = useState(0);   // 전체 주문 개수 (배지 고정용)
+  const [orderTotalCount, setOrderTotalCount] = useState(0);
+  const [allOrdersCount, setAllOrdersCount] = useState(0);
 
-  // 🌟 페이지 상태 (둘 다 백엔드 기준인 0부터 시작)
+  // 🌟 페이지 상태
   const [postPage, setPostPage] = useState(0);
   const [postTotalPages, setPostTotalPages] = useState(1);
 
   const [orderPage, setOrderPage] = useState(0);
   const [orderTotalPages, setOrderTotalPages] = useState(1);
 
-  // 필터 조건을 백엔드 URL에 동적으로 결합하여 데이터 로드
+  // 🌟 관리자가 수동으로 선택한 활동 타입을 저장하는 상태
+  const [selectedTypes, setSelectedTypes] = useState({});
+  const [editingPostId, setEditingPostId] = useState(null);
+
+  const getActivityName = (type) => {
+    const map = {
+      TUMBLER: '텀블러 사용',
+      TRANSPORT: '대중교통 이용',
+      RECYCLE: '분리배출',
+      FAIL: '인증 실패'
+    };
+    return map[type] || 'ESG 활동';
+  };
+
   const fetchData = useCallback(async () => {
     if (!companyId) return;
     setLoading(true);
     try {
-      // 1. 인증글 API URL 동적 빌드
       let postUrl = `/admin/posts?page=${postPage}&size=10&sort=createdDate,desc`;
       if (postFilter !== 'ALL') {
         postUrl += `&status=${postFilter}`;
       }
       let totalPostUrl = `/admin/posts?page=0&size=1`;
 
-      // 2. 주문 API URL 동적 빌드
       let orderUrl = `/market/admin/orders?page=${orderPage}&size=10&sort=id,desc`;
       if (orderStatusFilter !== 'ALL') {
         orderUrl += `&status=${orderStatusFilter}`;
@@ -57,7 +69,6 @@ const AdminDashboard = () => {
       }
       let totalOrderUrl = `/market/admin/orders?page=0&size=1`;
 
-      // 4개의 API를 동시에 빠르고 효율적으로 호출
       const [postsRes, totalPostsRes, ordersRes, totalOrdersRes] = await Promise.all([
         api.get(postUrl, { headers: { 'X-Company-Id': companyId } }),
         api.get(totalPostUrl, { headers: { 'X-Company-Id': companyId } }),
@@ -65,18 +76,16 @@ const AdminDashboard = () => {
         api.get(totalOrderUrl, { headers: { 'X-Company-Id': companyId } })
       ]);
 
-      // 🌟 인증글 백엔드 페이징 데이터 바인딩
       setPosts(postsRes.data.content || []);
       setPostTotalPages(postsRes.data.totalPages || 1);
       setTotalPostsCount(postsRes.data.totalElements || 0);
       setAllPostsCount(totalPostsRes.data.totalElements || 0);
 
-      // 🌟 주문 백엔드 페이징 데이터 바인딩
       setOrders(ordersRes.data.content || []);
       setOrderTotalPages(ordersRes.data.totalPages || 1);
       setOrderTotalCount(ordersRes.data.totalElements || 0);
       setAllOrdersCount(totalOrdersRes.data.totalElements || 0);
-      
+
     } catch (err) {
       console.error("데이터 로드 실패:", err);
     } finally {
@@ -89,13 +98,29 @@ const AdminDashboard = () => {
   }, [fetchData]);
 
   // --- [인증글 액션] ---
-  const handleApprove = async (postId) => {
-    if (!window.confirm("승인하시겠습니까?")) return;
+  // 🌟 파라미터에 aiPredictedType 추가 및 선택된 타입으로 API 전송
+  const handleApprove = async (postId, aiPredictedType) => {
+    // 관리자가 바꾼 값이 있으면 그것을 쓰고, 없다면 AI 예측값(단, FAIL이면 기본값 TUMBLER)을 사용
+    const defaultType = (aiPredictedType && aiPredictedType !== 'FAIL') ? aiPredictedType : 'TUMBLER';
+    const finalType = selectedTypes[postId] || defaultType;
+
+    if (!window.confirm(`해당 활동을 [${finalType}] 타입으로 승인하시겠습니까?`)) return;
+
     try {
-      await api.post(`/admin/posts/${postId}/approve`);
-      alert("승인 완료");
+      // 🌟 백엔드에 선택된 활동 타입을 함께 전달 (Request Body 사용)
+      await api.post(`/admin/posts/${postId}/approve`, { activityType: finalType });
+      toast.success(`✅ ${finalType} 타입으로 승인되었습니다.`, { containerId: 'main-toast' });
+
+      // 승인 후 선택 상태 초기화
+      setSelectedTypes(prev => {
+        const newState = { ...prev };
+        delete newState[postId];
+        return newState;
+      });
       fetchData();
-    } catch (err) { alert("처리 오류"); }
+    } catch (err) {
+      toast.error("승인 처리 중 오류가 발생했습니다.", { containerId: 'main-toast' });
+    }
   };
 
   const handleReject = async (postId) => {
@@ -103,9 +128,28 @@ const AdminDashboard = () => {
     if (!reason) return;
     try {
       await api.post(`/admin/posts/${postId}/reject`, { reason });
-      alert("거절 완료");
+      toast.success("🚫 거절되었습니다.", { containerId: 'main-toast' });
       fetchData();
-    } catch (err) { alert("처리 오류"); }
+    } catch (err) {
+      toast.error("거절 처리 중 오류가 발생했습니다.", { containerId: 'main-toast' });
+    }
+  };
+
+  const handleUpdateType = async (postId, currentType, aiResult) => {
+    const fallbackType = (aiResult && aiResult !== 'FAIL') ? aiResult : 'TUMBLER';
+    const newType = selectedTypes[postId] || currentType || fallbackType;
+    
+    if (!window.confirm(`활동 타입을 [${newType}]로 수정하시겠습니까?`)) return;
+
+    try {
+      // 🌟 방금 백엔드에 만든 PATCH API 호출
+      await api.patch(`/admin/posts/${postId}/type`, { activityType: newType });
+      toast.success(`✅ 타입이 수정되었습니다.`, { containerId: 'main-toast' });
+      setEditingPostId(null);
+      fetchData();
+    } catch (err) {
+      toast.error("수정 실패: " + (err.response?.data || "서버 오류"), { containerId: 'main-toast' });
+    }
   };
 
   // --- [주문 액션] ---
@@ -115,19 +159,22 @@ const AdminDashboard = () => {
       await api.post(`/market/admin/orders/${orderId}/cancel`, {}, {
         headers: { 'X-Company-Id': companyId }
       });
-      alert("주문 취소 완료");
+      toast.success("📦 주문이 취소되었습니다.", { containerId: 'main-toast' });
       fetchData();
-    } catch (err) { alert("취소 실패"); }
+    } catch (err) {
+      toast.error("취소 실패: " + (err.response?.data?.message || "오류 발생"), { containerId: 'main-toast' });
+    }
   };
 
   const handleResendEmail = async (orderId) => {
     try {
       await api.post(`/market/admin/orders/${orderId}/resend`);
-      alert("이메일이 재전송되었습니다.");
-    } catch (err) { alert("재전송 실패"); }
+      toast.success("📧 이메일이 재전송되었습니다.", { containerId: 'main-toast' });
+    } catch (err) {
+      toast.error("이메일 재전송 실패", { containerId: 'main-toast' });
+    }
   };
 
-  // 탭 변경 시 페이지 및 필터 상태 0으로 초기화
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     setPostPage(0);
@@ -158,11 +205,10 @@ const AdminDashboard = () => {
         </button>
       </div>
 
-      {/* 📝 인증글 관리 탭 */}
       {activeTab === 'POSTS' && (
         <div style={{ marginTop: '25px' }}>
           <div style={filterGroupStyle}>
-            {['ALL', 'WAITING', 'APPROVED', 'REJECTED', 'AUTO_REJECTED'].map(status => (
+            {['ALL', 'WAITING', 'APPROVED', 'REJECTED'].map(status => (
               <button key={status} onClick={() => { setPostFilter(status); setPostPage(0); }} style={filterBtnStyle(postFilter === status)}>
                 {status}
               </button>
@@ -176,7 +222,6 @@ const AdminDashboard = () => {
           </div>
 
           <div style={postGridStyle}>
-            {/* 🌟 프론트엔드 필터 배열이 아닌 백엔드에서 받아온 posts를 바로 매핑 */}
             {posts.map(post => (
               <div key={post.id} style={postCardStyle}>
                 <div style={cardHeaderStyle}>
@@ -194,26 +239,84 @@ const AdminDashboard = () => {
                     <span style={aiLabelStyle}>🤖 AI 분석 결과</span>
                     <span style={aiScoreStyle(post.aiScore)}>{(post.aiScore * 100).toFixed(1)}% 신뢰</span>
                   </div>
-                  <p style={{ margin: 0, fontSize: '14px' }}>예측 활동: <strong>{post.aiResult}</strong></p>
+                  <p style={{ margin: 0, fontSize: '14px' }}>예측 활동: <strong>{getActivityName(post.aiResult)}</strong></p>
                 </div>
 
+                {/* 🌟 승인 대기 중일 때 타입 선택 드롭다운과 버튼 렌더링 */}
                 {post.adminStatus === 'WAITING' && (
-                  <div style={btnGroupStyle}>
-                    <button onClick={() => handleApprove(post.id)} style={approveBtnStyle}>최종 승인</button>
-                    <button onClick={() => handleReject(post.id)} style={rejectBtnStyle}>반려</button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '13px', color: '#495057', fontWeight: 'bold' }}>분류 지정:</span>
+                      <select
+                        style={selectStyle}
+                        value={selectedTypes[post.id] || (post.aiResult !== 'FAIL' ? post.aiResult : 'TUMBLER')}
+                        onChange={(e) => setSelectedTypes(prev => ({ ...prev, [post.id]: e.target.value }))}
+                      >
+                        <option value="TUMBLER">텀블러 (300g)</option>
+                        <option value="TRANSPORT">대중교통 (1500g)</option>
+                        <option value="RECYCLE">분리배출 (500g)</option>
+                      </select>
+                    </div>
+                    <div style={btnGroupStyle}>
+                      {/* AI 예측값을 파라미터로 넘겨줌 */}
+                      <button onClick={() => handleApprove(post.id, post.aiResult)} style={approveBtnStyle}>승인</button>
+                      <button onClick={() => handleReject(post.id)} style={rejectBtnStyle}>반려</button>
+                    </div>
                   </div>
                 )}
 
-                {['REJECTED', 'AUTO_REJECTED'].includes(post.adminStatus) && post.rejectionReason && (
+                {post.adminStatus === 'APPROVED' && (
+                  <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#f1f7ff', borderRadius: '8px', border: '1px solid #d0ebff' }}>
+                    {editingPostId === post.id ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <select
+                          style={selectStyle}
+                          value={selectedTypes[post.id] || post.activityType || (post.aiResult && post.aiResult !== 'FAIL' ? post.aiResult : 'TUMBLER')}
+                          onChange={(e) => setSelectedTypes(prev => ({ ...prev, [post.id]: e.target.value }))}
+                        >
+                          <option value="TUMBLER">텀블러/다회용기 (300g)</option>
+                          <option value="TRANSPORT">대중교통 (1500g)</option>
+                          <option value="RECYCLE">분리배출 (500g)</option>
+                        </select>
+                        <div style={{ display: 'flex', gap: '5px' }}>
+                          <button
+                            onClick={() => {
+                              handleUpdateType(post.id, post.activityType, post.aiResult);
+                              setEditingPostId(null);
+                            }}
+                            style={{ ...approveBtnStyle, padding: '5px' }}
+                          >확인</button>
+                          <button
+                            onClick={() => setEditingPostId(null)}
+                            style={{ ...rejectBtnStyle, padding: '5px' }}
+                          >취소</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '13px', color: '#339af0', fontWeight: 'bold' }}>
+                          현재 분류: {getActivityName(post.activityType)}
+                        </span>
+                        <button
+                          onClick={() => setEditingPostId(post.id)}
+                          style={{ fontSize: '11px', padding: '4px 8px', cursor: 'pointer', backgroundColor: '#fff', border: '1px solid #339af0', color: '#339af0', borderRadius: '4px' }}
+                        >
+                          타입 수정
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {post.adminStatus === 'REJECTED' && post.rejectionReason && (
                   <div style={{ marginTop: '10px', padding: '8px', backgroundColor: '#fff5f5', borderRadius: '8px', fontSize: '13px', color: '#e03131', border: '1px solid #ffc9c9' }}>
-                    <strong>{post.adminStatus === 'AUTO_REJECTED' ? '🤖 AI 반려 사유:' : '❌ 반려 사유:'}</strong> {post.rejectionReason}
+                    <strong>❌ 반려 사유:</strong> {post.rejectionReason}
                   </div>
                 )}
               </div>
             ))}
           </div>
 
-          {/* 🌟 백엔드 페이징 기반 UI로 완벽 교체 */}
           {postTotalPages > 1 && (
             <div style={paginationContainerStyle}>
               <button disabled={postPage === 0} onClick={() => setPostPage(p => p - 1)} style={pageBtnStyle(postPage === 0)}>이전</button>
@@ -224,7 +327,7 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {/* 🛒 주문 관리 탭 */}
+      {/* 🛒 주문 관리 탭 생략 없이 기존 코드 유지 */}
       {activeTab === 'ORDERS' && (
         <div style={{ marginTop: '25px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '25px' }}>
@@ -310,6 +413,12 @@ const AdminDashboard = () => {
 };
 
 // --- 스타일링 속성 명세 ---
+// 🌟 셀렉트박스 스타일 추가
+const selectStyle = {
+  flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1px solid #dee2e6',
+  fontSize: '13px', color: '#495057', backgroundColor: '#fff', outline: 'none', cursor: 'pointer'
+};
+
 const containerStyle = { padding: '40px 20px', maxWidth: '1200px', margin: '0 auto', backgroundColor: '#fdfdfd', minHeight: '100vh' };
 const headerContainerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', borderBottom: '1px solid #eee', paddingBottom: '25px' };
 const dashboardTitleStyle = { margin: 0, fontSize: '28px', fontWeight: '800', color: '#333' };
