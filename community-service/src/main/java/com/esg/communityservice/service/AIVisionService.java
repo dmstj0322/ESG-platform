@@ -22,7 +22,7 @@ public class AIVisionService {
   private final S3Client s3Client;
 
   // 🌟 AI 검증 임계값 (상수 처리)
-  private static final float REJECT_THRESHOLD = 0.7f;
+  private static final float REJECT_THRESHOLD = 0.6f;
   private static final float ACCEPT_THRESHOLD = 0.5f;
 
   public AIVisionService(S3Client s3Client) throws IOException {
@@ -52,7 +52,15 @@ public class AIVisionService {
     return labels;
   }
 
-  // 1️⃣ 활동 유형 추론 (이미지 업로드 시 프론트엔드에 추천용)
+  private boolean isExactMatch(String description, String keyword) {
+    String desc = description.toLowerCase();
+    String key = keyword.toLowerCase();
+    return desc.equals(key)
+      || desc.startsWith(key + "_")
+      || desc.endsWith("_" + key)
+      || desc.contains("_" + key + "_");
+  }
+
   public ActivityType analyzeActivityType(List<MultipartFile> files) throws IOException {
     List<LabelInfo> allDetectedLabels = new ArrayList<>();
 
@@ -73,8 +81,8 @@ public class AIVisionService {
       // 1. 부정 키워드 감지 시 해당 타입 후보에서 즉시 제외
       boolean isRejected = allDetectedLabels.stream()
         .anyMatch(label -> type.getRejectKeywords().stream()
-          .anyMatch(reject -> label.description().contains(reject))
-          && label.score() > REJECT_THRESHOLD);
+          .anyMatch(reject -> isExactMatch(label.description(), reject)
+            && label.score() > REJECT_THRESHOLD));
 
       if (isRejected) {
         log.info("❌ {}: 부정 키워드 감지 → 후보 탈락", type);
@@ -93,11 +101,11 @@ public class AIVisionService {
         if (label.score() < ACCEPT_THRESHOLD) continue;
 
         // 🌟 Primary 키워드는 점수를 1.5배로 계산하여 압도적인 우위를 줌
-        if (type.getPrimaryKeywords().stream().anyMatch(k -> label.description().contains(k))) {
-          scoreSum += (label.score() * 1.5);
+        if (type.getPrimaryKeywords().stream().anyMatch(k -> isExactMatch(label.description(), k))) {
+          scoreSum += (label.score() * 2.0);
         }
         // 일반 키워드는 그대로 합산
-        else if (type.getKeywords().stream().anyMatch(k -> label.description().contains(k))) {
+        else if (type.getKeywords().stream().anyMatch(k -> isExactMatch(label.description(), k))) {
           scoreSum += label.score();
         }
       }
@@ -132,8 +140,8 @@ public class AIVisionService {
         // 1. 부정 키워드 체크 (발견 시 즉각 -1.0 반환)
         boolean isRejected = labels.stream()
           .anyMatch(label -> type.getRejectKeywords().stream()
-            .anyMatch(reject -> label.description().contains(reject))
-            && label.score() > REJECT_THRESHOLD);
+            .anyMatch(reject -> isExactMatch(label.description(), reject)
+            && label.score() > REJECT_THRESHOLD));
 
         if (isRejected) {
           log.warn("🚨 부정 키워드 감지됨! AI 자동 탈락 처리. 활동: {}, 이미지: {}", type, urlString);
@@ -153,10 +161,10 @@ public class AIVisionService {
         for (LabelInfo label : labels) {
           if (label.score() < ACCEPT_THRESHOLD) continue;
 
-          if (type.getPrimaryKeywords().stream().anyMatch(k -> label.description().contains(k))) {
-            currentScore += (label.score() * 1.5);
+          if (type.getPrimaryKeywords().stream().anyMatch(k -> isExactMatch(label.description(), k))) {
+            currentScore += (label.score() * 2.0);
             matchCount++;
-          } else if (type.getKeywords().stream().anyMatch(k -> label.description().contains(k))) {
+          } else if (type.getKeywords().stream().anyMatch(k -> isExactMatch(label.description(), k))) {
             currentScore += label.score();
             matchCount++;
           }
@@ -164,10 +172,9 @@ public class AIVisionService {
 
         if (currentScore > 0) {
           // 3. 점수 정규화 및 보너스 점수
-          // (매칭된 키워드 개수가 많을수록 맥락이 정확하므로 0.05점씩 보너스 부여)
           double finalScore = (currentScore / 2.0) + (matchCount * 0.05);
           // 합산 점수가 1.0을 넘지 않도록 캡핑
-          currentScore = Math.min(1.0, currentScore);
+          currentScore = Math.min(1.0, finalScore);
         } else {
           log.info("이미지에서 긍정 키워드를 찾을 수 없습니다. (0점 처리)");
         }

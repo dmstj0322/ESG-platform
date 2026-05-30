@@ -9,19 +9,13 @@ const PostWrite = () => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [activityType, setActivityType] = useState('TUMBLER');
+  const [aiResult, setAiResult] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
 
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
-
-  const ACTIVITY_NAME_MAP = {
-    'TUMBLER': '텀블러/다회용기 사용',
-    'TRANSPORT': '대중교통 이용',
-    'RECYCLE': '분리배출',
-    'FAIL': '인증 실패 (다시 시도해주세요)'
-  };
 
   const handleFileChange = async (e) => {
     const files = Array.from(e.target.files);
@@ -61,9 +55,15 @@ const PostWrite = () => {
       compressedFiles.forEach((file) => formData.append("files", file));
 
       const response = await api.post('/community/posts/analyze-image', formData);
-      setActivityType(response.data);
+      const result = response.data;
+      
+      setAiResult(result);
+      if (result !== 'FAIL') {
+        setActivityType(result);
+      }
     } catch (err) {
       console.error("AI 분석 실패:", err);
+      setAiResult('FAIL');
       alert("이미지 처리 및 분석 중 오류가 발생했습니다.");
     } finally {
       setIsAnalyzing(false);
@@ -78,11 +78,6 @@ const PostWrite = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // if (selectedFiles.length === 0) {
-    //   alert("인증샷을 첨부해주세요!");
-    //   return;
-    // }
-
     if (!title || !content || selectedFiles.length === 0) {
       toast.warning("제목, 내용, 이미지를 모두 입력해주세요.", { containerId: 'main-toast' });
       return;
@@ -93,6 +88,7 @@ const PostWrite = () => {
 
     // JSON 데이터 전송을 위한 Blob 객체 생성
     const dto = { title, content, activityType, nickname };
+    console.log("서버로 보내는 DTO 확인:", dto);
     const blob = new Blob([JSON.stringify(dto)], { type: 'application/json' });
     formData.append('dto', blob);
 
@@ -101,11 +97,9 @@ const PostWrite = () => {
 
     try {
       await api.post('/community/posts', formData);
-      // alert("성공적으로 등록되었습니다!");
       toast.success("🌱 게시글이 성공적으로 등록되었습니다!", { containerId: 'main-toast' });
       navigate('/community');
     } catch (err) {
-      // alert("작성 실패: " + (err.response?.data?.message || "서버 오류"));
       toast.error("게시글 등록에 실패했습니다.", { containerId: 'main-toast' });
     }
   };
@@ -135,21 +129,50 @@ const PostWrite = () => {
           <input type="file" id="file-input" multiple accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
         </div>
 
-        {/* AI 분석 결과 표시 */}
-        <div style={aiStatusStyle}>
-          <span style={{ fontSize: '14px', color: '#666', fontWeight: '500' }}>분석 결과:</span>
-          <div style={{
-            ...activityBadgeStyle,
-            backgroundColor: isAnalyzing ? '#f1f3f5' : '#ebfbee',
-            color: isAnalyzing ? '#868e96' : '#2b8a3e',
-            borderColor: isAnalyzing ? '#e9ecef' : '#d3f9d8'
-          }}>
-            {isAnalyzing ? "🔄 분석 중..." : `✨ ${ACTIVITY_NAME_MAP[activityType] || 'ESG 활동'}`}
-          </div>
-        </div>
-
-        {/* 입력 필드 */}
+        {/* 🌟 수정된 부분: 활동 유형 선택 영역 (AI 추천 + 수동 변경 기능) */}
         <div style={inputGroupStyle}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '5px' }}>
+            <label style={{ fontWeight: 'bold', fontSize: '14px', color: '#333' }}>
+              활동 유형 {isAnalyzing && <span style={{fontSize: '12px', color: '#339af0', fontWeight: 'normal'}}>(🔄 AI 분석 중...)</span>}
+            </label>
+            
+            <select
+              value={activityType} 
+              onChange={(e) => setActivityType(e.target.value)}
+              disabled={isAnalyzing} // 분석 중에는 선택 변경 불가
+              style={{
+                padding: '12px',
+                fontSize: '15px',
+                border: '1px solid #339af0', 
+                borderRadius: '8px',
+                outline: 'none',
+                backgroundColor: isAnalyzing ? '#f8f9fa' : '#e7f5ff',
+                cursor: isAnalyzing ? 'not-allowed' : 'pointer',
+                fontWeight: 'bold',
+                color: '#0062b3', 
+                appearance: 'auto'
+              }}
+            >
+              <option value="TUMBLER">텀블러/다회용기 사용</option>
+              <option value="RECYCLE">분리배출</option>
+              <option value="TRANSPORT">대중교통 이용</option>
+            </select>
+
+            {/* 사진을 올렸을 때만 나타나는 AI 안내 문구 */}
+            {previews.length > 0 && !isAnalyzing && (
+              <div style={{ 
+                fontSize: '12px', 
+                color: activityType === 'FAIL' ? '#d32f2f' : '#0062b3', 
+                paddingLeft: '4px' 
+              }}>
+                {aiResult === 'FAIL' 
+                  ? "⚠️ AI가 사진을 명확히 인식하지 못했습니다. 알맞은 활동을 직접 선택해 주세요."
+                  : "🤖 AI가 사진을 분석하여 추천한 항목입니다. 맞지 않다면 직접 수정해 주세요."}
+              </div>
+            )}
+          </div>
+
+          {/* 제목 및 내용 입력 필드 */}
           <input
             style={titleInputStyle}
             type="text"
@@ -179,7 +202,8 @@ const PostWrite = () => {
 // --- 스타일 정의 ---
 const containerStyle = { maxWidth: '500px', margin: '40px auto', padding: '0 20px', textAlign: 'left' };
 const formStyle = { backgroundColor: '#fff', padding: '30px', borderRadius: '15px', boxShadow: '0 10px 30px rgba(0,0,0,0.08)' };
-const headerStyle = { fontSize: '24px', fontWeight: '800', marginBottom: '25px', color: '#2b8a3e' };
+// 🌟 헤더 색상을 프로젝트 테마(블루)에 맞게 변경
+const headerStyle = { fontSize: '24px', fontWeight: '800', marginBottom: '25px', color: '#0062b3' };
 
 const uploadBoxStyle = { marginBottom: '20px' };
 const emptyUploadStyle = { display: 'flex', height: '200px', border: '2px dashed #ddd', borderRadius: '10px', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#888' };
@@ -188,9 +212,6 @@ const previewItemStyle = { position: 'relative', height: '100px', borderRadius: 
 const imgStyle = { width: '100%', height: '100%', objectFit: 'cover' };
 const removeBtnStyle = { position: 'absolute', top: '5px', right: '5px', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', fontSize: '10px' };
 const addMoreStyle = { display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100px', border: '2px dashed #ddd', borderRadius: '8px', fontSize: '24px', color: '#888', cursor: 'pointer' };
-
-const aiStatusStyle = { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '8px' };
-const activityBadgeStyle = { padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '4px', border: '1px solid' };
 
 const inputGroupStyle = { display: 'flex', flexDirection: 'column', gap: '15px' };
 const titleInputStyle = { padding: '12px', fontSize: '16px', border: '1px solid #eee', borderRadius: '8px', outline: 'none', fontWeight: 'bold' };

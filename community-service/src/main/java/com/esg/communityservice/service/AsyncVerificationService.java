@@ -41,8 +41,6 @@ public class AsyncVerificationService {
         post.updateAiAnalysis(score, event.activityType().name(), AIStatus.SUCCESS);
         post.approve(); // 승인 처리
 
-        post.setActivityType(event.activityType());
-
         badgeService.checkAndUnlockBadge(post.getMemberId(), event.activityType());
 
         kafkaTemplate.send("point-payment-topic", event);
@@ -62,7 +60,7 @@ public class AsyncVerificationService {
         log.info("AI 자동 승인 완료 이벤트 발행: Post ID {}", event.postId());
 
       } else {
-        post.updateAiAnalysis(score, event.activityType().name(), AIStatus.REVIEW_NEEDED);
+        post.updateAiAnalysis(score, "FAIL", AIStatus.REVIEW_NEEDED);
 //        post.autoReject("이미지에서 활동을 인식할 수 없습니다.");
 
 //        sendNotification(post, "⚠️ AI 분석 결과 인증이 반려되었습니다. 사유: 이미지에서 활동을 인식할 수 없습니다.", "ACTIVITY_REJECTED");

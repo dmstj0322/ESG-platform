@@ -127,7 +127,8 @@ export default function DashboardPage() {
         const list = Array.isArray(r.data) ? r.data
                    : Array.isArray(r.data?.content) ? r.data.content
                    : [];
-        setRecentPosts(list);
+        const approvedPosts = list.filter(post => post.adminStatus === 'APPROVED');
+        setRecentPosts(approvedPosts);
       })
       .catch(() => setRecentPosts([]));
   }, [user?.companyId]);
@@ -509,7 +510,7 @@ export default function DashboardPage() {
                           {maskNickname(post.nickname)}
                         </p>
                         <p className="text-[10px] text-gray-400 truncate">
-                          {post.aiResult ?? post.title ?? '친환경 활동 인증'}
+                          {post.activityType ?? post.title ?? '친환경 활동 인증'}
                         </p>
                       </div>
                       <span className="text-[9px] text-gray-300 shrink-0 tabular-nums">

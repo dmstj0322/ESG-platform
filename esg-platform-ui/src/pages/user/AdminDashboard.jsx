@@ -50,6 +50,7 @@ const AdminDashboard = () => {
   const [editingPostId, setEditingPostId] = useState(null);
 
   const getActivityName = (type) => {
+    console.log("현재 전달받은 활동 타입:", type);
     const map = {
       TUMBLER: '텀블러/다회용기 사용',
       TRANSPORT: '대중교통 이용',
@@ -141,7 +142,7 @@ const AdminDashboard = () => {
   const handleUpdateType = async (postId, currentType, aiResult) => {
     const fallbackType = (aiResult && aiResult !== 'FAIL') ? aiResult : 'TUMBLER';
     const newType = selectedTypes[postId] || currentType || fallbackType;
-    
+
     if (!window.confirm(`활동 타입을 [${newType}]로 수정하시겠습니까?`)) return;
 
     try {
@@ -225,7 +226,7 @@ const AdminDashboard = () => {
           <div style={postGridStyle}>
             {posts.map(post => {
               const isEditing = editingPostId === post.id;
-              
+
               return (
                 <div key={post.id} style={postCardStyle}>
                   <div style={cardHeaderStyle}>
@@ -239,6 +240,15 @@ const AdminDashboard = () => {
                   </div>
 
                   <div style={aiAnalysisBoxStyle}>
+                    {/* <p style={{ margin: '4px 0', fontSize: '14px' }}>
+                      선택한 활동: <strong style={{ color: '#0062b3' }}>{getActivityName(post.activityType)}</strong>
+                    </p> */}
+                    <div style={{ marginBottom: '10px' }}>
+                      <span style={aiLabelStyle}>👤 사용자 선택 활동</span>
+                      <p style={{ margin: '4px 0', fontSize: '14px', fontWeight: 'bold', color: '#0062b3' }}>
+                        {getActivityName(post.activityType)}
+                      </p>
+                    </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                       <span style={aiLabelStyle}>🤖 AI 분석 결과</span>
                       <span style={aiScoreStyle(post.aiScore)}>{(post.aiScore * 100).toFixed(1)}% 신뢰</span>
@@ -317,7 +327,7 @@ const AdminDashboard = () => {
                         </span>
                       </div>
                     )}
-                    
+
                   </div>
                 </div>
               );
@@ -420,7 +430,7 @@ const AdminDashboard = () => {
 
 // --- 스타일링 속성 명세 ---
 const unifiedBoxStyle = (status, isEditing) => {
-  const isLarge = status === 'WAITING' || isEditing; 
+  const isLarge = status === 'WAITING' || isEditing;
   return {
     marginTop: '15px',
     padding: isLarge ? '14px 16px' : '0 16px',

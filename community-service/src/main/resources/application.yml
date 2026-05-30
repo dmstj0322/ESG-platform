@@ -13,6 +13,20 @@ spring:
       max-file-size: 10MB
       max-request-size: 20MB
 
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    defer-datasource-initialization: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+
+    sql:
+      init:
+        mode: always
+
 eureka:
   client:
     service-url:

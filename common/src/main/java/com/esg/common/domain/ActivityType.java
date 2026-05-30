@@ -10,13 +10,13 @@ import java.util.List;
 public enum ActivityType {
   TUMBLER(
     // 🌟 Primary (결정적 키워드 - 가중치 높음): 텀블러 및 다회용기
-    List.of("tumbler", "thermos", "reusable", "flask", "lunch_box", "tupperware", "container", "food_storage"),
+    List.of("tumbler", "thermos", "reusable", "flask", "lunch_box", "tupperware", "container", "food_storage", "cylinder", "drinkware", "bottle", "water_bottle"),
 
-    // ✅ Secondary (보조 키워드 - 가중치 보통): 텀블러일 확률이 있는 형태/재질
-    List.of("mug", "cup", "drinkware", "water_bottle", "tableware", "vacuum_flask", "cookware", "bakeware", "bowl", "coffee_cup", "bottle", "cylinder"),
+    // ✅ Secondary (보조 키워드 - 가중치 보통)
+    List.of("mug", "cup", "tableware", "vacuum_flask", "cookware", "bakeware", "bowl", "coffee_cup"),
 
     // 🚨 Reject (부정 키워드): 일회용품의 강력한 증거 (플라스틱 컵은 보통 straw나 disposable과 함께 잡힘)
-    List.of("disposable", "straw", "paper_cup", "plastic_cup", "sleeve"),
+    List.of("disposable", "straw", "drinking_straw", "paper_cup", "plastic_cup", "sleeve", "plastic_bottle"),
 
     "텀블러 및 다회용기 사용",
     300
@@ -30,7 +30,7 @@ public enum ActivityType {
     List.of("public_transport", "railway", "transit", "commuter", "passenger", "station", "stop"),
 
     // 🚨 Reject: 개인 승용차 관련 강력한 증거
-    List.of("car", "driving", "taxi", "steering_wheel", "motor_vehicle", "traffic_jam"),
+    List.of("car", "driving", "taxi", "motor_vehicle", "traffic_jam"),
 
     "대중교통 및 자전거 이용",
     1500
