@@ -45,6 +45,13 @@ spring:
             - SetPath=/api/v1/analysis/report
             - JwtAuthFilter
 
+        - id: analysis-service-v1
+          uri: lb://ANALYSIS-SERVICE
+          predicates:
+            - Path=/api/v1/analysis/**
+          filters:
+            - JwtAuthFilter
+
         - id: analysis-service
           uri: lb://ANALYSIS-SERVICE
           predicates:
@@ -72,10 +79,17 @@ spring:
         - id: community-service
           uri: lb://COMMUNITY-SERVICE
           predicates:
-            - Path=/community/**, /admin/**
+            - Path=/community/**
           filters:
             - RewritePath=/community/(?<segment>.*), /${segment}
             - JwtAuthFilter # 인증 추가
+
+        - id: community-admin-service
+          uri: lb://COMMUNITY-SERVICE
+          predicates:
+            - Path=/admin/**
+          filters:
+            - JwtAuthFilter
 
         - id: point-service
           uri: lb://POINT-SERVICE
@@ -87,7 +101,7 @@ spring:
         - id: notification-service
           uri: lb://NOTIFICATION-SERVICE
           predicates:
-            - Path=/notification/**
+            - Path=/notification, /notification/**
           filters:
             - JwtAuthFilter # 인증 추가
 

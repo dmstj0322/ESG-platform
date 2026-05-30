@@ -79,7 +79,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<UserSignup />} />
               <Route path="/signup/admin" element={<AdminSingup />} />
-              <Route path="/points/:id" element={<PointHistory />} />
+              <Route path="/my-points" element={<PointHistory />} />
               <Route path="/market" element={<MarketList />} />
               <Route path="/products/:productId" element={<ProductDetail />} />
               <Route path="/mypage" element={<MyPage />} />

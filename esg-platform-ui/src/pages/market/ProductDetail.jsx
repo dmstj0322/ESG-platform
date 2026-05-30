@@ -46,7 +46,7 @@ const ProductDetail = () => {
         headers: { 'X-Member-Id': user.memberId, 'X-Company-Id': user.companyId }
       });
       // alert('주문이 완료되었습니다! 마이페이지에서 확인하세요.');
-      const successMsg = product.category === 'GIFTICON' ? "🎁 구매가 완료되었습니다!" : "💙 기부가 완료되었습니다! 감사합니다.";
+      const successMsg = product.category === 'GIFTICON' ? "🎁 구매가 완료되었습니다!" : "🤝 기부가 완료되었습니다! 감사합니다.";
       toast.success(successMsg, { containerId: 'main-toast' });
       navigate('/mypage');
     } catch (error) {

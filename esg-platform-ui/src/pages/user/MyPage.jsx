@@ -349,7 +349,7 @@ const MyPage = () => {
                         {o.category === 'GIFTICON' ? (
                           <div style={iconCircleStyle('#e7f5ff', '#1c7ed6')}>🎁</div>
                         ) : (
-                          <div style={iconCircleStyle('#f3f0ff', '#7048e8')}>💙</div>
+                          <div style={iconCircleStyle('#f3f0ff', '#7048e8')}>🤝</div>
                         )}
                         <span style={statusBadgeStyle(o.status)}>{o.status}</span>
                         <div>

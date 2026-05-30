@@ -14,7 +14,7 @@ const BADGE_EMOJI_MAP = {
 
 const getActivityName = (type) => {
   const map = { 
-    TUMBLER: '텀블러 사용', 
+    TUMBLER: '텀블러/다회용기 사용', 
     TRANSPORT: '대중교통 이용', 
     RECYCLE: '분리배출',
     FAIL: '인증 실패' 
@@ -184,7 +184,7 @@ const PostDetails = () => {
 };
 
 // 스타일 가이드 (기존과 동일)
-const containerStyle = { maxWidth: '640px', margin: '60px auto', padding: '0 20px', textAlign: 'left' };
+const containerStyle = { maxWidth: '640px', margin: 'auto', padding: '0 20px', textAlign: 'left' };
 const headerSectionStyle = { marginBottom: '30px' };
 const mainTitleStyle = { fontSize: '32px', fontWeight: '850', color: '#1a1a1a', margin: '15px 0', letterSpacing: '-0.5px' };
 const authorInfoStyle = { display: 'flex', alignItems: 'center', gap: '10px', marginTop: '20px' };

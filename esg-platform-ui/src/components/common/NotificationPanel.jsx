@@ -15,7 +15,10 @@ const NotificationPanel = ({ memberId, onClose, onRead }) => {
       const listRes = await api.get(`/notification${typeParam}`, {
         headers: { 'X-Member-Id': memberId }
       });
-      setNotifications(listRes.data.content || listRes.data);
+      console.log("알림 API 응답:", listRes.data);
+
+      const fetchedData = listRes.data.content || listRes.data;
+      setNotifications(Array.isArray(fetchedData) ? fetchedData : []);
 
       const countRes = await api.get('/notification/count', {
         headers: { 'X-Member-Id': memberId }
@@ -96,8 +99,8 @@ const NotificationPanel = ({ memberId, onClose, onRead }) => {
       navigatePath = '/mypage';
     } else if (n.type === 'BADGE_EARNED') {
       navigatePath = '/mypage';
-    } 
-    
+    }
+
     navigate(navigatePath);
 
     onClose(); // 알림창 닫기
@@ -118,6 +121,8 @@ const NotificationPanel = ({ memberId, onClose, onRead }) => {
 
   // 5. 날짜별 그룹화 로직
   const groupedNotifications = useMemo(() => {
+    if (!Array.isArray(notifications)) return {};
+
     return notifications.reduce((acc, n) => {
       const date = new Date(n.createdDate).toLocaleDateString();
       if (!acc[date]) acc[date] = [];

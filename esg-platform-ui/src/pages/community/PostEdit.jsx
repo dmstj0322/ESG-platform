@@ -21,7 +21,7 @@ const PostEdit = () => {
 
   const getActivityName = (type) => {
     const map = {
-      TUMBLER: '텀블러 사용',
+      TUMBLER: '텀블러/다회용기 사용',
       TRANSPORT: '대중교통 이용',
       RECYCLE: '분리배출',
       FAIL: '인증 실패'

@@ -27,7 +27,7 @@ const PostList = () => {
   const observerRef = useRef(null);
 
   const activityMap = {
-    'tumbler': '텀블러 사용',
+    'tumbler': '텀블러/다회용기 사용',
     'transport': '대중교통 이용',
     'recycle': '분리배출',
     'fail': '인증 실패'

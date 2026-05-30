@@ -4,6 +4,17 @@ import api from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 
+// 🌟 추가된 공통 서브 내비게이션
+const AdminSubNav = ({ active }) => {
+  const navigate = useNavigate();
+  return (
+    <div style={subNavContainerStyle}>
+      <button onClick={() => navigate('/admin/dashboard')} style={subTabStyle(active === 'DASHBOARD')}>통합 대시보드</button>
+      <button onClick={() => navigate('/admin/products')} style={subTabStyle(active === 'PRODUCTS')}>상품/재고 관리</button>
+    </div>
+  );
+};
+
 const AdminDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -22,27 +33,25 @@ const AdminDashboard = () => {
 
   const [loading, setLoading] = useState(false);
 
-  // 🌟 카운트 상태
+  // 카운트 상태
   const [totalPostsCount, setTotalPostsCount] = useState(0);
   const [allPostsCount, setAllPostsCount] = useState(0);
-
   const [orderTotalCount, setOrderTotalCount] = useState(0);
   const [allOrdersCount, setAllOrdersCount] = useState(0);
 
-  // 🌟 페이지 상태
+  // 페이지 상태
   const [postPage, setPostPage] = useState(0);
   const [postTotalPages, setPostTotalPages] = useState(1);
-
   const [orderPage, setOrderPage] = useState(0);
   const [orderTotalPages, setOrderTotalPages] = useState(1);
 
-  // 🌟 관리자가 수동으로 선택한 활동 타입을 저장하는 상태
+  // 관리자가 수동으로 선택한 활동 타입을 저장하는 상태
   const [selectedTypes, setSelectedTypes] = useState({});
   const [editingPostId, setEditingPostId] = useState(null);
 
   const getActivityName = (type) => {
     const map = {
-      TUMBLER: '텀블러 사용',
+      TUMBLER: '텀블러/다회용기 사용',
       TRANSPORT: '대중교통 이용',
       RECYCLE: '분리배출',
       FAIL: '인증 실패'
@@ -97,21 +106,15 @@ const AdminDashboard = () => {
     fetchData();
   }, [fetchData]);
 
-  // --- [인증글 액션] ---
-  // 🌟 파라미터에 aiPredictedType 추가 및 선택된 타입으로 API 전송
   const handleApprove = async (postId, aiPredictedType) => {
-    // 관리자가 바꾼 값이 있으면 그것을 쓰고, 없다면 AI 예측값(단, FAIL이면 기본값 TUMBLER)을 사용
     const defaultType = (aiPredictedType && aiPredictedType !== 'FAIL') ? aiPredictedType : 'TUMBLER';
     const finalType = selectedTypes[postId] || defaultType;
 
     if (!window.confirm(`해당 활동을 [${finalType}] 타입으로 승인하시겠습니까?`)) return;
 
     try {
-      // 🌟 백엔드에 선택된 활동 타입을 함께 전달 (Request Body 사용)
       await api.post(`/admin/posts/${postId}/approve`, { activityType: finalType });
       toast.success(`✅ ${finalType} 타입으로 승인되었습니다.`, { containerId: 'main-toast' });
-
-      // 승인 후 선택 상태 초기화
       setSelectedTypes(prev => {
         const newState = { ...prev };
         delete newState[postId];
@@ -142,7 +145,6 @@ const AdminDashboard = () => {
     if (!window.confirm(`활동 타입을 [${newType}]로 수정하시겠습니까?`)) return;
 
     try {
-      // 🌟 방금 백엔드에 만든 PATCH API 호출
       await api.patch(`/admin/posts/${postId}/type`, { activityType: newType });
       toast.success(`✅ 타입이 수정되었습니다.`, { containerId: 'main-toast' });
       setEditingPostId(null);
@@ -152,7 +154,6 @@ const AdminDashboard = () => {
     }
   };
 
-  // --- [주문 액션] ---
   const handleCancelOrder = async (orderId) => {
     if (!window.confirm("주문을 취소하시겠습니까?")) return;
     try {
@@ -186,14 +187,14 @@ const AdminDashboard = () => {
 
   return (
     <div style={containerStyle}>
+      {/* 🌟 수정완료: 이제 기존 버튼 대신 탭이 상단에 배치됩니다! */}
+      <AdminSubNav active="DASHBOARD" />
+
       <div style={headerContainerStyle}>
         <div>
           <h1 style={dashboardTitleStyle}>관리자 전체 관리</h1>
           <p style={subtitleStyle}>Green-Trace 플랫폼 통합 관리 도구</p>
         </div>
-        <button onClick={() => navigate('/admin/products')} style={navToProductBtnStyle}>
-          📦 상품/재고 관리 바로가기
-        </button>
       </div>
 
       <div style={tabBarStyle}>
@@ -222,99 +223,105 @@ const AdminDashboard = () => {
           </div>
 
           <div style={postGridStyle}>
-            {posts.map(post => (
-              <div key={post.id} style={postCardStyle}>
-                <div style={cardHeaderStyle}>
-                  <span style={postIdStyle}>#{post.id}</span>
-                  <h3 style={postTitleStyle}>{post.title}</h3>
-                  <span style={statusBadge(post.adminStatus)}>{post.adminStatus}</span>
-                </div>
-
-                <div style={imgScrollStyle}>
-                  {post.imageUrls?.map((url, i) => <img key={i} src={url} alt="인증" style={postImgStyle} />)}
-                </div>
-
-                <div style={aiAnalysisBoxStyle}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span style={aiLabelStyle}>ESG 활동 분석 결과</span>
-                    <span style={aiScoreStyle(post.aiScore)}>{(post.aiScore * 100).toFixed(1)}% 신뢰</span>
+            {posts.map(post => {
+              const isEditing = editingPostId === post.id;
+              
+              return (
+                <div key={post.id} style={postCardStyle}>
+                  <div style={cardHeaderStyle}>
+                    <span style={postIdStyle}>#{post.id}</span>
+                    <h3 style={postTitleStyle}>{post.title}</h3>
+                    <span style={statusBadge(post.adminStatus)}>{post.adminStatus}</span>
                   </div>
-                  <p style={{ margin: 0, fontSize: '14px' }}>예측 활동: <strong>{getActivityName(post.aiResult)}</strong></p>
-                </div>
 
-                {/* 🌟 승인 대기 중일 때 타입 선택 드롭다운과 버튼 렌더링 */}
-                {post.adminStatus === 'WAITING' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontSize: '13px', color: '#495057', fontWeight: 'bold' }}>분류 지정:</span>
-                      <select
-                        style={selectStyle}
-                        value={selectedTypes[post.id] || (post.aiResult !== 'FAIL' ? post.aiResult : 'TUMBLER')}
-                        onChange={(e) => setSelectedTypes(prev => ({ ...prev, [post.id]: e.target.value }))}
-                      >
-                        <option value="TUMBLER">텀블러 (300g)</option>
-                        <option value="TRANSPORT">대중교통 (1500g)</option>
-                        <option value="RECYCLE">분리배출 (500g)</option>
-                      </select>
-                    </div>
-                    <div style={btnGroupStyle}>
-                      {/* AI 예측값을 파라미터로 넘겨줌 */}
-                      <button onClick={() => handleApprove(post.id, post.aiResult)} style={approveBtnStyle}>승인</button>
-                      <button onClick={() => handleReject(post.id)} style={rejectBtnStyle}>반려</button>
-                    </div>
+                  <div style={imgScrollStyle}>
+                    {post.imageUrls?.map((url, i) => <img key={i} src={url} alt="인증" style={postImgStyle} />)}
                   </div>
-                )}
 
-                {post.adminStatus === 'APPROVED' && (
-                  <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#f1f7ff', borderRadius: '8px', border: '1px solid #d0ebff' }}>
-                    {editingPostId === post.id ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <select
-                          style={selectStyle}
-                          value={selectedTypes[post.id] || post.activityType || (post.aiResult && post.aiResult !== 'FAIL' ? post.aiResult : 'TUMBLER')}
-                          onChange={(e) => setSelectedTypes(prev => ({ ...prev, [post.id]: e.target.value }))}
-                        >
-                          <option value="TUMBLER">텀블러/다회용기 (300g)</option>
-                          <option value="TRANSPORT">대중교통 (1500g)</option>
-                          <option value="RECYCLE">분리배출 (500g)</option>
-                        </select>
-                        <div style={{ display: 'flex', gap: '5px' }}>
-                          <button
-                            onClick={() => {
-                              handleUpdateType(post.id, post.activityType, post.aiResult);
-                              setEditingPostId(null);
-                            }}
-                            style={{ ...approveBtnStyle, padding: '5px' }}
-                          >확인</button>
-                          <button
-                            onClick={() => setEditingPostId(null)}
-                            style={{ ...rejectBtnStyle, padding: '5px' }}
-                          >취소</button>
+                  <div style={aiAnalysisBoxStyle}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <span style={aiLabelStyle}>🤖 AI 분석 결과</span>
+                      <span style={aiScoreStyle(post.aiScore)}>{(post.aiScore * 100).toFixed(1)}% 신뢰</span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '14px' }}>예측 활동: <strong>{getActivityName(post.aiResult)}</strong></p>
+                  </div>
+
+                  <div style={unifiedBoxStyle(post.adminStatus, isEditing)}>
+                    {post.adminStatus === 'WAITING' && (
+                      <>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '13px', color: '#495057', fontWeight: 'bold', minWidth: '55px' }}>분류 지정</span>
+                          <select
+                            style={unifiedSelectStyle}
+                            value={selectedTypes[post.id] || (post.aiResult !== 'FAIL' ? post.aiResult : 'TUMBLER')}
+                            onChange={(e) => setSelectedTypes(prev => ({ ...prev, [post.id]: e.target.value }))}
+                          >
+                            <option value="TUMBLER">텀블러/다회용기 (300g)</option>
+                            <option value="TRANSPORT">대중교통 (1500g)</option>
+                            <option value="RECYCLE">분리배출 (500g)</option>
+                          </select>
                         </div>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '13px', color: '#339af0', fontWeight: 'bold' }}>
-                          현재 분류: {getActivityName(post.activityType)}
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button onClick={() => handleApprove(post.id, post.aiResult)} style={{ ...unifiedBtnStyle, backgroundColor: '#339af0', color: '#fff' }}>승인</button>
+                          <button onClick={() => handleReject(post.id)} style={{ ...unifiedBtnStyle, backgroundColor: '#fff', color: '#fa5252', border: '1px solid #fa5252' }}>반려</button>
+                        </div>
+                      </>
+                    )}
+
+                    {post.adminStatus === 'APPROVED' && (
+                      isEditing ? (
+                        <>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ fontSize: '13px', color: '#495057', fontWeight: 'bold', minWidth: '55px' }}>분류 수정</span>
+                            <select
+                              style={unifiedSelectStyle}
+                              value={selectedTypes[post.id] || post.activityType || (post.aiResult && post.aiResult !== 'FAIL' ? post.aiResult : 'TUMBLER')}
+                              onChange={(e) => setSelectedTypes(prev => ({ ...prev, [post.id]: e.target.value }))}
+                            >
+                              <option value="TUMBLER">텀블러/다회용기 (300g)</option>
+                              <option value="TRANSPORT">대중교통 (1500g)</option>
+                              <option value="RECYCLE">분리배출 (500g)</option>
+                            </select>
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              onClick={() => {
+                                handleUpdateType(post.id, post.activityType, post.aiResult);
+                                setEditingPostId(null);
+                              }}
+                              style={{ ...unifiedBtnStyle, backgroundColor: '#339af0', color: '#fff' }}
+                            >확인</button>
+                            <button
+                              onClick={() => setEditingPostId(null)}
+                              style={{ ...unifiedBtnStyle, backgroundColor: '#fff', color: '#868e96', border: '1px solid #dee2e6' }}
+                            >취소</button>
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                          <span style={{ fontSize: '14px', color: '#1864ab', fontWeight: 'bold' }}>✓ {getActivityName(post.activityType)}</span>
+                          <button
+                            onClick={() => setEditingPostId(post.id)}
+                            style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 'bold', border: '1px solid #339af0', color: '#339af0', backgroundColor: '#fff', borderRadius: '6px', cursor: 'pointer' }}
+                          >
+                            타입 수정
+                          </button>
+                        </div>
+                      )
+                    )}
+
+                    {post.adminStatus === 'REJECTED' && post.rejectionReason && (
+                      <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                        <span style={{ fontSize: '14px', color: '#c92a2a', fontWeight: 'bold' }}>
+                          ❌ 반려 사유: <span style={{ fontWeight: 'normal', color: '#495057' }}>{post.rejectionReason}</span>
                         </span>
-                        <button
-                          onClick={() => setEditingPostId(post.id)}
-                          style={{ fontSize: '11px', padding: '4px 8px', cursor: 'pointer', backgroundColor: '#fff', border: '1px solid #339af0', color: '#339af0', borderRadius: '4px' }}
-                        >
-                          타입 수정
-                        </button>
                       </div>
                     )}
+                    
                   </div>
-                )}
-
-                {post.adminStatus === 'REJECTED' && post.rejectionReason && (
-                  <div style={{ marginTop: '10px', padding: '8px', backgroundColor: '#fff5f5', borderRadius: '8px', fontSize: '13px', color: '#e03131', border: '1px solid #ffc9c9' }}>
-                    <strong>❌ 반려 사유:</strong> {post.rejectionReason}
-                  </div>
-                )}
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
 
           {postTotalPages > 1 && (
@@ -327,7 +334,6 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {/* 🛒 주문 관리 탭 생략 없이 기존 코드 유지 */}
       {activeTab === 'ORDERS' && (
         <div style={{ marginTop: '25px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '25px' }}>
@@ -341,7 +347,7 @@ const AdminDashboard = () => {
               <span style={filterLabelStyle}>분류:</span>
               <button onClick={() => { setOrderCategoryFilter('ALL'); setOrderPage(0); }} style={filterBtnStyle(orderCategoryFilter === 'ALL')}>전체보기</button>
               <button onClick={() => { setOrderCategoryFilter('GIFTICON'); setOrderPage(0); }} style={filterBtnStyle(orderCategoryFilter === 'GIFTICON')}>🎁 기프티콘</button>
-              <button onClick={() => { setOrderCategoryFilter('DONATION'); setOrderPage(0); }} style={filterBtnStyle(orderCategoryFilter === 'DONATION')}>💙 기부 캠페인</button>
+              <button onClick={() => { setOrderCategoryFilter('DONATION'); setOrderPage(0); }} style={filterBtnStyle(orderCategoryFilter === 'DONATION')}>🤝 기부 캠페인</button>
             </div>
           </div>
 
@@ -372,7 +378,7 @@ const AdminDashboard = () => {
                       <td style={{ fontWeight: 'bold', color: '#868e96' }}>{order.orderId}</td>
                       <td style={{ color: '#495057' }}>{order.nickname} ({order.memberId})</td>
                       <td style={{ textAlign: 'center', color: '#333', fontWeight: '500' }}>{order.productName}</td>
-                      <td>{order.category === 'GIFTICON' ? '🎁 기프티콘' : '💙 기부 캠페인'}</td>
+                      <td>{order.category === 'GIFTICON' ? '🎁 기프티콘' : '🤝 기부 캠페인'}</td>
                       <td style={{ color: '#22b8cf', fontWeight: 'bold' }}>{order.totalPrice?.toLocaleString()} P</td>
                       <td style={{ color: '#868e96', fontSize: '13px' }}>
                         {order.createdDate ? new Date(order.createdDate).toLocaleString() : '-'}
@@ -413,21 +419,40 @@ const AdminDashboard = () => {
 };
 
 // --- 스타일링 속성 명세 ---
-// 🌟 셀렉트박스 스타일 추가
-const selectStyle = {
-  flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1px solid #dee2e6',
-  fontSize: '13px', color: '#495057', backgroundColor: '#fff', outline: 'none', cursor: 'pointer'
+const unifiedBoxStyle = (status, isEditing) => {
+  const isLarge = status === 'WAITING' || isEditing; 
+  return {
+    marginTop: '15px',
+    padding: isLarge ? '14px 16px' : '0 16px',
+    height: isLarge ? 'auto' : '52px',
+    minHeight: isLarge ? '96px' : '52px',
+    borderRadius: '12px',
+    border: '1px solid',
+    borderColor: status === 'APPROVED' ? '#d0ebff' : status === 'WAITING' ? '#ffec99' : '#ffc9c9',
+    backgroundColor: status === 'APPROVED' ? '#f1f7ff' : status === 'WAITING' ? '#fff9db' : '#fff5f5',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    gap: '10px'
+  };
 };
+
+const unifiedSelectStyle = {
+  flex: 1, height: '38px', padding: '0 12px', borderRadius: '8px', border: '1px solid #dee2e6', fontSize: '13px', color: '#495057', backgroundColor: '#fff', outline: 'none', cursor: 'pointer'
+};
+
+const unifiedBtnStyle = {
+  flex: 1, height: '38px', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s'
+};
+
+// 🌟 추가된 내비게이션 스타일 
+const subNavContainerStyle = { display: 'flex', gap: '30px', marginBottom: '30px', borderBottom: '2px solid #f1f3f5' };
+const subTabStyle = (active) => ({ padding: '10px 5px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '16px', fontWeight: active ? '700' : '500', color: active ? '#339af0' : '#868e96', borderBottom: active ? '3px solid #339af0' : 'none' });
 
 const containerStyle = { padding: '40px 20px', maxWidth: '1200px', margin: '0 auto', backgroundColor: '#fdfdfd', minHeight: '100vh' };
 const headerContainerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', borderBottom: '1px solid #eee', paddingBottom: '25px' };
 const dashboardTitleStyle = { margin: 0, fontSize: '28px', fontWeight: '800', color: '#333' };
 const subtitleStyle = { margin: '5px 0 0 0', color: '#adb5bd', fontSize: '15px' };
-
-const navToProductBtnStyle = {
-  backgroundColor: '#339af0', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '12px',
-  cursor: 'pointer', fontWeight: 'bold', fontSize: '15px', boxShadow: '0 4px 12px rgba(51, 154, 240, 0.3)', transition: '0.2s'
-};
 
 const tabBarStyle = { display: 'flex', gap: '30px', borderBottom: '2px solid #f1f3f5', marginBottom: '20px' };
 const tabItemStyle = (active) => ({ padding: '15px 10px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '17px', fontWeight: active ? 'bold' : '500', color: active ? '#339af0' : '#adb5bd', borderBottom: active ? '3px solid #339af0' : 'none' });
@@ -455,10 +480,6 @@ const postImgStyle = { width: '100px', height: '100px', objectFit: 'cover', bord
 const aiAnalysisBoxStyle = { backgroundColor: '#f8f9fa', padding: '12px', borderRadius: '12px', marginBottom: '15px' };
 const aiLabelStyle = { fontSize: '12px', color: '#868e96', fontWeight: 'bold' };
 const aiScoreStyle = (score) => ({ fontSize: '12px', color: score >= 0.8 ? '#339af0' : '#fa5252', fontWeight: 'bold' });
-
-const btnGroupStyle = { display: 'flex', gap: '10px' };
-const approveBtnStyle = { flex: 1, padding: '10px', border: 'none', borderRadius: '8px', backgroundColor: '#339af0', color: '#fff', fontWeight: 'bold', cursor: 'pointer' };
-const rejectBtnStyle = { flex: 1, padding: '10px', border: '1px solid #fa5252', borderRadius: '8px', backgroundColor: '#fff', color: '#fa5252', fontWeight: 'bold', cursor: 'pointer' };
 
 const statusBadge = (status) => ({
   padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold',

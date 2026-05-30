@@ -66,7 +66,7 @@ const MarketList = () => {
       <div style={tabContainerStyle}>
         <button onClick={() => handleCategoryChange("ALL")} style={tabButtonStyle(filterCategory === "ALL")}>전체 상품</button>
         <button onClick={() => handleCategoryChange("GIFTICON")} style={tabButtonStyle(filterCategory === "GIFTICON")}>🎁 기프티콘</button>
-        <button onClick={() => handleCategoryChange("DONATION")} style={tabButtonStyle(filterCategory === "DONATION")}>💙 기부 캠페인</button>
+        <button onClick={() => handleCategoryChange("DONATION")} style={tabButtonStyle(filterCategory === "DONATION")}>🤝 기부 캠페인</button>
       </div>
 
       {/* --- 상품 리스트 그리드 --- */}
