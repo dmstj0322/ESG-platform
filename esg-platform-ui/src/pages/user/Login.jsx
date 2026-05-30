@@ -3,6 +3,7 @@ import { jwtDecode } from 'jwt-decode';
 import api from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 const AUTH_STYLE = `
   .auth-wrap * { box-sizing: border-box; }
@@ -173,7 +174,7 @@ function mapLoginError(err) {
 }
 
 const ADMIN_FEATURES = ['ESG 분석 및 자동 등급 산출', 'ESG 리포트 및 대시보드', '업종 벤치마크 비교'];
-const USER_FEATURES  = ['친환경 활동 참여 및 공유', 'EcoPoint 즉시 적립', '포인트 리워드 사용'];
+const USER_FEATURES = ['친환경 활동 참여 및 공유', 'EcoPoint 즉시 적립', '포인트 리워드 사용'];
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -195,6 +196,18 @@ const Login = () => {
       login(accessToken, refreshToken);
       const decoded = jwtDecode(accessToken);
       const role = decoded.role;
+
+      toast.success('로그인 되었습니다. 환영합니다!', {
+        position: "top-right",
+        autoClose: 2500,
+        hideProgressBar: true,
+        style: {
+          borderLeft: '4px solid #339af0',
+          color: '#0062b3',
+          fontWeight: '600'
+        }
+      });
+
       if (role === 'SYSTEM_ADMIN' || role === 'COMPANY_ADMIN') {
         navigate('/analysis/dashboard');
       } else {

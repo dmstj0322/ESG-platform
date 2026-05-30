@@ -1,6 +1,6 @@
 package com.esg.pointservice.event;
 
-import com.esg.pointservice.domain.ActivityType;
+import com.esg.common.domain.ActivityType;
 
 import java.io.Serializable;
 import java.util.List;

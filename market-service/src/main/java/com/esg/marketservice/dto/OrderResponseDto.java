@@ -11,6 +11,7 @@ import java.util.List;
 public record OrderResponseDto(
   Long orderId,
   Long memberId,
+  String nickname,
   Long companyId,
   String productName,
   Long totalPrice,
@@ -25,6 +26,7 @@ public record OrderResponseDto(
     this(
       order.getId(),
       order.getMemberId(),
+      order.getNickname(),
       order.getCompanyId(),
       order.getOrderItems().get(0).getProduct().getName(),
       order.getTotalPrice(),

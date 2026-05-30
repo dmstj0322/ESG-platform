@@ -57,13 +57,30 @@ public class ProductService {
     return savedProduct.getId();
   }
 
+//  @Transactional(readOnly = true)
+//  public Page<ProductResponseDto> getProducts(Long companyId, Pageable pageable) {
+//    if (companyId == 0L) {
+//      return productRepository.findByDeletedFalse(pageable).map(ProductResponseDto::new);
+//    }
+//
+//    return productRepository.findByCompanyIdAndDeletedFalse(companyId, pageable)
+//      .map(ProductResponseDto::new);
+//  }
+
   @Transactional(readOnly = true)
-  public Page<ProductResponseDto> getProducts(Long companyId, Pageable pageable) {
-    if (companyId == 0L) {
-      return productRepository.findByDeletedFalse(pageable).map(ProductResponseDto::new);
+  public Page<ProductResponseDto> getProducts(Long companyId, String category, String name, Pageable pageable) {
+    Category enumCategory = null;
+    if (category != null && !category.equalsIgnoreCase("ALL") && !category.trim().isEmpty()) {
+      try {
+        enumCategory = Category.valueOf(category.toUpperCase());
+      } catch (IllegalArgumentException e) {
+        log.warn("올바르지 않은 카테고리 Enum 요청 수신: {}", category);
+      }
     }
 
-    return productRepository.findByCompanyIdAndDeletedFalse(companyId, pageable)
+    String searchName = (name != null && !name.trim().isEmpty()) ? name : null;
+
+    return productRepository.findProductsWithFilters(companyId, enumCategory, searchName, pageable)
       .map(ProductResponseDto::new);
   }
 
@@ -85,7 +102,7 @@ public class ProductService {
       log.info("상품 이미지 변경 완료: {}", imageUrl);
     }
 
-    product.update(dto.name(), dto.price(), dto.stock(), dto.category(), dto.content(), imageUrl);
+    product.update(dto.name(), dto.price(), dto.stock(), dto.category(), dto.content(), imageUrl, dto.targetAmount());
 
     log.info("상품 상품 수정 완료 - ID: {}, Company: {}", productId, companyId);
   }
@@ -111,7 +128,7 @@ public class ProductService {
     Product product = productRepository.findByIdAndDeletedFalse(productId)
       .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없거나 이미 삭제되었습니다."));
 
-    if (companyId != 0L && !product.getCompanyId().equals(companyId)) {
+    if (!product.getCompanyId().equals(companyId)) {
       throw new RuntimeException("해당 상품에 대한 권한이 없습니다.");
     }
     return product;

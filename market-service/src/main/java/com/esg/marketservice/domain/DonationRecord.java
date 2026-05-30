@@ -26,6 +26,8 @@ public class DonationRecord extends BaseTimeEntity {
   private String productName;
   private Long amount;
 
+  private Long orderId;
+
   @Column(unique = true)
   private String certificateNo; // 증서 고유 번호 (예: CERT-20240512-XXXX)
 

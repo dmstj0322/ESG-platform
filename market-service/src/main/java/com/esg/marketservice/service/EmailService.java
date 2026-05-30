@@ -4,7 +4,6 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -66,7 +65,7 @@ public class EmailService {
   public void sendDonationCertEmail(String from, String to, String productName, String link) {
     String subject = String.format("[Green-Trace] %s 기부 참여에 감사드립니다.", productName);
     // EmailTemplates의 템플릿에 변수 주입
-    String htmlContent = String.format(EmailTemplates.DONATION_TEMPLATE, productName, link);
+    String htmlContent = String.format(EmailTemplates.DONATION_TEMPLATE, productName, from, link);
 
     sendHtmlMail(to, subject, htmlContent);
   }

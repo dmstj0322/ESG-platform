@@ -81,9 +81,7 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
                 // 3. 다음 서비스로 유저 ID 전달 (서비스별 헤더명 혼용 대비해 두 형식 모두 전달)
                 ServerHttpRequest modifiedRequest = request.mutate()
                   .header("X-Member-Id", memberId)
-                  .header("X-UserId", memberId)
                   .header("X-Company-Id", companyId)
-                  .header("X-CompanyId", companyId)
                   .header("X-Role", role)
                   .build();
 

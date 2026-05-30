@@ -3,6 +3,7 @@ package com.esg.pointservice.controller;
 import com.esg.common.dto.EsgPoolResponse;
 import com.esg.common.dto.PointRequest;
 import com.esg.pointservice.domain.PointHistory;
+import com.esg.pointservice.dto.PointDashboardDto;
 import com.esg.pointservice.service.PointService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,20 +20,27 @@ import org.springframework.web.bind.annotation.*;
 public class PointController {
   private final PointService pointService;
 
-  /** 친환경 활동 포인트 적립 — 개인 balance + 회사 ESG Pool 동시 증가 */
   @PostMapping("/earn")
   public ResponseEntity<Void> earnPoints(@RequestBody PointRequest pointRequest) {
-    pointService.earnPoints(pointRequest.memberId(), pointRequest.companyId(),
-        pointRequest.amount(), pointRequest.description());
+    pointService.earnPoints(pointRequest.memberId(), pointRequest.companyId(), pointRequest.amount(), pointRequest.description(), pointRequest.targetId(), pointRequest.earnedCo2());
     return ResponseEntity.ok().build();
   }
 
-  /** 개인 쇼핑/ESG 마켓 포인트 사용 — 개인 balance 만 차감, ESG Pool 영향 없음 */
   @PostMapping("/use")
   public ResponseEntity<Void> usePoints(@RequestBody PointRequest pointRequest) {
-    pointService.usePoints(pointRequest.memberId(), pointRequest.companyId(),
-        pointRequest.amount(), pointRequest.description());
+    pointService.usePoints(pointRequest.memberId(), pointRequest.companyId(), pointRequest.amount(), pointRequest.description(), pointRequest.targetId());
     return ResponseEntity.ok().build();
+  }
+
+  @PostMapping("/refund")
+  public ResponseEntity<Void> refundPoints(@RequestBody PointRequest pointRequest) {
+    pointService.refundPoints(pointRequest.memberId(), pointRequest.companyId(), pointRequest.amount(), pointRequest.description(), pointRequest.targetId());
+    return ResponseEntity.ok().build();
+  }
+
+  @GetMapping("/{memberId}/dashboard")
+  public ResponseEntity<PointDashboardDto> getPointDashboard(@PathVariable Long memberId) {
+    return ResponseEntity.ok(pointService.getPointDashboard(memberId));
   }
 
   /** ESG 분석 후 회사 ESG Pool 차감 — 개인 balance 절대 차감 금지 */
@@ -59,9 +67,7 @@ public class PointController {
   }
 
   @GetMapping("/{memberId}/history")
-  public ResponseEntity<Page<PointHistory>> getPointHistory(
-      @PathVariable Long memberId,
-      @PageableDefault(size = 10) Pageable pageable) {
+  public ResponseEntity<Page<PointHistory>> getPointHistory(@PathVariable Long memberId, @PageableDefault(size = 10) Pageable pageable) {
     return ResponseEntity.ok(pointService.getPointHistory(memberId, pageable));
   }
 }

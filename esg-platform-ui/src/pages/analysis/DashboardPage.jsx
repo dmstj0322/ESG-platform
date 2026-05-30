@@ -122,7 +122,7 @@ export default function DashboardPage() {
     api.get(`/points/company/${user.companyId}/esg-pool`)
       .then(r => setEcoPool(r.data))
       .catch(() => setEcoPool(null));
-    api.get('/posts', { params: { size: 5, sort: 'createdDate,desc' } })
+    api.get('/community/posts', { params: { size: 5, sort: 'createdDate,desc' } })
       .then(r => {
         const list = Array.isArray(r.data) ? r.data
                    : Array.isArray(r.data?.content) ? r.data.content

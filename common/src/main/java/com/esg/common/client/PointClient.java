@@ -12,4 +12,7 @@ public interface PointClient {
 
   @PostMapping("/points/use")
   void usePoints(@RequestBody PointRequest pointRequest);
+
+  @PostMapping("/points/refund")
+  void refundPoints(@RequestBody PointRequest request);
 }

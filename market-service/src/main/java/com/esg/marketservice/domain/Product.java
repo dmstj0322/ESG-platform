@@ -65,9 +65,24 @@ public class Product extends BaseTimeEntity {
   }
 
   public void addStock(int quantity) {
+    if (this.category == Category.DONATION) {
+      log.info("기부 상품 취소: 재고 복구를 진행하지 않습니다.");
+      return;
+    }
+
     this.stock += quantity;
     if (this.stock > 0 && this.status == ProductStatus.SOLD_OUT) {
       this.status = ProductStatus.ON_SALE;
+    }
+  }
+
+  public void removeDonation(Long amount) {
+    if (this.category == Category.DONATION && this.currentAmount != null) {
+      this.currentAmount -= amount;
+      if (this.currentAmount < 0) {
+        this.currentAmount = 0L; // 마이너스 방지
+      }
+      log.info("기부 모금액 차감 완료. 차감액: {}, 남은 모금액: {}", amount, this.currentAmount);
     }
   }
 

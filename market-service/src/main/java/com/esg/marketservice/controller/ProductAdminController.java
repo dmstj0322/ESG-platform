@@ -35,8 +35,11 @@ public class ProductAdminController {
 
   @PreAuthorize("hasRole('ADMIN')")
   @GetMapping
-  public ResponseEntity<Page<ProductResponseDto>> getProducts(@RequestHeader("X-Company-Id") Long companyId, @PageableDefault(size = 10) Pageable pageable) {
-    return ResponseEntity.ok(productService.getProducts(companyId, pageable));
+  public ResponseEntity<Page<ProductResponseDto>> getProducts(@RequestHeader("X-Company-Id") Long companyId,
+                                                              @RequestParam(value = "category", required = false, defaultValue = "ALL") String category,
+                                                              @RequestParam(value = "name", required = false) String name,
+                                                              @PageableDefault(size = 10) Pageable pageable) {
+    return ResponseEntity.ok(productService.getProducts(companyId, category, name, pageable));
   }
 
   @PreAuthorize("hasRole('ADMIN')")

@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class OrderEventProducer {
-  private final KafkaTemplate<String, OrderCreatedEvent> kafkaTemplate;
+  private final KafkaTemplate<String, Object> kafkaTemplate;
   private static final String TOPIC = "order-events";
 
   public void sendOrderEvent(OrderCreatedEvent event) {

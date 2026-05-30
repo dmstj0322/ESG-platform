@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
+import imageCompression from 'browser-image-compression';
+import { toast } from 'react-toastify';
 
 const PostWrite = () => {
   const [title, setTitle] = useState('');
@@ -14,23 +16,55 @@ const PostWrite = () => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
 
+  const ACTIVITY_NAME_MAP = {
+    'TUMBLER': '텀블러/다회용기 사용',
+    'TRANSPORT': '대중교통 이용',
+    'RECYCLE': '분리배출',
+    'FAIL': '인증 실패 (다시 시도해주세요)'
+  };
+
   const handleFileChange = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
 
-    setSelectedFiles([...selectedFiles, ...files]);
-    const newPreviews = files.map(file => URL.createObjectURL(file));
-    setPreviews([...previews, ...newPreviews]);
+    if (previews.length + files.length > 3) {
+      toast.warning("이미지는 최대 3장까지만 업로드 가능합니다.", { containerId: 'main-toast' });
+      setIsAnalyzing(false);
+      return;
+    }
 
     setIsAnalyzing(true);
-    const formData = new FormData();
-    files.forEach((file) => formData.append("files", file));
 
     try {
+      // 🌟 이미지 압축 설정
+      const options = {
+        maxSizeMB: 1,            // 1MB 이하로 압축
+        maxWidthOrHeight: 1280,  // 긴 쪽을 1280px로 리사이징
+        useWebWorker: true,
+      };
+
+      const compressedFiles = [];
+      const newPreviews = [];
+
+      // 파일들을 하나씩 압축 처리
+      for (let file of files) {
+        const compressedFile = await imageCompression(file, options);
+        compressedFiles.push(compressedFile);
+        newPreviews.push(URL.createObjectURL(compressedFile));
+      }
+
+      setSelectedFiles(prev => [...prev, ...compressedFiles]);
+      setPreviews(prev => [...prev, ...newPreviews]);
+
+      // AI 분석을 위한 FormData 생성 (압축된 파일 사용)
+      const formData = new FormData();
+      compressedFiles.forEach((file) => formData.append("files", file));
+
       const response = await api.post('/community/posts/analyze-image', formData);
       setActivityType(response.data);
     } catch (err) {
       console.error("AI 분석 실패:", err);
+      alert("이미지 처리 및 분석 중 오류가 발생했습니다.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -44,26 +78,35 @@ const PostWrite = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    console.log("현재 로그인한 유저 정보:", user);
-    console.log("유저의 닉네임:", user?.nickname);
+    // if (selectedFiles.length === 0) {
+    //   alert("인증샷을 첨부해주세요!");
+    //   return;
+    // }
 
-    if (selectedFiles.length === 0) {
-      alert("인증샷을 첨부해주세요!");
+    if (!title || !content || selectedFiles.length === 0) {
+      toast.warning("제목, 내용, 이미지를 모두 입력해주세요.", { containerId: 'main-toast' });
       return;
     }
 
     const nickname = user?.nickname || "익명회원";
     const formData = new FormData();
-    const blob = new Blob([JSON.stringify({ title, content, activityType, nickname })], { type: 'application/json' });
+
+    // JSON 데이터 전송을 위한 Blob 객체 생성
+    const dto = { title, content, activityType, nickname };
+    const blob = new Blob([JSON.stringify(dto)], { type: 'application/json' });
     formData.append('dto', blob);
+
+    // 이미 압축된 selectedFiles를 사용하여 전송
     selectedFiles.forEach((file) => formData.append("files", file));
 
     try {
       await api.post('/community/posts', formData);
-      alert("성공적으로 등록되었습니다!");
+      // alert("성공적으로 등록되었습니다!");
+      toast.success("🌱 게시글이 성공적으로 등록되었습니다!", { containerId: 'main-toast' });
       navigate('/community');
     } catch (err) {
-      alert("작성 실패: " + (err.response?.data?.message || "서버 오류"));
+      // alert("작성 실패: " + (err.response?.data?.message || "서버 오류"));
+      toast.error("게시글 등록에 실패했습니다.", { containerId: 'main-toast' });
     }
   };
 
@@ -94,19 +137,14 @@ const PostWrite = () => {
 
         {/* AI 분석 결과 표시 */}
         <div style={aiStatusStyle}>
-          {/* <span style={{ fontSize: '14px', color: '#666' }}>AI 분석 결과:</span>
-          <div style={badgeStyle(isAnalyzing)}>
-            {isAnalyzing ? "분석 중..." : `✨ ${activityType}`}
-          </div> */}
           <span style={{ fontSize: '14px', color: '#666', fontWeight: '500' }}>분석 결과:</span>
           <div style={{
             ...activityBadgeStyle,
-            // 분석 중일 때는 색상을 회색으로 변경
             backgroundColor: isAnalyzing ? '#f1f3f5' : '#ebfbee',
             color: isAnalyzing ? '#868e96' : '#2b8a3e',
             borderColor: isAnalyzing ? '#e9ecef' : '#d3f9d8'
           }}>
-            {isAnalyzing ? "🔄 분석 중..." : `✨ ${activityType}`}
+            {isAnalyzing ? "🔄 분석 중..." : `✨ ${ACTIVITY_NAME_MAP[activityType] || 'ESG 활동'}`}
           </div>
         </div>
 
@@ -138,7 +176,7 @@ const PostWrite = () => {
   );
 };
 
-// --- 스타일 정의 (Blue Hex: #339af0 적용) ---
+// --- 스타일 정의 ---
 const containerStyle = { maxWidth: '500px', margin: '40px auto', padding: '0 20px', textAlign: 'left' };
 const formStyle = { backgroundColor: '#fff', padding: '30px', borderRadius: '15px', boxShadow: '0 10px 30px rgba(0,0,0,0.08)' };
 const headerStyle = { fontSize: '24px', fontWeight: '800', marginBottom: '25px', color: '#2b8a3e' };
@@ -149,13 +187,10 @@ const previewGridStyle = { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)
 const previewItemStyle = { position: 'relative', height: '100px', borderRadius: '8px', overflow: 'hidden' };
 const imgStyle = { width: '100%', height: '100%', objectFit: 'cover' };
 const removeBtnStyle = { position: 'absolute', top: '5px', right: '5px', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', fontSize: '10px' };
-const addMoreStyle = { ...emptyUploadStyle, height: '100px', fontSize: '24px' };
+const addMoreStyle = { display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100px', border: '2px dashed #ddd', borderRadius: '8px', fontSize: '24px', color: '#888', cursor: 'pointer' };
 
 const aiStatusStyle = { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '8px' };
-const badgeStyle = (loading) => ({
-  backgroundColor: loading ? '#e9ecef' : '#339af0',
-  color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold'
-});
+const activityBadgeStyle = { padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '4px', border: '1px solid' };
 
 const inputGroupStyle = { display: 'flex', flexDirection: 'column', gap: '15px' };
 const titleInputStyle = { padding: '12px', fontSize: '16px', border: '1px solid #eee', borderRadius: '8px', outline: 'none', fontWeight: 'bold' };
@@ -166,18 +201,5 @@ const submitBtnStyle = (disabled) => ({
   border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: disabled ? 'not-allowed' : 'pointer'
 });
 const cancelBtnStyle = { width: '100%', padding: '10px', marginTop: '10px', background: 'none', border: 'none', color: '#888', cursor: 'pointer' };
-
-const activityBadgeStyle = {
-  backgroundColor: '#ebfbee', // 아주 연한 녹색 (배경)
-  color: '#2b8a3e',           // 진한 녹색 (글자)
-  padding: '4px 12px',
-  borderRadius: '20px',       // 알약 모양
-  fontSize: '12px',
-  fontWeight: 'bold',
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '4px',
-  border: '1px solid #d3f9d8' // 미세한 테두리 추가로 선명도 향상
-};
 
 export default PostWrite;

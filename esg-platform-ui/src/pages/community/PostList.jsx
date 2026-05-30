@@ -1,9 +1,15 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/api';
 import '../../styles/Feed.css';
 import PostImageSlider from '../../components/community/PostImageSlider';
+
+const BADGE_EMOJI_MAP = {
+  '텀블러 새싹': '🌱', '텀블러 프로': '🌿', '텀블러 마스터': '🌳',
+  '에코 뚜벅이': '👟', '에코 라이더': '🚲', '대중교통 마스터': '🚇',
+  '분리배출 요정': '♻️', '지구 방위대': '🌍', '환경부 장관': '👑'
+};
 
 const PostList = () => {
   const [posts, setPosts] = useState([]);
@@ -14,35 +20,73 @@ const PostList = () => {
   const isSystemAdmin = user?.role === 'SYSTEM_ADMIN';
   const targetCompanyId = isSystemAdmin ? 0 : (user?.companyId || localStorage.getItem('companyId'));
 
+  // 🌟 무한 스크롤을 위한 상태 추가
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const observerRef = useRef(null);
+
   const activityMap = {
-    'tumbler': '🥤 텀블러 사용',
-    'transport': '🚲 대중교통 이용',
-    'recycle': '♻️ 분리배출',
-    'fail': '❌ 인증 실패'
+    'tumbler': '텀블러/다회용기 사용',
+    'transport': '대중교통 이용',
+    'recycle': '분리배출',
+    'fail': '인증 실패'
   };
 
-  const fetchPosts = useCallback(async () => {
+  // 🌟 페이지 단위로 데이터를 불러오는 함수 (초기화 or 이어붙이기)
+  const fetchPosts = useCallback(async (pageNum = 0, isReset = false, searchKeyword = keyword) => {
+    if (isLoading) return;
+    setIsLoading(true);
+
     try {
       const headers = targetCompanyId ? { 'X-Company-Id': targetCompanyId } : {};
-      const response = await api.get('/community/posts', { headers });
-      setPosts(response.data.content);
+      const url = searchKeyword
+        ? `/community/posts/search?keyword=${searchKeyword}&page=${pageNum}&size=10`
+        : `/community/posts?page=${pageNum}&size=10`;
+
+      const response = await api.get(url, { headers });
+      const newPosts = response.data.content || [];
+
+      setPosts(prev => {
+        const merged = isReset ? newPosts : [...prev, ...newPosts];
+        return Array.from(new Map(merged.map(post => [post.id, post])).values());
+      });
+
+      setHasMore(!response.data.last);
+      setPage(pageNum);
     } catch (error) {
-      console.error('데이터 조회 실패:', error.response?.status, error.message);
+      console.error('데이터 조회 실패:', error);
+    } finally {
+      setIsLoading(false);
     }
+  }, [targetCompanyId, keyword, isLoading]);
+
+  useEffect(() => {
+    fetchPosts(0, true);
   }, [targetCompanyId]);
 
   useEffect(() => {
-    fetchPosts();
-  }, [fetchPosts]);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoading) {
+          fetchPosts(page + 1, false); // 다음 페이지 이어붙이기
+        }
+      },
+      { threshold: 0.5 } // 타겟이 50% 이상 보일 때 트리거
+    );
 
-  const handleSearch = async () => {
-    try {
-      const headers = targetCompanyId ? { 'X-Company-Id': targetCompanyId } : {};
-      const res = await api.get(`/community/posts/search?keyword=${keyword}`, { headers });
-      setPosts(res.data.content);
-    } catch (err) {
-      console.error("검색 실패:", err);
+    if (observerRef.current) {
+      observer.observe(observerRef.current);
     }
+
+    return () => {
+      if (observerRef.current) observer.unobserve(observerRef.current);
+    };
+  }, [hasMore, isLoading, page, fetchPosts]);
+
+  // 검색 버튼 클릭 시
+  const handleSearch = () => {
+    fetchPosts(0, true, keyword);
   };
 
   const handleLike = async (postId) => {
@@ -55,8 +99,6 @@ const PostList = () => {
     try {
       const res = await api.post(`/community/posts/${postId}/likes`);
       const { liked, count } = res.data;
-      console.log(res.data);
-      // 특정 포스트의 좋아요 상태만 업데이트
       setPosts(prevPosts =>
         prevPosts.map(post =>
           post.id === postId ? { ...post, isLiked: liked, likeCount: count } : post
@@ -65,6 +107,34 @@ const PostList = () => {
     } catch (err) {
       console.error("좋아요 처리 실패:", err);
     }
+  };
+
+  const renderStatusBadge = (post) => {
+    if (!user || String(user.memberId) !== String(post.memberId)) return null;
+
+    let badgeText = '';
+    let badgeColor = '';
+    let badgeBg = '';
+
+    if (post.adminStatus === 'APPROVED') {
+      badgeText = '✅ 인증 완료';
+      badgeColor = '#339af0';
+      badgeBg = '#e7f5ff';
+    } else if (post.adminStatus === 'REJECTED') {
+      badgeText = '❌ 인증 반려';
+      badgeColor = '#fa5252';
+      badgeBg = '#fff5f5';
+    } else if (post.aiStatus === 'PROCESSING') {
+      badgeText = '🤖 분석 중';
+      badgeColor = '#adb5bd';
+      badgeBg = '#f8f9fa';
+    } else {
+      badgeText = '⏳ 심사 대기';
+      badgeColor = '#fd7e14';
+      badgeBg = '#fff4e6';
+    }
+
+    return (<span style={{ fontSize: '11px', fontWeight: 'bold', padding: '2px 8px', borderRadius: '4px', color: badgeColor, backgroundColor: badgeBg, border: `1px solid ${badgeColor}50`, marginLeft: '8px' }}>{badgeText}</span>);
   };
 
   return (
@@ -84,27 +154,14 @@ const PostList = () => {
               style={{ padding: '8px 12px', borderRadius: '20px', border: '1px solid #ddd', outline: 'none' }}
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              placeholder="검색어 입력..."
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              placeholder="검색어를 입력하세요..."
             />
-            <button onClick={handleSearch} style={{ cursor: 'pointer', background: 'none', border: 'none', fontWeight: 'bold' }}>검색</button>
+            <button onClick={handleSearch} style={{ cursor: 'pointer', background: 'none', border: 'none', fontWeight: 'bold', color: '#339af0' }}>검색</button>
           </div>
-          {/* {isLoggedIn && (
-            <Link to="/write" className="write-btn" style={{
-              textDecoration: 'none', backgroundColor: '#2b8a3e', color: '#fff',
-              padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', fontSize: '14px'
-            }}>
-              글쓰기
-            </Link>
-          )} */}
-          {isLoggedIn && (
-            <Link to="/write" style={fabStyle} title="새 글 작성">
-              +
-            </Link>
-          )}
         </div>
       </div>
 
-      {/* 피드 리스트 */}
       <div className="instagram-feed" style={{ display: 'flex', flexDirection: 'column', gap: '40px', alignItems: 'center' }}>
         {posts.length > 0 ? (
           posts.map((post) => (
@@ -112,8 +169,6 @@ const PostList = () => {
               width: '100%', maxWidth: '600px', backgroundColor: '#fff',
               borderRadius: '12px', border: '1px solid #efefef', overflow: 'hidden'
             }}>
-
-              {/* 카드 상단: 유저 정보 (왼쪽 정렬) */}
               <div className="post-header" style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div className="user-info" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <div className="user-avatar" style={{
@@ -122,22 +177,29 @@ const PostList = () => {
                   }}>
                     {post.nickname ? post.nickname.substring(0, 1) : '?'}
                   </div>
-                  <span className="username" style={{ fontWeight: 'bold', fontSize: '14px' }}>
-                    {post.nickname || `Member #${post.memberId}`}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    {post.authorBadgeType && BADGE_EMOJI_MAP[post.authorBadgeType] && (
+                      <span style={{ fontSize: '15px', marginRight: '5px' }}>
+                        {BADGE_EMOJI_MAP[post.authorBadgeType]}
+                      </span>
+                    )}
+                    <span className="username" style={{ fontWeight: 'bold', fontSize: '14px' }}>
+                      {post.nickname || `Member #${post.memberId}`}
+                    </span>
+                    {renderStatusBadge(post)}
+                  </div>
                 </div>
-                {/* <span className="activity-tag" style={{ fontSize: '12px', backgroundColor: '#f1f3f5', padding: '4px 10px', borderRadius: '15px', color: '#495057' }}> */}
-                <span style={activityBadgeStyle}>
-                  {activityMap[post.aiResult?.toLowerCase()] || 'ESG 활동'}
-                </span>
+                {String(user?.memberId) === String(post.memberId) && (
+                  <span style={activityBadgeStyle}>
+                    {activityMap[(post.activityType || post.aiResult)?.toLowerCase()] || '🌱 ESG 활동'}
+                  </span>
+                )}
               </div>
 
-              {/* 이미지 슬라이더 */}
               <Link to={`/posts/${post.id}`} className="post-image-link">
                 <PostImageSlider imageUrls={post.imageUrls} />
               </Link>
 
-              {/* 카드 하단: 본문 (왼쪽 정렬) */}
               <div className="post-content" style={{ padding: '16px', textAlign: 'left' }}>
                 <div className="post-actions" style={{ display: 'flex', gap: '15px', marginBottom: '12px' }}>
                   <div className="like-group" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -174,130 +236,22 @@ const PostList = () => {
             </article>
           ))
         ) : (
-          <div style={{ padding: '100px 0', color: '#adb5bd' }}>아직 등록된 활동이 없습니다.</div>
+          !isLoading && <div style={{ padding: '100px 0', color: '#adb5bd' }}>아직 등록된 활동이 없습니다.</div>
         )}
+
+        {/* 🌟 무한 스크롤 감지 및 로딩 표시 영역 */}
+        <div ref={observerRef} style={{ padding: '20px', textAlign: 'center', color: '#339af0', fontWeight: 'bold', fontSize: '14px' }}>
+          {isLoading && '게시물을 불러오는 중... 🌱'}
+        </div>
       </div>
+
+      {isLoggedIn && <Link to="/write" className="fab-button">+</Link>}
     </div>
   );
 };
 
-const fabStyle = {
-  position: 'fixed',
-  bottom: '30px',
-  right: '30px',
-  width: '60px',
-  height: '60px',
-  backgroundColor: '#339af0', // 유저님의 브랜드 컬러 (블루)
-  color: 'white',
-  borderRadius: '50%',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontSize: '35px',
-  textDecoration: 'none',
-  boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-  zIndex: 1000,
-  transition: 'transform 0.2s',
-  cursor: 'pointer'
-};
-
-const activityBadgeStyle = {
-  backgroundColor: '#ebfbee', // 아주 연한 녹색 (배경)
-  color: '#2b8a3e',           // 진한 녹색 (글자)
-  padding: '4px 12px',
-  borderRadius: '20px',       // 알약 모양
-  fontSize: '12px',
-  fontWeight: 'bold',
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '4px',
-  border: '1px solid #d3f9d8' // 미세한 테두리 추가로 선명도 향상
-};
-
-//   return (
-//     <div className="feed-wrapper">
-//       <div className="feed-header">
-//         <h2>ESG Community</h2>
-//         <div className="search-box">
-//           <input
-//             type="text"
-//             value={keyword}
-//             onChange={(e) => setKeyword(e.target.value)}
-//             placeholder="검색..."
-//           />
-//           <button onClick={handleSearch}>검색</button>
-//         </div>
-//         {isLoggedIn && (
-//           <Link to="/write" className="write-btn">게시물 올리기</Link>
-//         )}
-//       </div>
-
-//       {/* 피드 리스트 */}
-//       <div className="instagram-feed">
-//         {posts.map((post) => (
-//           <article key={post.id} className="post-card">
-//             {/* 카드 상단: 유저 정보 */}
-//             <div className="post-header">
-//               <div className="user-info">
-//                 <div className="user-avatar">{post.nickname ? post.nickname.substring(0, 1) : '?'}</div>
-//                 {/* <span className="username">Member #{post.memberId}</span> */}
-//                 <div className="user-text-info">
-//                   {/* 닉네임 표시 (없으면 아이디 표시) */}
-//                   <span className="username">{post.nickname || `Member #${post.memberId}`}</span>
-//                   {/* B2B 성격을 강조하고 싶다면 회사 정보를 추가하세요 */}
-//                   {/* <span className="user-company">{post.companyName}</span> */}
-//                 </div>
-//               </div>
-//               <span className="activity-tag">{activityMap[post.aiResult?.toLowerCase()] || 'ESG 활동'}</span>
-//             </div>
-
-//             <Link to={`/posts/${post.id}`} className="post-image-link">
-//               <PostImageSlider imageUrls={post.imageUrls} />
-//               {/* {post.imageUrls && post.imageUrls.length > 0 ? (
-//                   <img src={post.imageUrls[0]} alt="Post" className="post-image" />
-//                 ) : (
-//                   <div className="no-image-placeholder">No Image</div>
-//                 )}
-//                 {post.imageUrls?.length > 1 && (
-//                   <span className="image-count-badge">1/{post.imageUrls.length}</span>
-//                 )} */}
-//             </Link>
-
-//             <div className="post-text">
-//               <span className="post-title">{post.title}</span>
-//               <p className="post-description">{post.content}</p>
-//             </div>
-
-//             {/* 카드 하단: 본문 및 상태 */}
-//             <div className="post-content">
-//               <div className="post-actions">
-//                 <div className="like-group">
-//                   <button className={`action-btn like-btn ${post.isLiked ? 'active' : ''}`}
-//                     onClick={() => handleLike(post.id)}>{post.isLiked ? '❤️' : '🤍'}
-//                   </button>
-//                   <span className="like-count-text">
-//                     {post.likeCount > 0 ? post.likeCount : 0}
-//                   </span>
-//                 </div>
-//                 <button className="action-btn" onClick={() => navigate(`/posts/${post.id}`)}>
-//                   💬 <span className="comment-count-text">{post.commentCount || 0}</span>
-//                 </button>
-//               </div>
-//               <div className="post-comments-link">
-//                 <Link to={`/posts/${post.id}`}>
-//                   {post.commentCount > 0 ? `댓글 ${post.commentCount}개 모두 보기` : '댓글 달기...'}
-//                 </Link>
-//               </div>
-//               <div className="post-meta">
-
-//                 <span className="post-date">{new Date(post.createdDate).toLocaleDateString()}</span>
-//               </div>
-//             </div>
-//           </article>
-//         ))}
-//       </div>
-//     </div>
-//   );
-// };
+// 스타일 가이드
+const fabStyle = { position: 'fixed', bottom: '30px', right: '30px', width: '60px', height: '60px', backgroundColor: '#339af0', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '35px', textDecoration: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', zIndex: 1000, transition: 'transform 0.2s', cursor: 'pointer' };
+const activityBadgeStyle = { backgroundColor: '#ebfbee', color: '#2b8a3e', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '4px', border: '1px solid #d3f9d8' };
 
 export default PostList;

@@ -15,10 +15,12 @@ public class LikeService {
   private final PostRepository postRepository;
   private final PostLikeRepository postLikeRepository;
 
+  @Transactional(readOnly = true)
   public boolean isLiked(Long postId, Long memberId, Long companyId) {
     return postLikeRepository.existsByCompanyIdAndPostIdAndMemberId(companyId, postId, memberId);
   }
 
+  @Transactional(readOnly = true)
   public int getLikeCount(Long postId) {
     return postRepository.findById(postId).map(Post::getLikeCount).orElse(0);
   }

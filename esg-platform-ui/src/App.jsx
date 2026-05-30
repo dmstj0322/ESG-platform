@@ -1,6 +1,9 @@
 import React from 'react';
 
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 import LandingPage from './pages/LandingPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AnalysisProvider } from './context/AnalysisContext';
@@ -76,7 +79,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<UserSignup />} />
               <Route path="/signup/admin" element={<AdminSingup />} />
-              <Route path="/points/:id" element={<PointHistory />} />
+              <Route path="/my-points" element={<PointHistory />} />
               <Route path="/market" element={<MarketList />} />
               <Route path="/products/:productId" element={<ProductDetail />} />
               <Route path="/mypage" element={<MyPage />} />
@@ -107,6 +110,31 @@ function App() {
             </Route>
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
+          
+          <ToastContainer
+            containerId="main-toast"
+            position="top-center"
+            autoClose={2500}
+            hideProgressBar={true}
+            newestOnTop
+            closeOnClick
+            pauseOnHover
+            draggable
+            theme="light"
+            style={{ marginTop: '70px' }}
+          />
+          <ToastContainer
+            containerId="notification-toast"
+            position="top-right"
+            autoClose={4000}
+            newestOnTop
+            closeOnClick
+            pauseOnHover
+            draggable
+            theme="light"
+            limit={3}
+            style={{ marginTop: '70px' }}
+          />
         </BrowserRouter>
       </AnalysisProvider>
     </AuthProvider>

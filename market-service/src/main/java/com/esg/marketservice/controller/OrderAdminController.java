@@ -1,5 +1,7 @@
 package com.esg.marketservice.controller;
 
+import com.esg.marketservice.domain.Category;
+import com.esg.marketservice.domain.OrderStatus;
 import com.esg.marketservice.dto.OrderResponseDto;
 import com.esg.marketservice.service.OrderService;
 import lombok.RequiredArgsConstructor;
@@ -18,8 +20,10 @@ public class OrderAdminController {
   @GetMapping
   public ResponseEntity<Page<OrderResponseDto>> getAdminOrders(
     @RequestHeader("X-Company-Id") Long companyId,
+    @RequestParam(required = false) OrderStatus status,
+    @RequestParam(required = false) Category category,
     @PageableDefault(size = 10) Pageable pageable) {
-    return ResponseEntity.ok(orderService.getAllOrdersByCompany(companyId, pageable));
+    return ResponseEntity.ok(orderService.getAllOrdersByCompany(companyId, status, category, pageable));
   }
 
   @PostMapping("/{orderId}/cancel")

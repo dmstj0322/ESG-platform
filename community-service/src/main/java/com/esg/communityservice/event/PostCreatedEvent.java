@@ -1,6 +1,6 @@
 package com.esg.communityservice.event;
 
-import com.esg.communityservice.domain.ActivityType;
+import com.esg.common.domain.ActivityType;
 
 import java.io.Serializable;
 import java.util.List;

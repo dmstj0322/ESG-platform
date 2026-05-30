@@ -130,8 +130,8 @@ public class AnalysisController {
      */
     @PostMapping("/api/v1/analysis/report")
     public ResponseEntity<?> requestReport(
-            @RequestHeader("X-UserId") Long userId,
-            @RequestHeader("X-CompanyId") Long companyId,
+            @RequestHeader("X-Member-Id") Long userId,
+            @RequestHeader("X-Company-Id") Long companyId,
             @RequestParam("file") MultipartFile file) {
 
         log.info("★파일 수신★ 이름: {}, 크기: {} bytes", file.getOriginalFilename(), file.getSize());

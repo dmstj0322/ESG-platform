@@ -1,18 +1,34 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom'; // 🌟 이동 훅 추가
 import api from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
+import ImagePlaceholder from './ImagePlaceholder';
+import { toast } from 'react-toastify';
+
+// 🌟 1. 공통 상단 내비게이션 추가 (AdminDashboard와 완벽 동일)
+const AdminSubNav = ({ active }) => {
+  const navigate = useNavigate();
+  return (
+    <div style={subNavContainerStyle}>
+      <button onClick={() => navigate('/admin')} style={subTabStyle(active === 'DASHBOARD')}>통합 대시보드</button>
+      <button onClick={() => navigate('/admin/products')} style={subTabStyle(active === 'PRODUCTS')}>상품/재고 관리</button>
+    </div>
+  );
+};
 
 const ProductAdmin = () => {
   const { user } = useAuth();
+  const navigate = useNavigate(); // 🌟 내비게이트 변수 추가
   const companyId = user?.companyId || localStorage.getItem('companyId');
 
   const [products, setProducts] = useState([]);
   const [formData, setFormData] = useState({ name: '', price: '', content: '', category: 'GIFTICON', stock: 0, targetAmount: 0 });
   const [file, setFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null); // ✅ 이미지 미리보기 URL 상태 추가
+  const [previewUrl, setPreviewUrl] = useState(null);
+
   const [voucherText, setVoucherText] = useState("");
   const [addVoucherText, setAddVoucherText] = useState("");
-  const [existingVouchers, setExistingVouchers] = useState([]); // ✅ 기존 핀번호 상태 추가
+  const [existingVouchers, setExistingVouchers] = useState([]);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
@@ -20,31 +36,42 @@ const ProductAdmin = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("ALL");
 
+  const [page, setPage] = useState(0); 
+  const [totalPages, setTotalPages] = useState(1);
+  const PAGE_SIZE = 10;
+
+  const fetchProducts = useCallback(async () => {
+    try {
+      let url = `/market/products?page=${page}&size=${PAGE_SIZE}&sort=id,desc`;
+
+      if (searchTerm) url += `&name=${encodeURIComponent(searchTerm)}`;
+      if (filterCategory !== "ALL") url += `&category=${filterCategory}`;
+
+      const res = await api.get(url, { headers: { 'X-Company-Id': companyId } });
+
+      setProducts(res.data.content || []);
+      setTotalPages(res.data.totalPages || 1);
+    } catch (err) {
+      console.error("상품 목록 로드 실패", err);
+    }
+  }, [companyId, page, filterCategory, searchTerm]);
+
   useEffect(() => {
     fetchProducts();
-  }, [companyId]);
+  }, [fetchProducts]);
 
-  const fetchProducts = async () => {
+  const fetchExistingVouchers = async (productId) => {
     try {
-      const res = await api.get('/market/products', { headers: { 'X-Company-Id': companyId } });
-      setProducts(res.data.content);
-    } catch (err) { console.error("목록 로드 실패"); }
+      const res = await api.get(`/market/admin/products/${productId}/vouchers`, { headers: { 'X-Company-Id': companyId } });
+      setExistingVouchers(res.data);
+    } catch (err) { console.error("바우처 로드 실패"); }
   };
 
-  const filteredProducts = products.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = filterCategory === "ALL" || p.category === filterCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  // ✅ 파일 선택 시 호출되는 함수 (미리보기 생성)
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
       setFile(selectedFile);
-      // 브라우저 내 임시 URL 생성하여 미리보기 반영
-      const objectUrl = URL.createObjectURL(selectedFile);
-      setPreviewUrl(objectUrl);
+      setPreviewUrl(URL.createObjectURL(selectedFile));
     }
   };
 
@@ -62,19 +89,21 @@ const ProductAdmin = () => {
 
     try {
       if (isEditing) {
-        await api.put(`/market/admin/products/${editId}`, sendData, {
-          headers: { 'X-Company-Id': companyId }
-        });
-        alert("수정되었습니다.");
+        await api.put(`/market/admin/products/${editId}`, sendData, { headers: { 'X-Company-Id': companyId } });
+        toast.success("✅ 상품이 성공적으로 수정되었습니다.", { containerId: 'main-toast' });
       } else {
-        await api.post('/market/admin/products', sendData, {
-          headers: { 'X-Company-Id': companyId }
-        });
-        alert("등록되었습니다.");
+        if (formData.category === 'GIFTICON' && voucherText) {
+          voucherText.split('\n').filter(v => v.trim() !== "").forEach(v => sendData.append("vouchers", v));
+        }
+        await api.post('/market/admin/products', sendData, { headers: { 'X-Company-Id': companyId } });
+        toast.success("✅ 상품이 성공적으로 등록되었습니다.", { containerId: 'main-toast' });
+        setPage(0);
       }
       resetForm();
       fetchProducts();
-    } catch (err) { alert("작업 처리에 실패했습니다."); }
+    } catch (err) {
+      toast.error("작업 처리에 실패했습니다.", { containerId: 'main-toast' });
+    }
   };
 
   const handleEdit = (p) => {
@@ -82,7 +111,13 @@ const ProductAdmin = () => {
     setEditId(p.id);
     setIsEditing(true);
     setShowForm(true);
-    setPreviewUrl(p.voucherUrl); // ✅ 수정 시 기존 이미지 URL을 미리보기에 설정
+    setPreviewUrl(p.voucherUrl);
+    setAddVoucherText("");
+
+    if (p.category === 'GIFTICON') {
+      fetchExistingVouchers(p.id);
+    }
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -91,37 +126,60 @@ const ProductAdmin = () => {
       await api.patch(`/market/admin/products/${productId}/status`, JSON.stringify(newStatus), {
         headers: { 'X-Company-Id': companyId, 'Content-Type': 'application/json' }
       });
+      toast.success(newStatus === 'HIDDEN' ? "상품이 숨김 처리되었습니다." : "상태가 변경되었습니다.", { containerId: 'main-toast' });
       fetchProducts();
-    } catch (err) { alert("상태 변경 실패"); }
+    } catch (err) {
+      toast.error("상태 변경에 실패했습니다.", { containerId: 'main-toast' });
+    }
   };
 
   const handleAddVouchers = async () => {
     const vouchers = addVoucherText.split('\n').filter(v => v.trim() !== "");
-    if (vouchers.length === 0) return alert("추가할 핀번호를 입력하세요.");
+    if (vouchers.length === 0) {
+      toast.warning("추가할 핀번호를 입력하세요.", { containerId: 'main-toast' });
+      return;
+    }
+
     try {
       await api.post(`/market/admin/products/${editId}/vouchers`, vouchers, { headers: { 'X-Company-Id': companyId } });
-      alert("바우처가 성공적으로 보충되었습니다.");
+      toast.success("🎁 바우처가 성공적으로 보충되었습니다.", { containerId: 'main-toast' });
+
+      setFormData(prev => ({
+        ...prev,
+        stock: Number(prev.stock || 0) + vouchers.length
+      }));
+
       setAddVoucherText('');
       fetchProducts();
-      fetchExistingVouchers(editId); // ✅ 보충 후 남은 핀번호 목록 새로고침
-    } catch (err) { alert("보충 실패"); }
+      fetchExistingVouchers(editId);
+    } catch (err) {
+      toast.error("바우처 보충에 실패했습니다.", { containerId: 'main-toast' });
+    }
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm("정말 삭제하시겠습니까? (주문 내역이 있으면 삭제 불가)")) return;
     try {
       await api.delete(`/market/admin/products/${id}`, { headers: { 'X-Company-Id': companyId } });
-      fetchProducts();
-    } catch (err) { alert(err.response?.data?.message || "삭제 실패"); }
+      toast.success("🗑️ 삭제되었습니다.", { containerId: 'main-toast' });
+
+      if (products.length === 1 && page > 0) {
+        setPage(p => p - 1);
+      } else {
+        fetchProducts();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "삭제에 실패했습니다. (주문 내역 존재 등)", { containerId: 'main-toast' });
+    }
   };
 
   const resetForm = () => {
     setFormData({ name: '', price: '', content: '', category: 'GIFTICON', stock: 0, targetAmount: 0 });
     setFile(null);
-    setPreviewUrl(null); // ✅ 리셋 시 미리보기 초기화
-    setVoucherText("");
-    setAddVoucherText("");
-    setExistingVouchers([]); // 초기화
+    setPreviewUrl(null);
+    voucherText && setVoucherText("");
+    addVoucherText && setAddVoucherText("");
+    setExistingVouchers([]);
     setIsEditing(false);
     setEditId(null);
     setShowForm(false);
@@ -133,8 +191,17 @@ const ProductAdmin = () => {
     return matchesSearch && matchesCategory;
   });
 
+  // 상태를 한글로 변환해주는 헬퍼 함수
+  const getStatusName = (status) => {
+    if (status === 'ON_SALE') return '판매중';
+    if (status === 'SOLD_OUT') return '품절';
+    if (status === 'HIDDEN') return '숨김';
+    return status;
+  };
+
   return (
     <div style={pageContainer}>
+      <AdminSubNav active="PRODUCTS" />
       <header style={headerContainer}>
         <div>
           <h2 style={titleStyle}>📦 상품 및 캠페인 관리</h2>
@@ -145,6 +212,7 @@ const ProductAdmin = () => {
         </button>
       </header>
 
+      {/* --- 등록 및 수정 폼 --- */}
       {showForm && (
         <div style={formCard}>
           <div style={formHeader}>
@@ -173,31 +241,50 @@ const ProductAdmin = () => {
                 </div>
               </div>
 
-              {/* ✅ 이미지 미리보기 영역 추가 */}
-              <label style={labelStyle}>대표 이미지</label>
-              {previewUrl && (
-                <div style={previewContainerStyle}>
-                  <img src={previewUrl} alt="Preview" style={previewImageStyle} />
-                  <p style={{ fontSize: '10px', color: '#888', marginTop: '5px' }}>
-                    {isEditing ? "현재 등록된 이미지" : "선택된 이미지 미리보기"}
-                  </p>
+              {formData.category === 'DONATION' ? (
+                <div style={{ ...inputGroup, backgroundColor: '#f1faff', padding: '15px', borderRadius: '8px', border: '1px solid #c5f6fa', marginTop: '30px' }}>
+                  <label style={{ ...labelStyle, color: '#0b7285' }}>🎯 목표 모금액 (P)</label>
+                  <input type="number" style={{ ...inputStyle, border: 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }} value={formData.targetAmount} onChange={e => setFormData({ ...formData, targetAmount: e.target.value })} placeholder="전체 목표 금액을 입력하세요" />
+                </div>
+              ) : (
+                <div style={{ ...inputGroup, backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '8px', border: '1px solid #e9ecef', marginTop: '30px' }}>
+                  {isEditing ? (
+                    <>
+                      <label style={{ ...labelStyle, color: '#495057' }}>
+                        🎫 현재 등록된 핀번호 (미사용: <span style={{ color: '#339af0' }}>{existingVouchers.length}</span>개)
+                      </label>
+                      <div style={existingVoucherBox}>
+                        {existingVouchers.length > 0
+                          ? existingVouchers.map((v, i) => <div key={i} style={{ padding: '3px 0' }}>• {v}</div>)
+                          : <div style={{ color: '#adb5bd', textAlign: 'center', padding: '10px 0' }}>미사용 핀번호가 없습니다.</div>}
+                      </div>
+
+                      <label style={{ ...labelStyle, color: '#495057', marginTop: '15px' }}>➕ 핀번호 추가 보충 (줄바꿈 구분)</label>
+                      <textarea
+                        style={{ ...inputStyle, height: '70px', resize: 'none' }}
+                        value={addVoucherText}
+                        onChange={e => setAddVoucherText(e.target.value)}
+                        placeholder="새로운 핀번호 입력"
+                      />
+                      <button type="button" onClick={handleAddVouchers} style={{ ...btnOutline('#339af0'), width: '100%', marginTop: '5px' }}>
+                        핀번호 즉시 추가
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <label style={{ ...labelStyle, color: '#495057' }}>🎫 초기 핀번호 등록 (줄바꿈 구분)</label>
+                      <textarea
+                        style={{ ...inputStyle, height: '100px', resize: 'none' }}
+                        value={voucherText}
+                        onChange={e => setVoucherText(e.target.value)}
+                        placeholder="ABCD-1234-5678&#13;&#10;EFGH-9012-3456"
+                      />
+                    </>
+                  )}
                 </div>
               )}
-              <input type="file" style={{ fontSize: '12px' }} onChange={handleFileChange} />
             </div>
 
-            <div style={formRightStyle}>
-              <label style={labelStyle}>상세 설명</label>
-              <textarea style={{ ...inputStyle, height: '80px', resize: 'none' }} value={formData.content} onChange={e => setFormData({ ...formData, content: e.target.value })} />
-              {!isEditing && formData.category === 'GIFTICON' && (
-                <div style={{ marginTop: '10px' }}>
-                  <label style={labelStyle}>🎫 초기 핀번호 (줄바꿈 구분)</label>
-                  <textarea style={{ ...inputStyle, height: '110px', backgroundColor: '#f1faff' }} value={voucherText} onChange={e => setVoucherText(e.target.value)} placeholder="ABC-123..." />
-                </div>
-              )}
-            </div>
-
-            {/* 우측 상세 설명 및 이미지 구역 */}
             <div style={formSection}>
               <div style={inputGroup}>
                 <label style={labelStyle}>상세 설명</label>
@@ -206,24 +293,21 @@ const ProductAdmin = () => {
 
               <div style={inputGroup}>
                 <label style={labelStyle}>대표 이미지</label>
-                {/* <div style={imageUploadBox}>
-                  {previewUrl ? (
-                    <img src={previewUrl} alt="Preview" style={previewImage} />
-                  ) : (
-                    <div style={{ color: '#adb5bd', fontSize: '13px', padding: '30px 0' }}>이미지를 선택해주세요</div>
-                  )}
-                  <input type="file" style={{ width: '100%', marginTop: '10px', fontSize: '13px' }} onChange={handleFileChange} />
-                </div> */}
                 <label style={imageUploadWrapper}>
                   <input
                     type="file"
                     accept="image/*"
                     onChange={handleFileChange}
-                    style={{ display: 'none' }} // 기본 버튼 숨기기
+                    style={{ display: 'none' }}
                   />
                   {previewUrl ? (
                     <div style={previewContainer}>
-                      <img src={previewUrl} alt="Preview" style={previewImage} />
+                      <ImagePlaceholder
+                        src={previewUrl}
+                        alt="preview"
+                        category={formData.category}
+                        style={previewImage}
+                      />
                       <div style={changeBadge}>🔄 이미지 변경</div>
                     </div>
                   ) : (
@@ -245,28 +329,18 @@ const ProductAdmin = () => {
         </div>
       )}
 
-      <div style={searchBarStyle}>
-        <div style={{ position: 'relative', flex: 1 }}>
-          <input
-            type="text"
-            placeholder="상품명으로 검색하세요..."
-            style={searchInputStyle}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <select
-          style={filterSelectStyle}
-          value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
-        >
+      {/* --- 검색 및 필터 --- */}
+      <div style={filterBar}>
+        <input type="text" placeholder="🔍 상품명 검색..." style={searchInput} value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }} />
+        <select style={filterSelect} value={filterCategory} onChange={(e) => { setFilterCategory(e.target.value); setPage(0); }}>
           <option value="ALL">전체 카테고리</option>
           <option value="GIFTICON">🎁 기프티콘</option>
           <option value="DONATION">🤝 기부 캠페인</option>
         </select>
       </div>
 
-      <div style={tableContainerStyle}>
+      {/* --- 리스트 테이블 --- */}
+      <div style={tableCard}>
         <table style={tableStyle}>
           <thead>
             <tr style={thRowStyle}>
@@ -280,11 +354,20 @@ const ProductAdmin = () => {
           </thead>
           <tbody>
             {filteredProducts.map(p => (
-              <tr key={p.id} style={tdRowStyle}>
-                <td align="center"><img src={p.voucherUrl} style={tableImg} alt="" /></td>
+              // 숨김 상태면 살짝 흐리게 표시해서 직관적으로 인지
+              <tr key={p.id} style={{...tdRowStyle, opacity: p.status === 'HIDDEN' ? 0.6 : 1}}>
                 <td align="center">
-                  <div style={badgeCategory(p.category)}>{p.category === 'DONATION' ? '기부' : '기프트'}</div>
-                  <div style={badgeStatus(p.status)}>{p.status}</div>
+                  <ImagePlaceholder
+                    src={p.voucherUrl}
+                    alt={p.name}
+                    category={p.category}
+                    style={tableImg}
+                    size="small"
+                  />
+                </td>
+                <td align="center">
+                  <div style={badgeCategory(p.category)}>{p.category === 'DONATION' ? '기부 캠페인' : '기프티콘'}</div>
+                  <div style={badgeStatus(p.status)}>{getStatusName(p.status)}</div>
                 </td>
                 <td style={{ padding: '0 20px', textAlign: 'left' }}>
                   <div style={tableTitle}>{p.name}</div>
@@ -303,18 +386,33 @@ const ProductAdmin = () => {
                 <td align="center" style={{ fontWeight: 'bold', fontSize: '15px', color: p.category === 'DONATION' ? '#339af0' : (p.stock < 5 ? '#fa5252' : '#495057') }}>
                   {p.category === 'DONATION' ? '∞' : `${p.stock} 개`}
                 </td>
+                
+                {/* <td align="center">
+                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
+                    <button onClick={() => handleEdit(p)} style={btnAction('#339af0')}>수정</button>
+                    {p.status === 'HIDDEN' ? (
+                      <button onClick={() => handleUpdateStatus(p.id, 'ON_SALE')} style={btnAction('#f59f00', true)}>노출</button>
+                    ) : (
+                      <button onClick={() => handleUpdateStatus(p.id, 'HIDDEN')} style={btnAction('#868e96')}>숨김</button>
+                    )}
+                    {p.status !== 'HIDDEN' && (
+                      p.status === 'ON_SALE'
+                        ? <button onClick={() => handleUpdateStatus(p.id, 'SOLD_OUT')} style={btnAction('#fa5252')}>품절</button>
+                        : <button onClick={() => handleUpdateStatus(p.id, 'ON_SALE')} style={btnAction('#20c997')}>판매</button>
+                    )}
+                    <button onClick={() => handleDelete(p.id)} style={btnDeleteIcon} title="삭제">🗑️</button>
+                  </div>
+                </td> */}
+                
                 <td align="center">
                   <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
                     <button onClick={() => handleEdit(p)} style={btnOutline('#339af0')}>수정</button>
                     {p.status === 'ON_SALE'
-                      ? <button onClick={() => handleUpdateStatus(p.id, 'SOLD_OUT')} style={soldOutBtn}>종료</button>
-                      : <button onClick={() => handleUpdateStatus(p.id, 'ON_SALE')} style={saleBtn}>판매</button>
-                    }
-                    {p.status === 'HIDDEN' ? (
-                      <button onClick={() => handleDelete(p.id)} style={iconBtnStyle} title="영구 삭제">🗑️</button>
-                    ) : (
-                      <button onClick={() => handleUpdateStatus(p.id, 'HIDDEN')} style={statusBtnStyle('#adb5bd')}>숨김</button>
-                    )}
+                      ? <button onClick={() => handleUpdateStatus(p.id, 'SOLD_OUT')} style={btnOutline('#fa5252')}>종료</button>
+                      : <button onClick={() => handleUpdateStatus(p.id, 'ON_SALE')} style={btnOutline('#20c997')}>판매</button>}
+                    {p.status === 'HIDDEN'
+                      ? <button onClick={() => handleDelete(p.id)} style={btnIcon} title="삭제">🗑️</button>
+                      : <button onClick={() => handleUpdateStatus(p.id, 'HIDDEN')} style={btnOutline('#adb5bd')}>숨김</button>}
                   </div>
                 </td>
               </tr>
@@ -322,16 +420,45 @@ const ProductAdmin = () => {
           </tbody>
         </table>
         {filteredProducts.length === 0 && <div style={emptyState}>조건에 맞는 상품이 없습니다.</div>}
+
+        {/* 🌟 하단 페이지네이션 UI */}
+        {totalPages > 1 && (
+          <div style={paginationWrapper}>
+            <button disabled={page === 0} onClick={() => setPage(p => p - 1)} style={pageBtnStyle(page === 0)}>이전</button>
+            <span style={pageInfoStyle}>{page + 1} / {totalPages}</span>
+            <button disabled={page === totalPages - 1} onClick={() => setPage(p => p + 1)} style={pageBtnStyle(page === totalPages - 1)}>다음</button>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
-// --- 스타일 정의 ---
-const pageContainerStyle = { padding: '40px 20px', maxWidth: '1200px', margin: '0 auto', backgroundColor: '#fdfdfd' };
-const headerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' };
-const titleStyle = { margin: 0, fontSize: '26px', fontWeight: '800' };
-const subtitleStyle = { margin: '5px 0 0 0', color: '#adb5bd', fontSize: '14px' };
+// ==========================================
+// 🎨 스타일 속성 (CSS)
+// ==========================================
+// 🌟 네비게이션 탭 스타일 추가
+const subNavContainerStyle = { display: 'flex', gap: '30px', marginBottom: '30px', borderBottom: '2px solid #f1f3f5' };
+const subTabStyle = (active) => ({ padding: '10px 5px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '16px', fontWeight: active ? '700' : '500', color: active ? '#339af0' : '#868e96', borderBottom: active ? '3px solid #339af0' : 'none' });
+
+// 🌟 버튼 간소화 통일 스타일 추가
+const btnAction = (color, isSolid = false) => ({
+  backgroundColor: isSolid ? color : '#fff',
+  color: isSolid ? '#fff' : color,
+  border: `1px solid ${color}`,
+  padding: '6px 12px',
+  borderRadius: '6px',
+  fontSize: '12px',
+  fontWeight: 'bold',
+  cursor: 'pointer',
+  transition: '0.2s'
+});
+const btnDeleteIcon = { background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', padding: '0 4px', marginLeft: '4px' };
+
+const pageContainer = { padding: '40px 20px', maxWidth: '1200px', margin: '0 auto', backgroundColor: '#f8f9fa', minHeight: '100vh' };
+const headerContainer = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' };
+const titleStyle = { margin: 0, fontSize: '26px', fontWeight: '900', color: '#212529', letterSpacing: '-0.5px' };
+const subtitleStyle = { margin: '8px 0 0 0', color: '#868e96', fontSize: '14px' };
 
 const btnPrimary = { backgroundColor: '#339af0', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', boxShadow: '0 4px 10px rgba(51, 154, 240, 0.2)', transition: 'background 0.2s' };
 const btnCancel = { backgroundColor: '#e9ecef', color: '#495057', border: 'none', padding: '12px 24px', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' };
@@ -348,12 +475,7 @@ const inputGroup = { display: 'flex', flexDirection: 'column', gap: '8px' };
 const labelStyle = { fontWeight: '600', fontSize: '13px', color: '#495057' };
 const inputStyle = { padding: '14px', border: '1px solid #dee2e6', borderRadius: '8px', fontSize: '14px', color: '#212529', backgroundColor: '#fff', outline: 'none' };
 
-// ✅ 기존 핀번호 보여주는 스크롤 박스 스타일
-const existingVoucherBox = {
-  maxHeight: '120px', overflowY: 'auto', padding: '10px 15px', backgroundColor: '#fff',
-  border: '1px solid #dee2e6', borderRadius: '6px', fontSize: '13px', color: '#495057',
-  lineHeight: '1.6', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.03)'
-};
+const existingVoucherBox = { maxHeight: '120px', overflowY: 'auto', padding: '10px 15px', backgroundColor: '#fff', border: '1px solid #dee2e6', borderRadius: '6px', fontSize: '13px', color: '#495057', lineHeight: '1.6', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.03)' };
 
 const filterBar = { display: 'flex', gap: '15px', marginBottom: '20px' };
 const searchInput = { flex: 1, padding: '14px 20px', borderRadius: '12px', border: '1px solid #e9ecef', fontSize: '14px', outline: 'none' };
@@ -361,54 +483,40 @@ const filterSelect = { padding: '0 20px', borderRadius: '12px', border: '1px sol
 
 const tableCard = { backgroundColor: '#fff', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 5px 20px rgba(0,0,0,0.03)', border: '1px solid #f1f3f5' };
 const tableStyle = { width: '100%', borderCollapse: 'collapse' };
-const theadStyle = { backgroundColor: '#f8f9fa', height: '50px', fontSize: '13px', color: '#868e96', borderBottom: '1px solid #eee' };
-const trStyle = { borderBottom: '1px solid #f8f9fa', textAlign: 'center' };
+const thRowStyle = { backgroundColor: '#f8f9fa', borderBottom: '2px solid #e9ecef', color: '#495057', fontSize: '14px', height: '55px' };
+const tdRowStyle = { borderBottom: '1px solid #f1f3f5', height: '75px' };
+const tableImg = { width: '50px', height: '50px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #f1f3f5' };
+const tableTitle = { fontWeight: '700', fontSize: '16px', color: '#212529', marginBottom: '4px' };
+const tableSub = { fontSize: '12px', color: '#adb5bd' };
+const emptyState = { padding: '60px', textAlign: 'center', color: '#adb5bd', fontSize: '15px' };
 
-const imgStyle = { borderRadius: '8px', objectFit: 'cover' };
-const categoryBadge = (cat) => ({ backgroundColor: cat === 'GIFTICON' ? '#e7f5ff' : '#f3f0ff', color: cat === 'GIFTICON' ? '#339af0' : '#845ef7', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold' });
-const statusText = (status) => ({ fontSize: '10px', marginTop: '4px', color: status === 'ON_SALE' ? '#20c997' : '#fa5252', fontWeight: 'bold' });
-const priceStyle = { fontWeight: '700', color: '#495057' };
-const stockStyle = (stock) => ({ fontWeight: '800', color: stock < 5 ? '#fa5252' : '#339af0' });
+const badgeCategory = (cat) => ({ display: 'inline-block', backgroundColor: cat === 'GIFTICON' ? '#e7f5ff' : '#f3f0ff', color: cat === 'GIFTICON' ? '#228be6' : '#845ef7', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', marginBottom: '4px' });
+const badgeStatus = (status) => ({ fontSize: '11px', fontWeight: 'bold', color: status === 'ON_SALE' ? '#20c997' : (status === 'SOLD_OUT' ? '#fa5252' : '#868e96') });
+const btnOutline = (color) => ({ backgroundColor: '#fff', color: color, border: `1px solid ${color}`, padding: '8px 14px', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' });
+const btnIcon = { background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' };
 
-const replenishWrapper = { display: 'flex', gap: '5px', justifyContent: 'center', padding: '0 10px' };
-const miniInputStyle = { width: '100px', padding: '6px 10px', borderRadius: '6px', border: '1px solid #eee', fontSize: '12px', outline: 'none' };
-const miniBtnStyle = { backgroundColor: '#339af0', color: '#fff', border: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer' };
+const tablePriceContainer = { verticalAlign: 'middle', padding: '10px 0' };
+const donationPriceWrapper = { display: 'flex', flexDirection: 'column', gap: '2px' };
+const participationPrice = { fontWeight: '800', color: '#22b8cf', fontSize: '15px' };
+const targetAmountLabel = { fontSize: '11px', color: '#adb5bd', fontWeight: 'normal' };
+const gifticonPrice = { fontWeight: '800', color: '#495057', fontSize: '15px' };
 
-const actionGroup = { display: 'flex', gap: '5px', justifyContent: 'center' };
-const baseBtn = { padding: '6px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', border: '1px solid transparent' };
-const editBtn = { ...baseBtn, backgroundColor: '#fff', color: '#339af0', borderColor: '#339af0' };
-const soldOutBtn = { ...baseBtn, backgroundColor: '#fff', color: '#fa5252', borderColor: '#fa5252' };
-const saleBtn = { ...baseBtn, backgroundColor: '#fff', color: '#20c997', borderColor: '#20c997' };
-const iconBtnStyle = { background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' };
-const statusBtnStyle = (color) => ({ backgroundColor: 'transparent', color, border: `1px solid ${color}`, padding: '4px 8px', borderRadius: '5px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' });
-
-const emptyStyle = { padding: '50px', textAlign: 'center', color: '#adb5bd' };
-
-const formWrapperStyle = { backgroundColor: '#fff', padding: '30px', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', marginBottom: '30px', border: '1px solid #e9ecef' };
-const gridFormStyle = { display: 'flex', flexWrap: 'wrap', gap: '25px' };
-const formLeftStyle = { flex: '1 1 350px', display: 'flex', flexDirection: 'column', gap: '15px' };
-const formRightStyle = { flex: '1 1 350px', display: 'flex', flexDirection: 'column', gap: '15px' };
-const formFooterStyle = { width: '100%', textAlign: 'right' };
-const submitBtnStyle = { backgroundColor: '#333', color: '#fff', border: 'none', padding: '12px 30px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' };
-const inputStyle = { padding: '12px', border: '1px solid #eee', borderRadius: '10px', fontSize: '14px', width: '100%', boxSizing: 'border-box' };
-const labelStyle = { display: 'block', marginBottom: '6px', fontWeight: 'bold', fontSize: '13px', color: '#495057' };
-const formTitleStyle = { marginTop: 0, marginBottom: '20px', fontSize: '18px' };
-
-// ✅ 미리보기 관련 추가 스타일
-const previewContainerStyle = {
-  marginBottom: '10px',
-  textAlign: 'center',
-  border: '1px dashed #dee2e6',
-  padding: '10px',
-  borderRadius: '8px',
-  backgroundColor: '#f8f9fa'
+const imageUploadWrapper = { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', minHeight: '180px', border: '2px dashed #a5d8ff', borderRadius: '12px', backgroundColor: '#f8f9fa', cursor: 'pointer', position: 'relative', overflow: 'hidden', transition: 'border 0.2s ease, background 0.2s ease', boxSizing: 'border-box' };
+const uploadPlaceholder = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', padding: '30px' };
+const uploadIcon = { fontSize: '32px', marginBottom: '4px' };
+const uploadMainText = { fontSize: '14px', fontWeight: '800', color: '#339af0' };
+const uploadSubText = { fontSize: '12px', color: '#adb5bd', fontWeight: '500' };
+const previewContainer = {
+  position: 'relative', width: '100%', minHeight: '180px', padding: '10px', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center'
 };
+const previewImage = { maxWidth: '100%', maxHeight: '200px', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 4px 15px rgba(0,0,0,0.08)', display: 'block', margin: '0 auto' };
+const changeBadge = { position: 'absolute', bottom: '15px', right: '15px', backgroundColor: 'rgba(0, 0, 0, 0.65)', color: '#fff', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', backdropFilter: 'blur(4px)', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' };
 
-const previewImageStyle = {
-  maxWidth: '100%',
-  maxHeight: '150px',
-  borderRadius: '4px',
-  objectFit: 'contain'
-};
+const paginationWrapper = { display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '24px 0', gap: '15px', borderTop: '1px solid #f1f3f5', backgroundColor: '#fdfdfd' };
+const pageInfoStyle = { fontSize: '14px', fontWeight: '700', color: '#495057', minWidth: '50px', textAlign: 'center' };
+const pageBtnStyle = (disabled) => ({
+  padding: '8px 18px', borderRadius: '8px', border: '1px solid #dee2e6',
+  backgroundColor: disabled ? '#f8f9fa' : '#fff', color: disabled ? '#adb5bd' : '#339af0', cursor: disabled ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '13px', transition: '0.2s ease'
+});
 
 export default ProductAdmin;
