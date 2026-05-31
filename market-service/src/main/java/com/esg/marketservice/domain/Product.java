@@ -35,6 +35,9 @@ public class Product extends BaseTimeEntity {
   @Enumerated(EnumType.STRING)
   private ProductStatus status;
 
+  @Enumerated(EnumType.STRING)
+  private ProductStatus previousStatus;
+
   private String content;
 
   private String voucherUrl;
@@ -43,6 +46,9 @@ public class Product extends BaseTimeEntity {
 
   @Builder.Default
   private boolean deleted = false;
+
+  @Builder.Default
+  private boolean hidden = false;
 
   private Long targetAmount;
   private Long currentAmount;
@@ -104,8 +110,27 @@ public class Product extends BaseTimeEntity {
     this.status = status;
   }
 
+  public void setHidden(boolean hidden) {
+    if (hidden) {
+      this.previousStatus = this.status;
+      this.hidden = true;
+      log.info("상품 숨김 처리 - ID: {}, 이전 상태: {}", id, this.previousStatus);
+    } else {
+      if (this.previousStatus != null) {
+        this.status = this.previousStatus;
+        log.info("상품 숨김 해제 - ID: {}, 복구된 상태: {}", id, this.previousStatus);
+      } else {
+        this.status = (this.stock > 0) ? ProductStatus.ON_SALE : ProductStatus.SOLD_OUT;
+        log.warn("상품 숨김 해제 (이전 상태 없음) - ID: {}, 설정된 상태: {}", id, this.status);
+      }
+      this.previousStatus = null;
+      this.hidden = false;
+    }
+  }
+
   public void delete() {
     this.deleted = true;
+    this.hidden = true;
     this.status = ProductStatus.SOLD_OUT; // 삭제 시 마켓에서 안 보이게 처리
   }
 
@@ -118,5 +143,9 @@ public class Product extends BaseTimeEntity {
       this.status = ProductStatus.SOLD_OUT;
       log.info("캠페인 목표 달성으로 인한 종료: {}", this.name);
     }
+  }
+
+  public boolean isVisible() {
+    return !this.hidden;
   }
 }

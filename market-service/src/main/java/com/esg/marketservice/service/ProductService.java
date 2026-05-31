@@ -114,6 +114,12 @@ public class ProductService {
   }
 
   @Transactional
+  public void updateHiddenStatus(Long companyId, Long productId, boolean hidden) {
+    Product product = findActiveProduct(companyId, productId);
+    product.setHidden(hidden);
+  }
+
+  @Transactional
   public void deleteProduct(Long companyId, Long productId) {
     Product product = findActiveProduct(companyId, productId);
 
