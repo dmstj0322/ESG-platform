@@ -116,7 +116,7 @@ const MyActivityList = () => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, opacity: item.status === 'CANCELED' ? 0.5 : 1 }}>
                     {/* 🌟 기존 코드에 뱃지만 추가 */}
                     {item.category === 'GIFTICON' ? (
-                      <div style={iconCircleStyle('#e7f5ff', '#1c7ed6')}>🎁</div>
+                      <div style={iconCircleStyle('#E6F7F1', '#16A87A')}>🎁</div>
                     ) : (
                       <div style={iconCircleStyle('#f3f0ff', '#7048e8')}>🤝</div>
                     )}
@@ -126,7 +126,7 @@ const MyActivityList = () => {
                         {item.status === 'CANCELED' ? <del>{item.productName}</del> : item.productName}
                       </div>
                       <div style={{ fontSize: '13px', color: '#868e96', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ color: '#22b8cf', fontWeight: '800' }}>{item.totalPrice?.toLocaleString()} P</span>
+                        <span style={{ color: '#16A87A', fontWeight: '800' }}>{item.totalPrice?.toLocaleString()} P</span>
                         <span>|</span>
                         <span>{new Date(item.createdDate).toLocaleDateString()}</span>
                       </div>
@@ -161,7 +161,7 @@ const MyActivityList = () => {
                     {item.imageUrls?.[0] ? (
                       <img src={item.imageUrls[0]} style={thumbnailImgStyle} alt="thumb" />
                     ) : (
-                      <div style={iconCircleStyle('#e7f5ff', '#339af0')}>📝</div>
+                      <div style={iconCircleStyle('#E6F7F1', '#16A87A')}>📝</div>
                     )}
                     <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                       <div style={mainTitleStyle}>{item.title}</div>
@@ -244,7 +244,7 @@ const MyActivityList = () => {
 // ==========================================
 // 🎨 스타일 명세 
 // ==========================================
-const pageContainer = { padding: '40px 20px', maxWidth: '900px', margin: '0 auto', backgroundColor: '#fdfdfd', minHeight: '100vh', fontFamily: 'sans-serif' };
+const pageContainer = { padding: '40px 20px', maxWidth: '900px', margin: '0 auto', backgroundColor: '#fdfdfd', minHeight: '100vh', fontFamily: "'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" };
 
 const headerWrapperStyle = { marginBottom: '30px', display: 'flex', flexDirection: 'column', gap: '8px' };
 const backLinkStyle = { textDecoration: 'none', color: '#adb5bd', fontSize: '14px', fontWeight: 'bold' };
@@ -264,12 +264,12 @@ const thumbnailImgStyle = { width: '50px', height: '50px', borderRadius: '8px', 
 const verifyBadgeStyle = (bg, color) => ({ padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', backgroundColor: bg, color: color, display: 'inline-block' });
 const iconCircleStyle = (bg, color) => ({ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: bg, color: color, display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0 });
 
-const statusBadgeStyle = (status) => ({ padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', backgroundColor: status === 'CANCELED' ? '#fff5f5' : '#e7f5ff', color: status === 'CANCELED' ? '#fa5252' : '#1c7ed6' });
-const viewVoucherBtnStyle = { padding: '6px 12px', backgroundColor: '#339af0', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' };
+const statusBadgeStyle = (status) => ({ padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', backgroundColor: status === 'CANCELED' ? '#fff5f5' : '#E6F7F1', color: status === 'CANCELED' ? '#fa5252' : '#0D7A58' });
+const viewVoucherBtnStyle = { padding: '6px 12px', backgroundColor: '#16A87A', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' };
 const cancelBtnStyle = { padding: '6px 12px', backgroundColor: '#fff', color: '#fa5252', border: '1px solid #fa5252', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' };
 const disabledCancelBtnStyle = { padding: '6px 12px', backgroundColor: '#f8f9fa', color: '#adb5bd', border: '1px solid #dee2e6', borderRadius: '6px', cursor: 'not-allowed', fontSize: '12px', fontWeight: 'bold' };
 
-const loadMoreBtnStyle = { padding: '12px 30px', backgroundColor: '#fff', border: '1px solid #dee2e6', borderRadius: '10px', color: '#339af0', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', transition: 'all 0.2s' };
+const loadMoreBtnStyle = { padding: '12px 30px', backgroundColor: '#fff', border: '1px solid #dee2e6', borderRadius: '10px', color: '#16A87A', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', transition: 'all 0.2s' };
 const emptyTextStyle = { textAlign: 'center', padding: '60px 0', color: '#adb5bd', fontSize: '15px' };
 
 export default MyActivityList;

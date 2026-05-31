@@ -9,6 +9,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -60,8 +63,47 @@ public class EnvironmentBenchmarkService {
      * 업종 벤치마크를 임직원 수 기준으로 스케일링하여 반환합니다.
      * 기업 가입 시 자동 조회용.
      */
+    // 한국어 업종명 → KSIC 2자리 코드 매핑 (회사 프로필에 텍스트로 저장된 경우 대응)
+    private static final Map<String, String> INDUSTRY_NAME_TO_KSIC;
+    static {
+        Map<String, String> m = new LinkedHashMap<>();
+        // IT·소프트웨어
+        m.put("소프트웨어",    "62"); m.put("it서비스",      "62"); m.put("it서비스업",    "62");
+        m.put("정보통신",      "63"); m.put("it",            "62"); m.put("sw",           "62");
+        m.put("정보기술",      "62"); m.put("소프트웨어개발", "62"); m.put("플랫폼",        "62");
+        m.put("인터넷",        "63"); m.put("통신",          "61"); m.put("통신업",        "61");
+        // 제조업
+        m.put("제조업",        "10"); m.put("제조",          "10"); m.put("전자",          "26");
+        m.put("반도체",        "26"); m.put("화학",          "20"); m.put("철강",          "24");
+        m.put("자동차",        "30"); m.put("기계",          "29"); m.put("식품",          "10");
+        m.put("섬유",          "13"); m.put("의류",          "13");
+        // 금융·서비스
+        m.put("금융",          "64"); m.put("보험",          "65"); m.put("증권",          "64");
+        m.put("도소매",        "45"); m.put("유통",          "45"); m.put("건설",          "41");
+        m.put("숙박",          "56"); m.put("음식",          "56"); m.put("음식업",        "56");
+        // 에너지
+        m.put("에너지",        "35"); m.put("전력",          "35"); m.put("가스공급",       "35");
+        INDUSTRY_NAME_TO_KSIC = Collections.unmodifiableMap(m);
+    }
+
+    /** ksicCode에서 2자리 숫자 prefix 추출. 숫자 아니면 한국어 업종명 매핑 시도. */
+    private String resolveKsicPrefix(String ksicCode) {
+        if (ksicCode == null || ksicCode.isBlank()) return "";
+        // 숫자 시작 → 앞 2자리 사용
+        if (Character.isDigit(ksicCode.charAt(0))) {
+            return ksicCode.length() >= 2 ? ksicCode.substring(0, 2) : ksicCode;
+        }
+        // 한국어/영문 업종명 → 소문자 정규화 후 키워드 매핑
+        String lower = ksicCode.toLowerCase().replaceAll("[\\s·_\\-/]+", "");
+        for (Map.Entry<String, String> e : INDUSTRY_NAME_TO_KSIC.entrySet()) {
+            if (lower.contains(e.getKey())) return e.getValue();
+        }
+        log.warn("[EnvBenchmark] ksicCode 매핑 실패 '{}' → DEFAULT 사용", ksicCode);
+        return "";
+    }
+
     public EnvironmentValues getBenchmarkScaled(String ksicCode, int employeeCount) {
-        String prefix = (ksicCode != null && ksicCode.length() >= 2) ? ksicCode.substring(0, 2) : "";
+        String prefix = resolveKsicPrefix(ksicCode);
         EnvironmentBenchmark bm = benchmarkRepository.findByKsicCodeAndBaseYear(prefix, BASE_YEAR)
                 .or(() -> benchmarkRepository.findByKsicCodeAndBaseYear("DEFAULT", BASE_YEAR))
                 .orElse(null);
@@ -76,6 +118,31 @@ public class EnvironmentBenchmarkService {
                 prefix, bm.getIndustryName(), emp, bm.getElectricitySource());
 
         return EnvironmentValues.fromBenchmark(bm, emp);
+    }
+
+    /**
+     * E 지표 코드(metric key)에 해당하는 업종 평균값 반환 (임직원 수 스케일링 적용).
+     * 벤치마크 없으면 null 반환.
+     *
+     * @param metric "electricity" | "gas" | "carbon" | "waste" | "water"
+     */
+    /**
+     * getBenchmarkScaled()는 월간 총량을 반환하므로 ×12 해서 연간 기준으로 변환.
+     * E 지표 입력값이 연간 기준(ESG 보고 관행)이므로 동일 단위로 맞춤.
+     */
+    public Double getIndustryAvgForMetric(String ksicCode, int employeeCount, String metric) {
+        EnvironmentValues vals = getBenchmarkScaled(ksicCode, employeeCount);
+        if ("NONE".equals(vals.getSource())) return null;
+        Double monthly = null;
+        switch (metric.toLowerCase()) {
+            case "electricity": monthly = vals.getElectricityKwh(); break;
+            case "gas":         monthly = vals.getGasMj();          break;
+            case "carbon":      monthly = vals.getCarbonTco2();     break;
+            case "waste":       monthly = vals.getWasteKg();        break;
+            case "water":       monthly = vals.getWaterM3();        break;
+            default:            return null;
+        }
+        return monthly != null ? monthly * 12.0 : null;  // 월 → 연간 환산
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -135,7 +202,7 @@ public class EnvironmentBenchmarkService {
             return new EnvironmentValues(
                     d.getElectricityKwh(), d.getGasMj(), d.getCarbonTco2(),
                     d.getWasteKg(), d.getWaterM3(), "ACTUAL",
-                    "kWh", "MJ", "tCO₂", "kg", "m³",
+                    "kWh", "Nm³", "tCO₂", "kg", "m³",
                     "기업 제출 실측 데이터", "기업 제출 실측 데이터", "기업 제출 실측 데이터",
                     "기업 제출 실측 데이터", "기업 제출 실측 데이터");
         }

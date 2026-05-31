@@ -12,7 +12,7 @@ import java.util.regex.*;
  * <pre>
  * 지원 지표 -> 메트릭 매핑:
  *   E-101 전력 사용량 -> electricity (kWh)
- *   E-102 가스 사용량 -> gas (MJ)
+ *   E-102 가스 사용량 -> gas (Nm³)
  *   E-103 탄소 배출량 -> carbon (tCO2)
  *   E-104 폐기물 발생량 -> waste (kg)
  *   E-105 수자원 사용량 -> water (m3)
@@ -45,7 +45,7 @@ public class NumericExtractionService {
     // ---- 메트릭 -> 표시 단위 -----------------------------------------------------
     private static final Map<String, String> METRIC_UNIT = Map.of(
             "electricity", "kWh",
-            "gas",         "MJ",
+            "gas",         "Nm³",
             "carbon",      "tCO2",
             "waste",       "kg",
             "water",       "m3"
@@ -116,11 +116,12 @@ public class NumericExtractionService {
             new UnitDef("킬로와트시", 1.0)   // 킬로와트시
         ));
         m.put("gas", List.of(
-            new UnitDef("Nm3",    38.4),
-            new UnitDef("Ncm",    38.4),
-            new UnitDef("Mcal",   4.1868),
-            new UnitDef("MJ",     1.0),
-            new UnitDef("메가줄", 1.0)  // 메가줄
+            // Nm³ 기준: MJ = 1/38.4 ≈ 0.026042, Mcal = 4.1868/38.4 ≈ 0.10903
+            new UnitDef("Nm3",    1.0),
+            new UnitDef("Ncm",    1.0),
+            new UnitDef("MJ",     0.026042),
+            new UnitDef("Mcal",   0.10903),
+            new UnitDef("메가줄", 0.026042)  // 메가줄
         ));
         m.put("carbon", List.of(
             new UnitDef("tCO2",    1.0),
@@ -163,8 +164,9 @@ public class NumericExtractionService {
             new RegexDef(Pattern.compile("\\uc804\\uae30\\s*(?:\\uc0ac\\uc6a9\\ub7c9|\\uc18c\\ube44\\ub7c9?)[^\\d]{0,30}" + NUM), 1.0, "전기사용량+NUM")
         ));
         m.put("gas", List.of(
-            new RegexDef(Pattern.compile(NUM + "\\s*(?:MJ|\\uba54\\uac00\\uc904|Mcal)", Pattern.CASE_INSENSITIVE), 1.0,  "NUM+MJ"),
-            new RegexDef(Pattern.compile(NUM + "\\s*(?:Nm3|Ncm|\\ub178\\uba40\\uc785\\ubc29)",  Pattern.CASE_INSENSITIVE), 38.4, "NUM+Nm3"),
+            // Nm³ 기준: Nm3=1.0, MJ/메가줄=1/38.4≈0.026042
+            new RegexDef(Pattern.compile(NUM + "\\s*(?:Nm3|Ncm|\\ub178\\uba40\\uc785\\ubc29)",  Pattern.CASE_INSENSITIVE), 1.0,      "NUM+Nm3"),
+            new RegexDef(Pattern.compile(NUM + "\\s*(?:MJ|\\uba54\\uac00\\uc904|Mcal)", Pattern.CASE_INSENSITIVE), 0.026042, "NUM+MJ"),
             new RegexDef(Pattern.compile("\\uac00\\uc2a4\\s*(?:\\uc0ac\\uc6a9\\ub7c9|\\uc18c\\ube44\\ub7c9?)[^\\d]{0,30}" + NUM), 1.0, "가스사용량+NUM")
         ));
         // carbon: normalizeForExtraction 후 tco2 소문자 통일

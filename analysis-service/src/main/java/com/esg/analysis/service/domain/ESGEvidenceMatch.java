@@ -82,7 +82,7 @@ public class ESGEvidenceMatch {
     @Column(name = "extracted_value")
     private Double extractedValue;
 
-    /** 수치 단위 (예: "kWh", "MJ", "tCO₂", "kg", "m³") */
+    /** 수치 단위 (예: "kWh", "Nm³", "tCO₂", "kg", "m³") */
     @Column(name = "numeric_unit", length = 20)
     private String unit;
 

@@ -110,6 +110,42 @@ public final class EsgScoreConstants {
         return INDUSTRY_WEIGHTS.get(getIndustryType(ksicCode));
     }
 
+    // ── E 카테고리 벤치마크 기반 점수 산출 ───────────────────────────────────
+    // ratio = 회사값 / 업종평균 (낮을수록 우수 — 에너지·탄소·폐기물 모두 적을수록 좋음)
+    // 업종 평균 수준(ratio≈1.0) = B등급(70점) 기준으로 설계
+    public static int calcBenchmarkScore(double ratio) {
+        if (ratio <= 0.50) return 95;  // 업종의 절반 이하 — S등급
+        if (ratio <= 0.70) return 85;  // 업종보다 30% 적게 — A등급
+        if (ratio <= 0.90) return 77;  // 업종 하회 — B+
+        if (ratio <= 1.10) return 70;  // 업종 평균 수준 — B등급 (기준점)
+        if (ratio <= 1.30) return 58;  // 업종 초과 — C등급
+        if (ratio <= 1.50) return 45;  // 업종 대비 50% 과다 — D+
+        return 30;                      // 업종 대비 심각 — D등급
+    }
+
+    // numericMatch 신뢰도 → 벤치마크 점수 보정 배율
+    // HIGH=데이터 신뢰(페널티 없음), MEDIUM=경미 불일치, LOW=심각 불일치
+    public static double calcValidityMultiplier(String matchLevel) {
+        if (matchLevel == null) return 0.65;
+        switch (matchLevel.toUpperCase()) {
+            case "HIGH":   return 1.00;
+            case "MEDIUM": return 0.93;
+            case "LOW":    return 0.80;
+            default:       return 0.65;
+        }
+    }
+
+    // 벤치마크 데이터 없을 때 numericMatch 기반 fallback 점수
+    public static int calcFallbackEScore(String matchLevel, int evidenceBonus) {
+        if (matchLevel == null) return 50;
+        switch (matchLevel.toUpperCase()) {
+            case "HIGH":   return Math.min(100, 82 + evidenceBonus);
+            case "MEDIUM": return Math.min(100, 60 + evidenceBonus);
+            case "LOW":    return 35;
+            default:       return 50;
+        }
+    }
+
     // ── Negative polarity 지표 ────────────────────────────────────────────
     public static final Set<String> NEGATIVE_POLARITY_INDICATORS = Set.of("S-202");
 

@@ -314,49 +314,6 @@ export default function ReportPage() {
           )}
         </div>
 
-        {/* ── 이동 단축 카드 ──────────────────────────────── */}
-        {latestReport && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {[
-              {
-                icon: <BarChart2 size={15} className="text-indigo-500" />,
-                bg: 'bg-indigo-50',
-                label: '상세 분석 결과',
-                sub: '근거 · 업종 비교 · 분석 기록',
-                action: () => storedId && navigate(`/analysis/result/${storedId}#summary`),
-              },
-              {
-                icon: <Shield size={15} className="text-emerald-500" />,
-                bg: 'bg-emerald-50',
-                label: '근거 추적',
-                sub: '감사 근거 확인',
-                action: () => storedId && navigate(`/analysis/result/${storedId}#evidence`),
-              },
-              {
-                icon: <FileText size={15} className="text-purple-500" />,
-                bg: 'bg-purple-50',
-                label: 'AI 리포트',
-                sub: 'GPT 기반 섹션별 진단 보고서',
-                action: () => storedId && navigate(`/analysis/result/${storedId}#ai-report`),
-              },
-            ].map((card, i) => (
-              <button
-                key={i}
-                onClick={card.action}
-                className="saas-card flex items-center gap-3 px-5 py-4 text-left group"
-              >
-                <span className={`w-9 h-9 rounded-xl ${card.bg} flex items-center justify-center shrink-0`}>
-                  {card.icon}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-800">{card.label}</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">{card.sub}</p>
-                </div>
-                <ArrowUpRight size={13} className="text-gray-300 group-hover:text-emerald-500 transition-colors shrink-0" />
-              </button>
-            ))}
-          </div>
-        )}
 
         {/* ── 빠른 요약 (latestReport 있을 때만) ─────────── */}
         {latestReport && (() => {

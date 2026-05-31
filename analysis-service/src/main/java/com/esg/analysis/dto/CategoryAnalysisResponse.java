@@ -68,7 +68,7 @@ public class CategoryAnalysisResponse {
         private Double  inputValue;
         /** OCR/CSV 추출값 */
         private Double  extractedValue;
-        /** 단위 ("kWh" / "MJ" / "tCO₂" / "kg" / "m³") */
+        /** 단위 ("kWh" / "Nm³" / "tCO₂" / "kg" / "m³") */
         private String  unit;
 
         // ── Explainability (S/G 지표 전용) ──────────────────────────────────

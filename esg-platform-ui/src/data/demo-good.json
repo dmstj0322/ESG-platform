@@ -47,6 +47,7 @@
     { "indicatorCode": "G-301", "indicatorTitle": "윤리경영 정책 수립",   "similarity": 0.86, "finalScore": 0.88, "evidenceText": "윤리경영 방침 및 행동강령을 수립하고 전 임직원에게 고지하였습니다.", "isValidEvidence": true, "confidenceLevel": "HIGH", "pageNumber": 22 },
     { "indicatorCode": "G-303", "indicatorTitle": "ESG 담당 조직 여부",   "similarity": 0.79, "finalScore": 0.84, "evidenceText": "ESG위원회를 설치하고 ESG 전담부서를 운영 중입니다.", "isValidEvidence": true, "confidenceLevel": "HIGH", "pageNumber": 28 }
   ],
+  "overallOpinion": "에코테크 주식회사는 환경(E) 수치 데이터의 높은 신뢰도와 윤리경영 체계 구축으로 우수한 ESG 관리 역량을 보여줍니다. 전반적인 데이터 정합성이 높으며, 용수 사용량 정확도 향상과 사회(S) 카테고리 증빙 보완이 권장됩니다.",
   "fullReport": "### ESG 종합 총평\n\n에코테크 주식회사는 전반적으로 우수한 ESG 관리 역량을 보여주고 있습니다.\n\n### 주요 강점\n\n- E 카테고리 수치 검증 결과 대부분 HIGH 수준으로 데이터 신뢰도가 높음\n- 윤리경영 체계 및 ESG 담당 조직 구비\n\n### 개선 권고\n\n- 용수 사용량 데이터 정확도 향상 필요\n- S 카테고리 evidence 보완 권장",
   "benchmarkComparison": {
     "industry": "제조업",

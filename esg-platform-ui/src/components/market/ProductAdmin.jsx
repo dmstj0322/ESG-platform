@@ -251,7 +251,7 @@ const ProductAdmin = () => {
                   {isEditing ? (
                     <>
                       <label style={{ ...labelStyle, color: '#495057' }}>
-                        🎫 현재 등록된 핀번호 (미사용: <span style={{ color: '#339af0' }}>{existingVouchers.length}</span>개)
+                        🎫 현재 등록된 핀번호 (미사용: <span style={{ color: '#16A87A' }}>{existingVouchers.length}</span>개)
                       </label>
                       <div style={existingVoucherBox}>
                         {existingVouchers.length > 0
@@ -266,7 +266,7 @@ const ProductAdmin = () => {
                         onChange={e => setAddVoucherText(e.target.value)}
                         placeholder="새로운 핀번호 입력"
                       />
-                      <button type="button" onClick={handleAddVouchers} style={{ ...btnOutline('#339af0'), width: '100%', marginTop: '5px' }}>
+                      <button type="button" onClick={handleAddVouchers} style={{ ...btnOutline('#16A87A'), width: '100%', marginTop: '5px' }}>
                         핀번호 즉시 추가
                       </button>
                     </>
@@ -383,13 +383,13 @@ const ProductAdmin = () => {
                     <span style={gifticonPrice}>{p.price.toLocaleString()} P</span>
                   )}
                 </td>
-                <td align="center" style={{ fontWeight: 'bold', fontSize: '15px', color: p.category === 'DONATION' ? '#339af0' : (p.stock < 5 ? '#fa5252' : '#495057') }}>
+                <td align="center" style={{ fontWeight: 'bold', fontSize: '15px', color: p.category === 'DONATION' ? '#16A87A' : (p.stock < 5 ? '#fa5252' : '#495057') }}>
                   {p.category === 'DONATION' ? '∞' : `${p.stock} 개`}
                 </td>
                 
                 {/* <td align="center">
                   <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
-                    <button onClick={() => handleEdit(p)} style={btnAction('#339af0')}>수정</button>
+                    <button onClick={() => handleEdit(p)} style={btnAction('#16A87A')}>수정</button>
                     {p.status === 'HIDDEN' ? (
                       <button onClick={() => handleUpdateStatus(p.id, 'ON_SALE')} style={btnAction('#f59f00', true)}>노출</button>
                     ) : (
@@ -406,7 +406,7 @@ const ProductAdmin = () => {
                 
                 <td align="center">
                   <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                    <button onClick={() => handleEdit(p)} style={btnOutline('#339af0')}>수정</button>
+                    <button onClick={() => handleEdit(p)} style={btnOutline('#16A87A')}>수정</button>
                     {p.status === 'ON_SALE'
                       ? <button onClick={() => handleUpdateStatus(p.id, 'SOLD_OUT')} style={btnOutline('#fa5252')}>종료</button>
                       : <button onClick={() => handleUpdateStatus(p.id, 'ON_SALE')} style={btnOutline('#20c997')}>판매</button>}
@@ -439,7 +439,7 @@ const ProductAdmin = () => {
 // ==========================================
 // 🌟 네비게이션 탭 스타일 추가
 const subNavContainerStyle = { display: 'flex', gap: '30px', marginBottom: '30px', borderBottom: '2px solid #f1f3f5' };
-const subTabStyle = (active) => ({ padding: '10px 5px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '16px', fontWeight: active ? '700' : '500', color: active ? '#339af0' : '#868e96', borderBottom: active ? '3px solid #339af0' : 'none' });
+const subTabStyle = (active) => ({ padding: '10px 5px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '16px', fontWeight: active ? '700' : '500', color: active ? '#16A87A' : '#868e96', borderBottom: active ? '3px solid #16A87A' : 'none' });
 
 // 🌟 버튼 간소화 통일 스타일 추가
 const btnAction = (color, isSolid = false) => ({
@@ -460,12 +460,12 @@ const headerContainer = { display: 'flex', justifyContent: 'space-between', alig
 const titleStyle = { margin: 0, fontSize: '26px', fontWeight: '900', color: '#212529', letterSpacing: '-0.5px' };
 const subtitleStyle = { margin: '8px 0 0 0', color: '#868e96', fontSize: '14px' };
 
-const btnPrimary = { backgroundColor: '#339af0', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', boxShadow: '0 4px 10px rgba(51, 154, 240, 0.2)', transition: 'background 0.2s' };
+const btnPrimary = { backgroundColor: '#16A87A', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', boxShadow: '0 4px 10px rgba(22, 168, 122, 0.2)', transition: 'background 0.2s' };
 const btnCancel = { backgroundColor: '#e9ecef', color: '#495057', border: 'none', padding: '12px 24px', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' };
 const btnSubmit = { backgroundColor: '#1864ab', color: '#fff', border: 'none', padding: '12px 30px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '15px' };
 const btnCancelLine = { backgroundColor: 'transparent', color: '#868e96', border: '1px solid #dee2e6', padding: '12px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' };
 
-const formCard = { backgroundColor: '#fff', padding: '35px', borderRadius: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.04)', marginBottom: '35px', border: '1px solid #f1f3f5' };
+const formCard = { backgroundColor: '#fff', padding: '35px', borderRadius: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '35px', border: '1px solid #f1f3f5' };
 const formHeader = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', borderBottom: '2px solid #f8f9fa', paddingBottom: '15px' };
 const formTitle = { margin: 0, fontSize: '20px', fontWeight: 'bold', color: '#343a40' };
 const formGrid = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' };
@@ -481,7 +481,7 @@ const filterBar = { display: 'flex', gap: '15px', marginBottom: '20px' };
 const searchInput = { flex: 1, padding: '14px 20px', borderRadius: '12px', border: '1px solid #e9ecef', fontSize: '14px', outline: 'none' };
 const filterSelect = { padding: '0 20px', borderRadius: '12px', border: '1px solid #e9ecef', fontSize: '14px', backgroundColor: '#fff', cursor: 'pointer', outline: 'none' };
 
-const tableCard = { backgroundColor: '#fff', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 5px 20px rgba(0,0,0,0.03)', border: '1px solid #f1f3f5' };
+const tableCard = { backgroundColor: '#fff', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', border: '1px solid #f1f3f5' };
 const tableStyle = { width: '100%', borderCollapse: 'collapse' };
 const thRowStyle = { backgroundColor: '#f8f9fa', borderBottom: '2px solid #e9ecef', color: '#495057', fontSize: '14px', height: '55px' };
 const tdRowStyle = { borderBottom: '1px solid #f1f3f5', height: '75px' };
@@ -490,21 +490,21 @@ const tableTitle = { fontWeight: '700', fontSize: '16px', color: '#212529', marg
 const tableSub = { fontSize: '12px', color: '#adb5bd' };
 const emptyState = { padding: '60px', textAlign: 'center', color: '#adb5bd', fontSize: '15px' };
 
-const badgeCategory = (cat) => ({ display: 'inline-block', backgroundColor: cat === 'GIFTICON' ? '#e7f5ff' : '#f3f0ff', color: cat === 'GIFTICON' ? '#228be6' : '#845ef7', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', marginBottom: '4px' });
+const badgeCategory = (cat) => ({ display: 'inline-block', backgroundColor: cat === 'GIFTICON' ? '#E6F7F1' : '#f3f0ff', color: cat === 'GIFTICON' ? '#0D7A58' : '#845ef7', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', marginBottom: '4px' });
 const badgeStatus = (status) => ({ fontSize: '11px', fontWeight: 'bold', color: status === 'ON_SALE' ? '#20c997' : (status === 'SOLD_OUT' ? '#fa5252' : '#868e96') });
 const btnOutline = (color) => ({ backgroundColor: '#fff', color: color, border: `1px solid ${color}`, padding: '8px 14px', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' });
 const btnIcon = { background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' };
 
 const tablePriceContainer = { verticalAlign: 'middle', padding: '10px 0' };
 const donationPriceWrapper = { display: 'flex', flexDirection: 'column', gap: '2px' };
-const participationPrice = { fontWeight: '800', color: '#22b8cf', fontSize: '15px' };
+const participationPrice = { fontWeight: '800', color: '#16A87A', fontSize: '15px' };
 const targetAmountLabel = { fontSize: '11px', color: '#adb5bd', fontWeight: 'normal' };
 const gifticonPrice = { fontWeight: '800', color: '#495057', fontSize: '15px' };
 
 const imageUploadWrapper = { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', minHeight: '180px', border: '2px dashed #a5d8ff', borderRadius: '12px', backgroundColor: '#f8f9fa', cursor: 'pointer', position: 'relative', overflow: 'hidden', transition: 'border 0.2s ease, background 0.2s ease', boxSizing: 'border-box' };
 const uploadPlaceholder = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', padding: '30px' };
 const uploadIcon = { fontSize: '32px', marginBottom: '4px' };
-const uploadMainText = { fontSize: '14px', fontWeight: '800', color: '#339af0' };
+const uploadMainText = { fontSize: '14px', fontWeight: '800', color: '#16A87A' };
 const uploadSubText = { fontSize: '12px', color: '#adb5bd', fontWeight: '500' };
 const previewContainer = {
   position: 'relative', width: '100%', minHeight: '180px', padding: '10px', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center'
@@ -516,7 +516,7 @@ const paginationWrapper = { display: 'flex', justifyContent: 'center', alignItem
 const pageInfoStyle = { fontSize: '14px', fontWeight: '700', color: '#495057', minWidth: '50px', textAlign: 'center' };
 const pageBtnStyle = (disabled) => ({
   padding: '8px 18px', borderRadius: '8px', border: '1px solid #dee2e6',
-  backgroundColor: disabled ? '#f8f9fa' : '#fff', color: disabled ? '#adb5bd' : '#339af0', cursor: disabled ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '13px', transition: '0.2s ease'
+  backgroundColor: disabled ? '#f8f9fa' : '#fff', color: disabled ? '#adb5bd' : '#16A87A', cursor: disabled ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '13px', transition: '0.2s ease'
 });
 
 export default ProductAdmin;

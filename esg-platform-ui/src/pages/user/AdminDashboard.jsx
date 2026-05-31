@@ -216,7 +216,7 @@ const AdminDashboard = () => {
             ))}
           </div>
 
-          {loading && <div style={{ textAlign: 'center', padding: '20px', color: '#339af0' }}>데이터 동기화 중...</div>}
+          {loading && <div style={{ textAlign: 'center', padding: '20px', color: '#16A87A' }}>데이터 동기화 중...</div>}
 
           <div style={{ marginBottom: '15px', fontSize: '14px', color: '#868e96' }}>
             필터링된 항목: <strong>{totalPostsCount}</strong>건
@@ -262,7 +262,7 @@ const AdminDashboard = () => {
                           </select>
                         </div>
                         <div style={{ display: 'flex', gap: '8px' }}>
-                          <button onClick={() => handleApprove(post.id, post.aiResult)} style={{ ...unifiedBtnStyle, backgroundColor: '#339af0', color: '#fff' }}>승인</button>
+                          <button onClick={() => handleApprove(post.id, post.aiResult)} style={{ ...unifiedBtnStyle, backgroundColor: '#16A87A', color: '#fff' }}>승인</button>
                           <button onClick={() => handleReject(post.id)} style={{ ...unifiedBtnStyle, backgroundColor: '#fff', color: '#fa5252', border: '1px solid #fa5252' }}>반려</button>
                         </div>
                       </>
@@ -289,7 +289,7 @@ const AdminDashboard = () => {
                                 handleUpdateType(post.id, post.activityType, post.aiResult);
                                 setEditingPostId(null);
                               }}
-                              style={{ ...unifiedBtnStyle, backgroundColor: '#339af0', color: '#fff' }}
+                              style={{ ...unifiedBtnStyle, backgroundColor: '#16A87A', color: '#fff' }}
                             >확인</button>
                             <button
                               onClick={() => setEditingPostId(null)}
@@ -302,7 +302,7 @@ const AdminDashboard = () => {
                           <span style={{ fontSize: '14px', color: '#1864ab', fontWeight: 'bold' }}>✓ {getActivityName(post.activityType)}</span>
                           <button
                             onClick={() => setEditingPostId(post.id)}
-                            style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 'bold', border: '1px solid #339af0', color: '#339af0', backgroundColor: '#fff', borderRadius: '6px', cursor: 'pointer' }}
+                            style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 'bold', border: '1px solid #16A87A', color: '#16A87A', backgroundColor: '#fff', borderRadius: '6px', cursor: 'pointer' }}
                           >
                             타입 수정
                           </button>
@@ -351,7 +351,7 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {loading && <div style={{ textAlign: 'center', padding: '20px', color: '#339af0' }}>데이터 동기화 중...</div>}
+          {loading && <div style={{ textAlign: 'center', padding: '20px', color: '#16A87A' }}>데이터 동기화 중...</div>}
 
           <div style={{ marginBottom: '15px', fontSize: '14px', color: '#868e96' }}>
             필터링된 항목: <strong>{orderTotalCount}</strong>건
@@ -379,7 +379,7 @@ const AdminDashboard = () => {
                       <td style={{ color: '#495057' }}>{order.nickname} ({order.memberId})</td>
                       <td style={{ textAlign: 'center', color: '#333', fontWeight: '500' }}>{order.productName}</td>
                       <td>{order.category === 'GIFTICON' ? '🎁 기프티콘' : '🤝 기부 캠페인'}</td>
-                      <td style={{ color: '#22b8cf', fontWeight: 'bold' }}>{order.totalPrice?.toLocaleString()} P</td>
+                      <td style={{ color: '#16A87A', fontWeight: 'bold' }}>{order.totalPrice?.toLocaleString()} P</td>
                       <td style={{ color: '#868e96', fontSize: '13px' }}>
                         {order.createdDate ? new Date(order.createdDate).toLocaleString() : '-'}
                       </td>
@@ -387,7 +387,7 @@ const AdminDashboard = () => {
                       <td>
                         {order.status !== 'CANCELED' ? (
                           <>
-                            <button onClick={() => handleResendEmail(order.orderId)} style={actionBtnStyle('#339af0')}>재전송</button>
+                            <button onClick={() => handleResendEmail(order.orderId)} style={actionBtnStyle('#16A87A')}>재전송</button>
                             <button onClick={() => handleCancelOrder(order.orderId)} style={actionBtnStyle('#fa5252')}>취소</button>
                           </>
                         ) : (
@@ -447,7 +447,7 @@ const unifiedBtnStyle = {
 
 // 🌟 추가된 내비게이션 스타일 
 const subNavContainerStyle = { display: 'flex', gap: '30px', marginBottom: '30px', borderBottom: '2px solid #f1f3f5' };
-const subTabStyle = (active) => ({ padding: '10px 5px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '16px', fontWeight: active ? '700' : '500', color: active ? '#339af0' : '#868e96', borderBottom: active ? '3px solid #339af0' : 'none' });
+const subTabStyle = (active) => ({ padding: '10px 5px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '16px', fontWeight: active ? '700' : '500', color: active ? '#16A87A' : '#868e96', borderBottom: active ? '3px solid #16A87A' : 'none' });
 
 const containerStyle = { padding: '40px 20px', maxWidth: '1200px', margin: '0 auto', backgroundColor: '#fdfdfd', minHeight: '100vh' };
 const headerContainerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', borderBottom: '1px solid #eee', paddingBottom: '25px' };
@@ -455,9 +455,9 @@ const dashboardTitleStyle = { margin: 0, fontSize: '28px', fontWeight: '800', co
 const subtitleStyle = { margin: '5px 0 0 0', color: '#adb5bd', fontSize: '15px' };
 
 const tabBarStyle = { display: 'flex', gap: '30px', borderBottom: '2px solid #f1f3f5', marginBottom: '20px' };
-const tabItemStyle = (active) => ({ padding: '15px 10px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '17px', fontWeight: active ? 'bold' : '500', color: active ? '#339af0' : '#adb5bd', borderBottom: active ? '3px solid #339af0' : 'none' });
+const tabItemStyle = (active) => ({ padding: '15px 10px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '17px', fontWeight: active ? 'bold' : '500', color: active ? '#16A87A' : '#adb5bd', borderBottom: active ? '3px solid #16A87A' : 'none' });
 
-const countBadgeStyle = { backgroundColor: '#e7f5ff', color: '#339af0', padding: '2px 8px', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold' };
+const countBadgeStyle = { backgroundColor: '#E6F7F1', color: '#16A87A', padding: '2px 8px', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold' };
 
 const filterGroupStyle = { display: 'flex', gap: '10px', marginBottom: '25px' };
 const orderFilterGroupStyle = { display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' };
@@ -465,11 +465,11 @@ const filterLabelStyle = { fontSize: '14px', fontWeight: 'bold', color: '#495057
 
 const filterBtnStyle = (active) => ({
   padding: '8px 20px', borderRadius: '20px', border: active ? 'none' : '1px solid #dee2e6',
-  backgroundColor: active ? '#339af0' : '#fff', color: active ? '#fff' : '#495057', cursor: 'pointer', fontWeight: '600', fontSize: '14px'
+  backgroundColor: active ? '#16A87A' : '#fff', color: active ? '#fff' : '#495057', cursor: 'pointer', fontWeight: '600', fontSize: '14px'
 });
 
 const postGridStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' };
-const postCardStyle = { backgroundColor: '#fff', borderRadius: '16px', border: '1px solid #f1f3f5', padding: '20px', boxShadow: '0 4px 10px rgba(0,0,0,0.03)' };
+const postCardStyle = { backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #f1f3f5', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
 const cardHeaderStyle = { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '15px' };
 const postIdStyle = { fontSize: '12px', color: '#adb5bd', fontWeight: 'bold' };
 const postTitleStyle = { margin: 0, fontSize: '16px', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#212529' };
@@ -479,19 +479,19 @@ const postImgStyle = { width: '100px', height: '100px', objectFit: 'cover', bord
 
 const aiAnalysisBoxStyle = { backgroundColor: '#f8f9fa', padding: '12px', borderRadius: '12px', marginBottom: '15px' };
 const aiLabelStyle = { fontSize: '12px', color: '#868e96', fontWeight: 'bold' };
-const aiScoreStyle = (score) => ({ fontSize: '12px', color: score >= 0.8 ? '#339af0' : '#fa5252', fontWeight: 'bold' });
+const aiScoreStyle = (score) => ({ fontSize: '12px', color: score >= 0.8 ? '#16A87A' : '#fa5252', fontWeight: 'bold' });
 
 const statusBadge = (status) => ({
   padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold',
-  backgroundColor: status === 'APPROVED' ? '#e7f5ff' : status === 'WAITING' ? '#fff9db' : '#fff5f5',
-  color: status === 'APPROVED' ? '#339af0' : status === 'WAITING' ? '#f08c00' : '#fa5252'
+  backgroundColor: status === 'APPROVED' ? '#E6F7F1' : status === 'WAITING' ? '#fff9db' : '#fff5f5',
+  color: status === 'APPROVED' ? '#16A87A' : status === 'WAITING' ? '#f08c00' : '#fa5252'
 });
 
 const orderContentWrapper = {
   backgroundColor: '#fff',
-  borderRadius: '16px',
+  borderRadius: '12px',
   border: '1px solid #f1f3f5',
-  boxShadow: '0 4px 10px rgba(0,0,0,0.03)',
+  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
   overflow: 'hidden'
 };
 
@@ -506,13 +506,13 @@ const actionBtnStyle = (color) => ({
 
 const orderStatusBadge = (status) => ({
   padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold',
-  backgroundColor: status === 'COMPLETED' ? '#e7f5ff' : '#fff5f5', color: status === 'COMPLETED' ? '#339af0' : '#fa5252'
+  backgroundColor: status === 'COMPLETED' ? '#E6F7F1' : '#fff5f5', color: status === 'COMPLETED' ? '#16A87A' : '#fa5252'
 });
 
 const paginationContainerStyle = { display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px 0', gap: '20px' };
 const pageBtnStyle = (disabled) => ({
-  padding: '8px 16px', borderRadius: '8px', border: '1px solid #dee2e6', backgroundColor: disabled ? '#f8f9fa' : '#fff',
-  color: disabled ? '#adb5bd' : '#339af0', cursor: disabled ? 'default' : 'pointer', fontWeight: 'bold', transition: '0.2s'
+  padding: '8px 16px', borderRadius: '10px', border: '1px solid #dee2e6', backgroundColor: disabled ? '#f8f9fa' : '#fff',
+  color: disabled ? '#adb5bd' : '#16A87A', cursor: disabled ? 'default' : 'pointer', fontWeight: 'bold', transition: '0.2s'
 });
 const pageInfoStyle = { fontSize: '15px', fontWeight: '600', color: '#495057' };
 

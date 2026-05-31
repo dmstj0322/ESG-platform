@@ -103,7 +103,7 @@ const CommentSection = ({ postId, currentMemberId }) => {
   const renderComment = (comment, isReply = false) => (
     <div key={comment.id} style={{
       marginLeft: isReply ? '40px' : '0',
-      borderLeft: isReply ? '2px solid #339af0' : 'none', // 답글은 파란 선으로 구분
+      borderLeft: isReply ? '2px solid #16A87A' : 'none',
       paddingLeft: isReply ? '15px' : '0',
       marginBottom: '20px',
       textAlign: 'left' // 👈 전체 텍스트 왼쪽 정렬 강제
@@ -180,7 +180,7 @@ const CommentSection = ({ postId, currentMemberId }) => {
       textAlign: 'left' // 👈 전체 컨테이너 왼쪽 정렬
     }}>
       <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        💬 댓글 <span style={{ color: '#339af0' }}>{comments.length}</span>
+        💬 댓글 <span style={{ color: '#16A87A' }}>{comments.length}</span>
       </h3>
 
       {/* 댓글 입력창 */}
@@ -192,7 +192,7 @@ const CommentSection = ({ postId, currentMemberId }) => {
             onChange={(e) => setContent(e.target.value)}
             placeholder="칭찬과 격려의 댓글은 큰 힘이 됩니다!"
           />
-          <button style={{ padding: '0 20px', backgroundColor: '#339af0', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }} onClick={handleAddComment}>등록</button>
+          <button style={{ padding: '0 20px', backgroundColor: '#16A87A', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }} onClick={handleAddComment}>등록</button>
         </div>
       ) : (
         <p style={{ color: '#adb5bd', fontSize: '14px', marginBottom: '20px' }}>로그인 후 소통에 참여해보세요.</p>
@@ -208,7 +208,7 @@ const CommentSection = ({ postId, currentMemberId }) => {
 
 // 버튼 스타일들
 const textBtnStyle = { background: 'none', border: 'none', color: '#868e96', fontSize: '12px', cursor: 'pointer', padding: 0, fontWeight: '500' };
-const activeBtnStyle = { padding: '5px 12px', backgroundColor: '#339af0', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' };
+const activeBtnStyle = { padding: '5px 12px', backgroundColor: '#16A87A', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' };
 const cancelBtnStyle = { padding: '5px 12px', backgroundColor: '#e9ecef', color: '#495057', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' };
 
 export default CommentSection;

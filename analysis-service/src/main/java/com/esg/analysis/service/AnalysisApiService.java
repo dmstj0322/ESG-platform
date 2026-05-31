@@ -248,17 +248,29 @@ public class AnalysisApiService {
                         }
                     }
 
+                    // USER_INPUT은 연간 기준, getBenchmarkScaled()는 월간 기준 → 연간 환산 필요
+                    // ACTUAL(CSV 실측)은 월간 기준끼리 비교 → 환산 불필요
+                    final double annualFactor = "USER_INPUT".equals(dataSource) ? 12.0 : 1.0;
+                    Double indElec  = industryVals.getElectricityKwh() != null ? industryVals.getElectricityKwh()  * annualFactor : null;
+                    Double indGas   = industryVals.getGasMj()          != null ? industryVals.getGasMj()           * annualFactor : null;
+                    Double indCarb  = industryVals.getCarbonTco2()     != null ? industryVals.getCarbonTco2()      * annualFactor : null;
+                    Double indWaste = industryVals.getWasteKg()        != null ? industryVals.getWasteKg()         * annualFactor : null;
+                    Double indWater = industryVals.getWaterM3()        != null ? industryVals.getWaterM3()         * annualFactor : null;
+                    log.info("[BenchmarkAnnual] dataSource={} annualFactor={} indElec={} indGas={} indCarb={} indWaste={} indWater={}",
+                            dataSource, annualFactor, indElec, indGas, indCarb, indWaste, indWater);
+
                     benchmarkComparison = AnalysisResultResponse.BenchmarkComparisonDto.builder()
                             .industry(industry)
                             .regionName(regionDisplay)
                             .companyDataSource(dataSource)
-                            .companyElectricityKwh(compElec).industryAvgElectricityKwh(industryVals.getElectricityKwh())
-                            .companyGasMj(compGas).industryAvgGasMj(industryVals.getGasMj())
-                            .companyCarbonTco2(compCarb).industryAvgCarbonTco2(industryVals.getCarbonTco2())
-                            .companyWasteKg(compWaste).industryAvgWasteKg(industryVals.getWasteKg())
-                            .companyWaterM3(compWater).industryAvgWaterM3(industryVals.getWaterM3())
+                            .companyElectricityKwh(compElec).industryAvgElectricityKwh(indElec)
+                            .companyGasMj(compGas).industryAvgGasMj(indGas)
+                            .companyCarbonTco2(compCarb).industryAvgCarbonTco2(indCarb)
+                            .companyWasteKg(compWaste).industryAvgWasteKg(indWaste)
+                            .companyWaterM3(compWater).industryAvgWaterM3(indWater)
                             .metrics(buildBenchmarkMetrics(
-                                    compElec, compGas, compCarb, compWaste, compWater, industryVals))
+                                    compElec, compGas, compCarb, compWaste, compWater,
+                                    indElec, indGas, indCarb, indWaste, indWater, industryVals))
                             .build();
                 } else {
                     log.warn("[BenchmarkIndustry] 업종 벤치마크 없음 — 비교 생략 analysisId={}", analysisId);
@@ -471,13 +483,14 @@ public class AnalysisApiService {
     // company 값은 사용자 실제 입력 또는 CSV 실측값. null이면 해당 지표 비교 미표시.
     private List<AnalysisResultResponse.BenchmarkComparisonDto.BenchmarkMetricDto> buildBenchmarkMetrics(
             Double cElec, Double cGas, Double cCarb, Double cWaste, Double cWater,
+            Double iElec, Double iGas, Double iCarb, Double iWaste, Double iWater,
             EnvironmentBenchmarkService.EnvironmentValues ind) {
         return List.of(
-                metricOf("전력 사용량",   "kWh",  cElec,  ind.getElectricityKwh(), ind.getElectricitySource()),
-                metricOf("가스 사용량",   "Nm³",  cGas, ind.getGasMj(), ind.getGasSource()),
-                metricOf("탄소 배출량",   "tCO₂", cCarb,  ind.getCarbonTco2(),     ind.getCarbonSource()),
-                metricOf("폐기물 발생량", "kg",   cWaste, ind.getWasteKg(),        ind.getWasteSource()),
-                metricOf("용수 사용량",   "m³",   cWater, ind.getWaterM3(),        ind.getWaterSource())
+                metricOf("전력 사용량",   "kWh",  cElec,  iElec,  ind.getElectricitySource()),
+                metricOf("가스 사용량",   "Nm³",  cGas,   iGas,   ind.getGasSource()),
+                metricOf("탄소 배출량",   "tCO₂", cCarb,  iCarb,  ind.getCarbonSource()),
+                metricOf("폐기물 발생량", "kg",   cWaste, iWaste, ind.getWasteSource()),
+                metricOf("용수 사용량",   "m³",   cWater, iWater, ind.getWaterSource())
         );
     }
 

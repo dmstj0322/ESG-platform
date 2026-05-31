@@ -772,6 +772,9 @@ const buildRecommendations = (indicators) => {
   const byStatus  = (s) => indicators.filter(ev => getVerificationStatus(ev) === s);
   const byCat     = (items, cat) => items.filter(ev => ev.indicatorCode?.startsWith(cat));
 
+  // 부족 개수 기반 priority 동적 계산 (4개 이상 → HIGH, 2~3개 → MEDIUM, 1개 → LOW)
+  const calcPriority = (cnt) => cnt >= 4 ? 'HIGH' : cnt >= 2 ? 'MEDIUM' : 'LOW';
+
   const contradictions  = byStatus('CONTRADICTION');
   const noEvidence      = byStatus('NO_EVIDENCE');
   const weakItems       = byStatus('WEAK');
@@ -786,93 +789,90 @@ const buildRecommendations = (indicators) => {
 
   if (eContradictions.length >= 2) {
     recs.push({
-      priority: 'HIGH', code: 'E-CONTR', category: 'E',
+      priority: 'HIGH', _cnt: eContradictions.length, code: 'E-CONTR', category: 'E',
       title: '환경 데이터 증빙 불일치 — 재검증 권고',
-      desc: `${eContradictions.length}개 환경(E) 지표에서 제출 수치와 증빙 문서 간 유의미한 차이가 확인되었습니다. 데이터 출처·집계 기간·단위 환산 기준을 면밀히 검토하고, 원본 측정 데이터 또는 제3자 인증 증빙을 첨부하여 재제출하시길 권장합니다.`,
-      scoreImpact: '+8~12점', urgency: '즉시', impact: '등급 상향 가능',
+      desc: `환경(E) 영역 ${eContradictions.length}개 지표에서 제출 수치와 증빙 문서 간 유의미한 차이가 확인되었습니다. 데이터 출처·집계 기간·단위 환산 기준을 면밀히 검토하고, 원본 측정 데이터 또는 제3자 인증 증빙을 첨부하여 재제출하시길 권장합니다.`,
       docs: ['수치 측정 원본 데이터 (CSV)', '제3자 인증서 또는 측정 기관 확인서'],
     });
   } else if (eContradictions.length === 1) {
     const ev0 = eContradictions[0];
     const t = ev0.indicatorTitle ?? ev0.indicatorCode;
     recs.push({
-      priority: 'MEDIUM', code: 'E-CONTR-1', category: 'E',
+      priority: 'MEDIUM', _cnt: 1, code: 'E-CONTR-1', category: 'E',
       title: `${t} — 수치 출처 재확인 권고`,
       desc: `${t} 항목의 제출값과 증빙 문서 내 기재값 간 차이가 감지되었습니다. 측정 기준, 보고 연도, 단위 환산 여부를 재검토하고 산정 근거를 명시하시면 감사 신뢰도 평가가 개선됩니다.`,
-      scoreImpact: '+3~6점', urgency: '1개월', impact: '신뢰도 향상',
       docs: ['측정 원본 데이터', '단위 환산 산정 근거서'],
     });
   }
 
   if (gContradictions.length >= 1) {
     recs.push({
-      priority: 'HIGH', code: 'G-CONTR', category: 'G',
+      priority: 'HIGH', _cnt: gContradictions.length, code: 'G-CONTR', category: 'G',
       title: '지배구조 공시 내용 — 감사 기준 불일치',
-      desc: `${gContradictions.length}개 지배구조(G) 항목에서 보고서 기술 내용이 K-ESG 감사 기준과 불일치하는 신호가 감지되었습니다. 이사회 독립성 현황, 감사위원회 운영 실적, 윤리경영 강령 이행 내용을 원문 기준으로 재검토하시길 권장합니다.`,
-      scoreImpact: '+6~10점', urgency: '즉시', impact: '공시 신뢰도 향상',
+      desc: `지배구조(G) 영역 ${gContradictions.length}개 항목에서 보고서 기술 내용이 K-ESG 감사 기준과 불일치하는 신호가 감지되었습니다. 이사회 독립성 현황, 감사위원회 운영 실적, 윤리경영 강령 이행 내용을 원문 기준으로 재검토하시길 권장합니다.`,
       docs: ['이사회 회의록', '감사위원회 운영 기록', '윤리경영 강령 원문'],
     });
   }
 
-  if (gNoEvidence.length >= 2) {
+  if (gNoEvidence.length >= 1) {
     recs.push({
-      priority: 'HIGH', code: 'G-NOEV', category: 'G',
-      title: '지배구조 공시 문서 — 감사 근거 부재',
-      desc: `${gNoEvidence.length}개 지배구조(G) 지표에서 감사 근거가 확인되지 않았습니다. 이사회 독립성 정책, 감사위원회 구성 및 운영 현황, 내부 신고 시스템, 윤리경영 강령 등 지배구조 공시 사항을 ESG 보고서에 명시적으로 기재하시길 권장합니다.`,
-      scoreImpact: '+5~8점', urgency: '1개월', impact: 'G 카테고리 점수 향상',
+      priority: calcPriority(gNoEvidence.length), _cnt: gNoEvidence.length,
+      code: 'G-NOEV', category: 'G',
+      title: '지배구조 공시 문서 — 분석 근거 부재',
+      desc: `지배구조(G) 영역 ${gNoEvidence.length}개 지표에서 분석 근거가 확인되지 않았습니다. 이사회 독립성 정책, 감사위원회 구성 및 운영 현황, 내부 신고 시스템, 윤리경영 강령 등 지배구조 공시 사항을 ESG 보고서에 명시적으로 기재하시길 권장합니다.`,
+      scoreImpact: gNoEvidence.length >= 3 ? '+5~8점' : '+2~4점',
+      urgency: gNoEvidence.length >= 3 ? '1개월' : '분기 내',
+      impact: 'G 카테고리 점수 향상',
       docs: ['지배구조 정책 문서', 'ESG 보고서 지배구조 섹션', '내부 신고 시스템 운영 현황'],
-    });
-  } else if (gNoEvidence.length === 1) {
-    const ev0 = gNoEvidence[0];
-    const t = ev0.indicatorTitle ?? ev0.indicatorCode;
-    recs.push({
-      priority: 'MEDIUM', code: 'G-NOEV-1', category: 'G',
-      title: `${t} — 공시 내용 보강 권고`,
-      desc: `${t} 항목에 대한 감사 근거가 보고서에서 확인되지 않았습니다. 해당 정책의 수립 여부, 운영 현황, 이행 결과를 보고서에 구체적으로 기술하시면 감사 점수에 긍정적으로 반영됩니다.`,
-      scoreImpact: '+2~4점', urgency: '분기 내', impact: '지배구조 공시 강화',
-      docs: ['해당 정책 수립 문서', '운영 현황 보고서'],
     });
   }
 
-  if (sNoEvidence.length >= 2) {
+  if (sNoEvidence.length >= 1) {
     recs.push({
-      priority: 'MEDIUM', code: 'S-NOEV', category: 'S',
+      priority: calcPriority(sNoEvidence.length), _cnt: sNoEvidence.length,
+      code: 'S-NOEV', category: 'S',
       title: '사회 지표 증빙 — 문서 기재 미흡',
-      desc: `${sNoEvidence.length}개 사회(S) 지표에서 감사 근거가 확인되지 않았습니다. 산업안전 교육 실적, 임직원 참여 프로그램, 지역사회 기여 활동 내역 등을 정량 데이터와 함께 기재하시면 감사 평가에 반영됩니다.`,
-      scoreImpact: '+3~6점', urgency: '분기 내', impact: 'S 카테고리 점수 향상',
+      desc: `사회(S) 영역 ${sNoEvidence.length}개 지표에서 분석 근거가 확인되지 않았습니다. 산업안전 교육 실적, 임직원 참여 프로그램, 지역사회 기여 활동 내역 등을 정량 데이터와 함께 기재하시면 분석 평가에 반영됩니다.`,
+      scoreImpact: sNoEvidence.length >= 3 ? '+3~6점' : '+1~3점',
+      urgency: sNoEvidence.length >= 3 ? '분기 내' : '다음 보고 주기',
+      impact: 'S 카테고리 점수 향상',
       docs: ['사회공헌 활동 보고서', '산업안전 교육 이수 기록', '임직원 프로그램 운영 현황'],
     });
   }
 
   if (sWeak.length >= 2) {
     recs.push({
-      priority: 'MEDIUM', code: 'S-WEAK', category: 'S',
+      priority: 'MEDIUM', _cnt: sWeak.length, code: 'S-WEAK', category: 'S',
       title: '사회 지표 — 정량 근거 보강 권고',
-      desc: `${sWeak.length}개 사회(S) 지표에서 관련 내용이 일부 확인되었으나 정량적 근거가 미흡합니다. 교육 이수율, 참여 임직원 수, 사업 수혜 규모 등 실적 수치를 보완하여 기재하시면 감사 신뢰도가 향상됩니다.`,
-      scoreImpact: '+2~5점', urgency: '분기 내', impact: '신뢰도 향상',
+      desc: `사회(S) 영역 ${sWeak.length}개 지표에서 관련 내용이 일부 확인되었으나 정량적 근거가 미흡합니다. 교육 이수율, 참여 임직원 수, 사업 수혜 규모 등 실적 수치를 보완하여 기재하시면 감사 신뢰도가 향상됩니다.`,
       docs: ['정량 성과 지표 데이터', '교육 이수율 현황표', '실적 수치 집계 자료'],
     });
   }
 
   if (gWeak.length >= 2) {
     recs.push({
-      priority: 'MEDIUM', code: 'G-WEAK', category: 'G',
+      priority: 'MEDIUM', _cnt: gWeak.length, code: 'G-WEAK', category: 'G',
       title: '지배구조 — 실적 근거 구체화 권고',
-      desc: `${gWeak.length}개 지배구조(G) 지표에서 관련 내용이 일부 확인되었으나 실적 데이터가 미흡합니다. 감사위원회 연간 개최 횟수, 이사회 내 독립이사 비율, 내부 신고 처리 건수 등 정량 실적을 명시하시면 공시 신뢰도가 개선됩니다.`,
-      scoreImpact: '+2~5점', urgency: '분기 내', impact: '공시 품질 향상',
+      desc: `지배구조(G) 영역 ${gWeak.length}개 지표에서 관련 내용이 일부 확인되었으나 실적 데이터가 미흡합니다. 감사위원회 연간 개최 횟수, 이사회 내 독립이사 비율, 내부 신고 처리 건수 등 정량 실적을 명시하시면 공시 신뢰도가 개선됩니다.`,
       docs: ['이사회 독립성 비율 현황', '감사위원회 연간 실적 보고서', '내부 감사 처리 건수 기록'],
     });
   }
 
   if (eNoEvidence.length >= 2) {
     recs.push({
-      priority: 'LOW', code: 'E-NOEV', category: 'E',
+      priority: 'LOW', _cnt: eNoEvidence.length, code: 'E-NOEV', category: 'E',
       title: '환경 계량 데이터 — 문서 기재 누락',
-      desc: `${eNoEvidence.length}개 환경(E) 지표에서 수치 데이터를 확인하지 못했습니다. 전력 사용량, 가스 소비량, 탄소 배출량, 폐기물 발생량, 용수 사용량 등을 보고서에 연도별로 명시하거나, 공인 측정 기관의 증빙 자료를 별도로 첨부하시길 권장합니다.`,
-      scoreImpact: '+2~4점', urgency: '다음 보고 주기', impact: 'E 데이터 정확도 향상',
+      desc: `환경(E) 영역 ${eNoEvidence.length}개 지표에서 수치 데이터를 확인하지 못했습니다. 전력 사용량, 가스 소비량, 탄소 배출량, 폐기물 발생량, 용수 사용량 등을 보고서에 연도별로 명시하거나, 공인 측정 기관의 증빙 자료를 별도로 첨부하시길 권장합니다.`,
       docs: ['환경 데이터 측정 보고서', 'CSV 수치 증빙 파일', '공인 측정 기관 확인서'],
     });
   }
+
+  // 부족 개수 기준 내림차순 정렬 (priority 우선, 동일 priority 내에서 개수 많은 것 먼저)
+  const prioOrder = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+  recs.sort((a, b) => {
+    const pd = (prioOrder[a.priority] ?? 2) - (prioOrder[b.priority] ?? 2);
+    return pd !== 0 ? pd : (b._cnt ?? 0) - (a._cnt ?? 0);
+  });
 
   return recs.slice(0, 5);
 };
@@ -3658,14 +3658,9 @@ function AiAuditRecommendations({ indicators, isAutoSimulation }) {
                   >
                     {catLabel}
                   </span>
-                  {rec.scoreImpact && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700">
-                      예상 {rec.scoreImpact}
-                    </span>
-                  )}
-                  {rec.urgency && (
-                    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-gray-100 border border-gray-200 text-gray-500">
-                      {rec.urgency}
+                  {rec._cnt != null && rec._cnt > 0 && (
+                    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-gray-100 border border-gray-200 text-gray-600">
+                      근거 부족 지표 {rec._cnt}개
                     </span>
                   )}
                 </div>
@@ -4346,7 +4341,7 @@ function AIRetrievalTraceTable({ rows, onSelect }) {
     <div className="data-table rounded-xl overflow-hidden">
       {/* Table header — desktop only */}
       <div className="hidden sm:grid sm:grid-cols-[148px_1fr_70px_96px] bg-gray-50 border-b border-gray-200 px-4 py-3 gap-3 items-center">
-        {['지표', '검색 근거', '근거 적합도', '검증 상태'].map(h => (
+        {['지표', '검색 근거', '신뢰도', '검증 상태'].map(h => (
           <span key={h} className="text-[9px] font-black text-gray-500 uppercase tracking-wider">{h}</span>
         ))}
       </div>
@@ -4358,6 +4353,15 @@ function AIRetrievalTraceTable({ rows, onSelect }) {
           const simPct   = toPct(ev.similarity);
           const simColor = getSimColor(simPct);
           const isECat   = ev.indicatorCode?.[0] === 'E';
+          // E 지표: numericMatchLevel 기반 신뢰도 (PDF와 동일 기준)
+          const eConfPct   = isECat
+            ? (ev.numericMatchLevel === 'HIGH' ? 97 : ev.numericMatchLevel === 'MEDIUM' ? 72 : ev.numericMatchLevel === 'LOW' ? 38 : null)
+            : null;
+          const eConfColor = isECat
+            ? (ev.numericMatchLevel === 'HIGH' ? '#059669' : ev.numericMatchLevel === 'MEDIUM' ? '#f59e0b' : '#ef4444')
+            : null;
+          const displayPct   = isECat ? eConfPct   : simPct;
+          const displayColor = isECat ? (eConfColor ?? '#9ca3af') : simColor;
           const catColor = isECat ? '#059669' : ev.indicatorCode?.[0] === 'S' ? '#3b82f6' : '#f59e0b';
           const _snippetSrc = ev.chunkText || (isFragmentArtifact(ev.evidenceText) ? null : ev.evidenceText);
           const snippet  = isECat
@@ -4395,15 +4399,15 @@ function AIRetrievalTraceTable({ rows, onSelect }) {
                         : <span className="text-[10px] text-gray-400 italic">— 근거 문서 확인됨</span>
                     }
                   </div>
-                  {/* Similarity */}
+                  {/* Similarity / Numeric confidence */}
                   <div className="flex flex-col items-start gap-0.5">
-                    {simPct != null ? (
+                    {displayPct != null ? (
                       <>
-                        <span className="text-xs font-black font-mono tabular-nums leading-none" style={{ color: simColor }}>
-                          {simPct}%
+                        <span className="text-xs font-black font-mono tabular-nums leading-none" style={{ color: displayColor }}>
+                          {displayPct}%
                         </span>
                         <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden mt-0.5">
-                          <div className="h-full rounded-full" style={{ width: `${simPct}%`, background: simColor }} />
+                          <div className="h-full rounded-full" style={{ width: `${displayPct}%`, background: displayColor }} />
                         </div>
                       </>
                     ) : isECat ? (
@@ -4438,8 +4442,8 @@ function AIRetrievalTraceTable({ rows, onSelect }) {
                         : null
                     }
                   </div>
-                  {simPct != null && (
-                    <span className="text-xs font-black font-mono shrink-0" style={{ color: simColor }}>{simPct}%</span>
+                  {displayPct != null && (
+                    <span className="text-xs font-black font-mono shrink-0" style={{ color: displayColor }}>{displayPct}%</span>
                   )}
                 </div>
               </button>
@@ -4481,8 +4485,12 @@ function AIRetrievalTraceTable({ rows, onSelect }) {
                         <p className="text-[8px] font-black text-gray-400 uppercase tracking-wider mb-2">AI 검색 지표</p>
                         <div className="space-y-1.5">
                           {[
-                            { label: '근거 적합도',   value: simPct != null ? `${simPct}%` : '—', color: simPct != null ? simColor : '#9ca3af' },
-                            { label: '최종 점수',   value: toPct(ev.finalScore) != null ? `${toPct(ev.finalScore)}%` : '—', color: '#6366f1' },
+                            isECat
+                              ? { label: '수치 검증 신뢰도', value: eConfPct != null ? `${eConfPct}%` : '—', color: eConfColor ?? '#9ca3af' }
+                              : { label: '근거 적합도',      value: simPct   != null ? `${simPct}%`   : '—', color: simPct   != null ? simColor : '#9ca3af' },
+                            isECat
+                              ? { label: '차이율',           value: ev.numericDiffPercent != null ? `${Number(ev.numericDiffPercent).toFixed(1)}%` : '—', color: (ev.numericDiffPercent ?? 0) <= 5 ? '#059669' : '#f59e0b' }
+                              : { label: '최종 점수',        value: toPct(ev.finalScore)  != null ? `${toPct(ev.finalScore)}%` : '—', color: '#6366f1' },
                           ].map(item => (
                             <div key={item.label} className="flex items-center justify-between text-[10px]">
                               <span className="text-gray-400">{item.label}</span>
@@ -4987,7 +4995,7 @@ export default function AnalysisResultPage() {
     // 2순위: 구버전 응답 / metrics 누락 시 scalar 필드에서 복원
     return [
       { name: '전력 사용량',  unit: 'kWh',  company: bc.companyElectricityKwh  ?? null, industryAvg: bc.industryAvgElectricityKwh  ?? null },
-      { name: '가스 사용량',  unit: 'Nm³', company: bc.companyGasMj   != null ? Math.round(bc.companyGasMj   / 35.8) : null, industryAvg: bc.industryAvgGasMj != null ? Math.round(bc.industryAvgGasMj / 35.8) : null },
+      { name: '가스 사용량',  unit: 'Nm³', company: bc.companyGasMj   ?? null, industryAvg: bc.industryAvgGasMj ?? null },
       { name: '탄소 배출량',  unit: 'tCO₂', company: bc.companyCarbonTco2      ?? null, industryAvg: bc.industryAvgCarbonTco2      ?? null },
       { name: '폐기물 발생량',unit: 'kg',   company: bc.companyWasteKg         ?? null, industryAvg: bc.industryAvgWasteKg         ?? null },
       { name: '용수 사용량',  unit: 'm³',   company: bc.companyWaterM3         ?? null, industryAvg: bc.industryAvgWaterM3         ?? null },
@@ -5141,7 +5149,7 @@ export default function AnalysisResultPage() {
 
   // E 카테고리 수치 비교 행 — API 직접 inputValue/extractedValue/unit 사용
   const numericRows = useMemo(() => {
-    const UNIT_FALLBACK = { 'E-101': 'kWh', 'E-102': 'MJ', 'E-103': 'tCO₂', 'E-104': 'kg', 'E-105': 'm³' };
+    const UNIT_FALLBACK = { 'E-101': 'kWh', 'E-102': 'Nm³', 'E-103': 'tCO₂', 'E-104': 'kg', 'E-105': 'm³' };
     const seen = new Set();
     return (data?.evidenceMatches ?? [])
       .filter(e => e.numericMatchLevel != null && (e.indicatorCode?.startsWith('E') || Object.keys(E_INDICATORS).includes(e.indicatorCode)))
@@ -5224,33 +5232,60 @@ export default function AnalysisResultPage() {
     const eFailed  = analysisSummary?.e?.failed ?? 0;
     const eTotal   = analysisSummary?.e?.total  ?? 5;
     const lowCnt   = verificationStats.lowCount;
+
+    // [우선순위 3] 부족 개수 기반 severity 동적 계산
+    const calcSev = (cnt) => cnt >= 4 ? 'HIGH' : cnt >= 2 ? 'MED' : 'LOW';
+
+    // E 수치 불일치
     if (lowCnt >= 2)
-      recs.push({ sev: 'HIGH', code: 'E-MISMATCH', title: '환경 데이터 수치 불일치', desc: `${lowCnt}개 환경(E) 지표에서 입력값과 증빙 수치 간 오차가 허용 범위를 초과합니다.`,
+      recs.push({ sev: 'HIGH', code: 'E-MISMATCH', _cnt: lowCnt, title: '환경 데이터 수치 불일치',
+        desc: `환경(E) 영역 ${lowCnt}개 지표에서 입력값과 증빙 수치 간 오차가 허용 범위를 초과합니다.`,
         scoreImpact: '+5~10점', urgency: '즉시', docs: ['수치 측정 원본 데이터 (CSV)', '제3자 검증 증빙서'] });
     else if (lowCnt === 1)
-      recs.push({ sev: 'MED',  code: 'E-MISMATCH', title: '수치 불일치 감지',       desc: '1개 환경(E) 지표에서 입력값과 증빙 수치 간 차이가 발생했습니다. 해당 항목의 재검토를 권장합니다.',
+      recs.push({ sev: 'MED', code: 'E-MISMATCH', _cnt: 1, title: '수치 불일치 감지',
+        desc: '환경(E) 영역 1개 지표에서 입력값과 증빙 수치 간 차이가 발생했습니다. 해당 항목의 재검토를 권장합니다.',
         scoreImpact: '+2~4점', urgency: '1개월', docs: ['측정 원본 데이터', '단위 환산 근거서'] });
+
+    // E 수치 증빙 미확인
     if (eFailed >= eTotal && eTotal > 0)
-      recs.push({ sev: 'HIGH', code: 'E-EXTRACT',  title: '수치 증빙 미확인',        desc: `환경(E) ${eFailed}개 지표 전체에서 수치 증빙이 확인되지 않아 업종 평균 기반 보수적 평가가 적용되었습니다. 추가 공시 문서 제출을 권장합니다.`,
+      recs.push({ sev: 'HIGH', code: 'E-EXTRACT', _cnt: eFailed, title: '수치 증빙 미확인',
+        desc: `환경(E) 영역 ${eFailed}개 지표 전체에서 수치 증빙이 확인되지 않아 업종 평균 기반 보수적 평가가 적용되었습니다. 추가 공시 문서 제출을 권장합니다.`,
         scoreImpact: '+8~12점', urgency: '즉시', docs: ['환경 데이터 CSV 파일', 'PDF 수치 증빙 자료', '공인 측정 기관 확인서'] });
     else if (eFailed >= 3)
-      recs.push({ sev: 'MED',  code: 'E-EXTRACT',  title: '수치 증빙 부분 미확인', desc: `환경(E) ${eFailed}개 지표에서 수치 증빙이 확인되지 않았습니다. 보수적 평가가 부분 적용되었으며, 관련 증빙 파일의 포맷 및 기재 여부를 확인하시기 바랍니다.`,
+      recs.push({ sev: 'MED', code: 'E-EXTRACT', _cnt: eFailed, title: '수치 증빙 부분 미확인',
+        desc: `환경(E) 영역 ${eFailed}개 지표에서 수치 증빙이 확인되지 않았습니다. 증빙 파일의 포맷 및 기재 여부를 확인하시기 바랍니다.`,
         scoreImpact: '+4~7점', urgency: '1개월', docs: ['환경 데이터 CSV 파일', 'PDF 증빙 자료'] });
-    if (gBlocked.length >= 2)
-      recs.push({ sev: 'HIGH', code: 'G-EVIDENCE', title: '지배구조 정보 보완 권장',     desc: `${gBlocked.length}개 지배구조(G) 항목은 추가 정보 보완 시 분석 신뢰도를 높일 수 있습니다. 관련 정책 문서를 보완하시면 더 정교한 ESG 분석이 가능합니다.`,
-        scoreImpact: '+6~10점', urgency: '1개월', docs: ['지배구조 정책 문서', '이사회 운영 기록', 'ESG 보고서 지배구조 섹션'] });
-    else if (gBlocked.length === 1)
-      recs.push({ sev: 'MED',  code: 'G-EVIDENCE', title: '지배구조 정보 보완 권장',   desc: '일부 지배구조(G) 항목은 추가 정보 보완 시 분석 신뢰도가 향상될 수 있습니다. 관련 정책 문서를 확인해 주세요.',
-        scoreImpact: '+2~4점', urgency: '분기 내', docs: ['해당 정책 수립 문서', '운영 현황 보고서'] });
-    if (sBlocked.length >= 2)
-      recs.push({ sev: 'MED',  code: 'S-EVIDENCE', title: '사회 지표 정보 보완 권장', desc: `${sBlocked.length}개 사회(S) 항목은 추가 정보 확보 시 분석 정확도가 향상될 수 있습니다. 관련 보고서 내용을 보완하시면 더 정밀한 분석이 가능합니다.`,
-        scoreImpact: '+3~6점', urgency: '분기 내', docs: ['사회공헌 활동 보고서', '산업안전 교육 이수 기록'] });
-    else if (sBlocked.length === 1)
-      recs.push({ sev: 'LOW',  code: 'S-EVIDENCE', title: '사회 지표 정보 보완 권장', desc: '일부 사회(S) 항목은 추가 정보 보완 시 분석 정확도가 향상될 수 있습니다.',
-        scoreImpact: '+1~3점', urgency: '다음 보고 주기', docs: ['사회지표 관련 증빙 문서'] });
+
+    // [우선순위 1] G/S 메시지에 실제 부족 개수 표시
+    // [우선순위 3] severity를 calcSev로 동적 계산
+    if (gBlocked.length >= 1)
+      recs.push({ sev: calcSev(gBlocked.length), code: 'G-EVIDENCE', _cnt: gBlocked.length,
+        title: '지배구조 정보 보완 권장',
+        desc: `지배구조(G) 영역 ${gBlocked.length}개 지표의 근거가 부족합니다. 관련 정책 문서를 보완하시면 더 정교한 ESG 분석이 가능합니다.`,
+        scoreImpact: gBlocked.length >= 3 ? '+6~10점' : '+2~4점',
+        urgency: gBlocked.length >= 3 ? '1개월' : '분기 내',
+        docs: ['지배구조 정책 문서', '이사회 운영 기록', 'ESG 보고서 지배구조 섹션'] });
+
+    if (sBlocked.length >= 1)
+      recs.push({ sev: calcSev(sBlocked.length), code: 'S-EVIDENCE', _cnt: sBlocked.length,
+        title: '사회 지표 정보 보완 권장',
+        desc: `사회(S) 영역 ${sBlocked.length}개 지표의 근거가 부족합니다. 관련 보고서 내용을 보완하시면 더 정밀한 분석이 가능합니다.`,
+        scoreImpact: sBlocked.length >= 3 ? '+3~6점' : '+1~3점',
+        urgency: sBlocked.length >= 3 ? '분기 내' : '다음 보고 주기',
+        docs: ['사회공헌 활동 보고서', '산업안전 교육 이수 기록'] });
+
     if (isBenchmarkFallback && !isFullBenchmark && recs.every(r => r.code !== 'E-EXTRACT'))
-      recs.push({ sev: 'LOW',  code: 'E-BENCHMARK', title: '업종 평균 추정 적용', desc: '일부 환경(E) 지표에 업종 평균 추정치가 적용되었습니다. 실측 데이터 제출 시 정확도가 향상됩니다.',
+      recs.push({ sev: 'LOW', code: 'E-BENCHMARK', _cnt: 0, title: '업종 평균 추정 적용',
+        desc: '일부 환경(E) 지표에 업종 평균 추정치가 적용되었습니다. 실측 데이터 제출 시 정확도가 향상됩니다.',
         scoreImpact: '+3~5점', urgency: '다음 보고 주기', docs: ['환경 데이터 실측 CSV', 'PDF 증빙 파일'] });
+
+    // [우선순위 2] severity 우선, 동일 severity 내에서는 부족 개수 내림차순 정렬
+    const sevOrder = { HIGH: 0, MED: 1, LOW: 2 };
+    recs.sort((a, b) => {
+      const sd = sevOrder[a.sev] - sevOrder[b.sev];
+      return sd !== 0 ? sd : (b._cnt ?? 0) - (a._cnt ?? 0);
+    });
+
     return recs.slice(0, 5);
   }, [data, isAutoSimulation, blockedIndicators, analysisSummary, verificationStats, isBenchmarkFallback, isFullBenchmark]);
 
@@ -5839,7 +5874,7 @@ export default function AnalysisResultPage() {
               <CheckCircle2 size={13} className="text-emerald-500" />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-gray-700">감사 검증 완료</p>
+              <p className="text-sm font-semibold text-gray-700">분석 검증 완료</p>
               <p className="text-xs text-gray-400 mt-0.5">
                 환경(E) 수치 검증 · 사회(S)/지배구조(G) 근거 추적 · K-ESG 기준 적용
               </p>
@@ -5985,11 +6020,6 @@ export default function AnalysisResultPage() {
                       <p className="text-[12px] font-semibold text-gray-800 mb-0.5">{rec.title}</p>
                       <p className="text-[11px] text-gray-500 leading-relaxed">{rec.desc}</p>
                     </div>
-                    {rec.scoreImpact && (
-                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-100 text-emerald-600 shrink-0">
-                        {rec.scoreImpact}
-                      </span>
-                    )}
                   </div>
                 );
               })}
@@ -6114,8 +6144,11 @@ export default function AnalysisResultPage() {
                     .replace(/확인되지\s+않았습니다\s*지표는\s+없습니다[.!?。]?/g, '')
                     .replace(/[^.!?。]*지표는\s+없습니다[.!?。]?/g, '')
                     .replace(/[^.!?。]*존재하지\s+않았습니다[.!?。]?/g, '')
-                    .replace(/[^.!?。]*일부 지표에 대한[^.!?。]*확인되지 않았습니다[.!?。]?/g, '')
-                    .replace(/[^.!?。]*일부 지표에 대한[^.!?。]*제한적[^.!?。]*[.!?。]?/g, '')
+                    .replace(/[^.!?。]*(?:일부|특정)\s*지표에 대한[^.!?。]*(?:증빙은?\s*)?확인되지 않았습니다[.!?。]?/g, '')
+                    .replace(/[^.!?。]*(?:일부|특정)\s*지표에 대한[^.!?。]*제한적[^.!?。]*[.!?。]?/g, '')
+                    .replace(/[^.!?。]*증빙[^.!?。]*확인되지\s*않았습니다[.!?。]?/g, '')
+                    .replace(/\.\s*확인되지\s*않았습니다[.!?。]?/g, '.')
+                    .replace(/확인되지\s*않았습니다[.!?。]?\s*$/g, '')
                     .replace(/\s{2,}/g, ' ')
                     .trim()}
                 </p>
@@ -6189,8 +6222,10 @@ export default function AnalysisResultPage() {
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">검증 방식 안내</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px] text-gray-600">
               <div className="flex flex-col gap-1">
-                <span className="font-semibold text-sky-700">E (환경) — 정량 수치 검증</span>
-                <span>CSV 수치 직접 대조 · 입력값 vs 추출값 오차율 계산 · 5개 환경 지표 수치 정합성 판정</span>
+                <span className="font-semibold text-sky-700">E (환경) — 환경 성과 및 데이터 검증</span>
+                <span>업종·규모별 평균 대비 환경 성과 평가 ·
+                      CSV 데이터 기반 수치 검증 ·
+                      전력·가스·탄소·폐기물·수자원 5대 환경 지표 분석</span>
               </div>
               <div className="flex flex-col gap-1">
                 <span className="font-semibold text-purple-700">S/G (사회·지배구조) — 문서 근거 탐지</span>
@@ -6210,8 +6245,8 @@ export default function AnalysisResultPage() {
               <span className="w-7 h-7 rounded-lg bg-sky-50 flex items-center justify-center shrink-0">
                 <BarChart2 size={14} className="text-sky-500" />
               </span>
-              <span className="text-sm font-semibold text-gray-700">수치 일관성 검증 상세</span>
-              <span className="text-[10px] text-gray-400 ml-1">— E 카테고리 입력값 vs 증빙 문서 추출값 수치 비교 <span className="text-gray-300">·</span> Evidence Quality(의미 유사도)와 별도 계산</span>
+              <span className="text-sm font-semibold text-gray-700">환경 데이터 검증 상세</span>
+              <span className="text-[10px] text-gray-400 ml-1">입력값과 제출 데이터의 일치 여부를 검증하고, 업종 평균 대비 환경 성과를 종합 평가합니다.<span className="text-gray-300">·</span></span>
               <span className="ml-auto flex items-center gap-2">
                 <span className="text-[10px] font-semibold text-sky-600 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded">
                   {numericRows.length}개 항목
