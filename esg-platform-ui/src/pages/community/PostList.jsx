@@ -118,8 +118,8 @@ const PostList = () => {
 
     if (post.adminStatus === 'APPROVED') {
       badgeText = '✅ 인증 완료';
-      badgeColor = '#339af0';
-      badgeBg = '#e7f5ff';
+      badgeColor = '#16A87A';
+      badgeBg = '#E6F7F1';
     } else if (post.adminStatus === 'REJECTED') {
       badgeText = '❌ 인증 반려';
       badgeColor = '#fa5252';
@@ -143,7 +143,7 @@ const PostList = () => {
         <div>
           <h2 style={{ fontSize: '28px', fontWeight: '800', margin: 0 }}>🌱 ESG Community</h2>
           {isSystemAdmin && (
-            <span style={{ fontSize: '12px', color: '#339af0', fontWeight: 'bold' }}>● 시스템 관리자 모드 (전체 기업 노출)</span>
+            <span style={{ fontSize: '12px', color: '#16A87A', fontWeight: 'bold' }}>● 시스템 관리자 모드 (전체 기업 노출)</span>
           )}
         </div>
 
@@ -157,7 +157,7 @@ const PostList = () => {
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
               placeholder="검색어를 입력하세요..."
             />
-            <button onClick={handleSearch} style={{ cursor: 'pointer', background: 'none', border: 'none', fontWeight: 'bold', color: '#339af0' }}>검색</button>
+            <button onClick={handleSearch} style={{ cursor: 'pointer', background: 'none', border: 'none', fontWeight: 'bold', color: '#16A87A' }}>검색</button>
           </div>
         </div>
       </div>
@@ -172,7 +172,7 @@ const PostList = () => {
               <div className="post-header" style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div className="user-info" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <div className="user-avatar" style={{
-                    width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#339af0',
+                    width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#16A87A',
                     color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 'bold'
                   }}>
                     {post.nickname ? post.nickname.substring(0, 1) : '?'}
@@ -240,7 +240,7 @@ const PostList = () => {
         )}
 
         {/* 🌟 무한 스크롤 감지 및 로딩 표시 영역 */}
-        <div ref={observerRef} style={{ padding: '20px', textAlign: 'center', color: '#339af0', fontWeight: 'bold', fontSize: '14px' }}>
+        <div ref={observerRef} style={{ padding: '20px', textAlign: 'center', color: '#16A87A', fontWeight: 'bold', fontSize: '14px' }}>
           {isLoading && '게시물을 불러오는 중... 🌱'}
         </div>
       </div>
@@ -251,7 +251,7 @@ const PostList = () => {
 };
 
 // 스타일 가이드
-const fabStyle = { position: 'fixed', bottom: '30px', right: '30px', width: '60px', height: '60px', backgroundColor: '#339af0', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '35px', textDecoration: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', zIndex: 1000, transition: 'transform 0.2s', cursor: 'pointer' };
+const fabStyle = { position: 'fixed', bottom: '30px', right: '30px', width: '60px', height: '60px', backgroundColor: '#16A87A', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '35px', textDecoration: 'none', boxShadow: '0 4px 12px rgba(22,168,122,0.2)', zIndex: 1000, transition: 'transform 0.2s', cursor: 'pointer' };
 const activityBadgeStyle = { backgroundColor: '#ebfbee', color: '#2b8a3e', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '4px', border: '1px solid #d3f9d8' };
 
 export default PostList;

@@ -202,8 +202,8 @@ const Login = () => {
         autoClose: 2500,
         hideProgressBar: true,
         style: {
-          borderLeft: '4px solid #339af0',
-          color: '#0062b3',
+          borderLeft: '4px solid #16A87A',
+          color: '#0D7A58',
           fontWeight: '600'
         }
       });

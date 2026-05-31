@@ -24,8 +24,8 @@ import java.util.regex.Pattern;
  *
  * <pre>
  * 지원 포맷 (헤더 필수):
- *   month,electricity_kwh,gas_mj,carbon_tco2,waste_kg,water_m3
- *   2026-01,1200,530,0.8,500,5000
+ *   month,electricity_kwh,gas_nm3,carbon_tco2,waste_kg,water_m3
+ *   2026-01,1200,300,0.8,500,5000
  *
  * - month: YYYY-MM 형식 필수
  * - 나머지 컬럼: 선택 (없으면 null 저장)
@@ -111,15 +111,16 @@ public class EnvironmentCsvService {
     }
 
     private int[] resolveColumnIndices(String[] headers) {
-        // [0]=month, [1]=electricity_kwh, [2]=gas(MJ 또는 Nm³), [3]=carbon_tco2, [4]=waste_kg, [5]=water_m3, [6]=gas단위(0=MJ,1=Nm³)
+        // [0]=month, [1]=electricity_kwh, [2]=gas_nm3(Nm³), [3]=carbon_tco2, [4]=waste_kg, [5]=water_m3
+        // gas는 Nm³ 단위 단일 표준: gas_nm3 컬럼만 공식 지원, 변환 없이 그대로 저장
         int[] idx = {-1, -1, -1, -1, -1, -1, 0};
         for (int i = 0; i < headers.length; i++) {
             String h = headers[i].trim().toLowerCase();
             switch (h) {
                 case "month"           -> idx[0] = i;
                 case "electricity_kwh" -> idx[1] = i;
-                case "gas_mj"          -> { idx[2] = i; idx[6] = 0; }  // MJ 단위
-                case "gas_nm3", "gas_nm³" -> { idx[2] = i; idx[6] = 1; }  // Nm³ 단위 → MJ로 변환 필요
+                case "gas_nm3", "gas_nm³" -> { idx[2] = i; idx[6] = 1; }  // Nm³ 단위
+                case "gas_mj"          -> { idx[2] = i; idx[6] = 0; }  // 레거시 MJ 컬럼 호환
                 case "carbon_tco2"     -> idx[3] = i;
                 case "waste_kg"        -> idx[4] = i;
                 case "water_m3"        -> idx[5] = i;
@@ -130,10 +131,14 @@ public class EnvironmentCsvService {
     }
 
     private EnvironmentDataRow parseRow(String[] cols, int[] idx) {
+        Double rawGas = getDouble(cols, idx[2]);
+        // idx[6]=0 이면 레거시 gas_mj 컬럼 → MJ를 Nm³로 환산 (÷38.4)
+        // idx[6]=1 이면 gas_nm3 컬럼 → Nm³ 값 그대로 저장
+        Double gasNm3 = (rawGas != null && idx[6] == 0) ? rawGas / 38.4 : rawGas;
         return EnvironmentDataRow.builder()
                 .month(        getString(cols, idx[0]))
                 .electricityKwh(getDouble(cols, idx[1]))
-                .gasMj(         getDouble(cols, idx[2]))  // gas_nm3 컬럼이면 Nm³ 값 그대로 저장
+                .gasMj(         gasNm3)
                 .carbonTco2(    getDouble(cols, idx[3]))
                 .wasteKg(       getDouble(cols, idx[4]))
                 .waterM3(       getDouble(cols, idx[5]))

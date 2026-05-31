@@ -127,7 +127,7 @@ public class AnalysisResultResponse {
         private Double  inputValue;
         /** OCR/CSV 문서 추출값 */
         private Double  extractedValue;
-        /** 수치 단위 ("kWh" / "MJ" / "tCO₂" / "kg" / "m³") */
+        /** 수치 단위 ("kWh" / "Nm³" / "tCO₂" / "kg" / "m³") */
         private String  unit;
     }
 

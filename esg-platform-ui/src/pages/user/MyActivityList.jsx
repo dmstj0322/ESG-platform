@@ -64,7 +64,7 @@ const MyActivityList = () => {
   };
 
   const handleCancel = async (orderId, productName) => {
-    if (!window.confirm(`[${productName}] 결제를 취소하시겠습니까?`)) return;
+    if (!window.confirm(`[${productName}] 주문을 취소하시겠습니까?`)) return;
     try {
       await api.post(`/market/orders/${orderId}/cancel`, {}, { headers: { 'X-Member-Id': user.memberId } });
       // alert("취소 및 포인트 환불이 완료되었습니다.");
@@ -92,8 +92,7 @@ const MyActivityList = () => {
 
   const renderVerifyBadge = (status) => {
     if (status === 'APPROVED') return <span style={verifyBadgeStyle('#ebfbee', '#2b8a3e')}>✅ 인증 완료</span>;
-    if (status === 'REJECTED') return <span style={verifyBadgeStyle('#fff5f5', '#e03131')}>❌ 관리자 반려</span>;
-    if (status === 'AUTO_REJECTED') return <span style={verifyBadgeStyle('#fff0f0', '#c92a2a')}>🤖❌ AI 자동 반려</span>;
+    if (status === 'REJECTED') return <span style={verifyBadgeStyle('#fff5f5', '#e03131')}>❌ 인증 반려</span>;
     return <span style={verifyBadgeStyle('#fff4e6', '#fd7e14')}>⏳ 심사 대기</span>;
   };
 
@@ -116,7 +115,7 @@ const MyActivityList = () => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, opacity: item.status === 'CANCELED' ? 0.5 : 1 }}>
                     {/* 🌟 기존 코드에 뱃지만 추가 */}
                     {item.category === 'GIFTICON' ? (
-                      <div style={iconCircleStyle('#e7f5ff', '#1c7ed6')}>🎁</div>
+                      <div style={iconCircleStyle('#E6F7F1', '#16A87A')}>🎁</div>
                     ) : (
                       <div style={iconCircleStyle('#f3f0ff', '#7048e8')}>🤝</div>
                     )}
@@ -126,7 +125,7 @@ const MyActivityList = () => {
                         {item.status === 'CANCELED' ? <del>{item.productName}</del> : item.productName}
                       </div>
                       <div style={{ fontSize: '13px', color: '#868e96', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ color: '#22b8cf', fontWeight: '800' }}>{item.totalPrice?.toLocaleString()} P</span>
+                        <span style={{ color: '#16A87A', fontWeight: '800' }}>{item.totalPrice?.toLocaleString()} P</span>
                         <span>|</span>
                         <span>{new Date(item.createdDate).toLocaleDateString()}</span>
                       </div>
@@ -158,11 +157,37 @@ const MyActivityList = () => {
               return (
                 <div key={item.id || index} style={listCardStyle} onClick={() => navigate(`/posts/${item.id}`)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, overflow: 'hidden', cursor: 'pointer' }}>
-                    {item.imageUrls?.[0] ? (
+                    {/* {item.imageUrls?.[0] ? (
                       <img src={item.imageUrls[0]} style={thumbnailImgStyle} alt="thumb" />
                     ) : (
-                      <div style={iconCircleStyle('#e7f5ff', '#339af0')}>📝</div>
-                    )}
+                      <div style={iconCircleStyle('#E6F7F1', '#16A87A')}>📝</div>
+                    )} */}
+                    <div style={{ position: 'relative', width: '50px', height: '50px' }}>
+                      {item.imageUrls?.[0] ? (
+                        <>
+                          <img src={item.imageUrls[0]} style={thumbnailImgStyle} alt="thumb" />
+                          {/* 사진이 1장보다 많을 때만 표시 */}
+                          {item.imageUrls.length > 1 && (
+                            <div style={{
+                              position: 'absolute',
+                              top: 0, left: 0, width: '100%', height: '100%',
+                              backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                              color: '#fff',
+                              display: 'flex',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              fontSize: '12px',
+                              fontWeight: 'bold',
+                              borderRadius: '8px'
+                            }}>
+                              +{item.imageUrls.length - 1}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div style={iconCircleStyle('#E6F7F1', '#16A87A')}>📝</div>
+                      )}
+                    </div>
                     <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                       <div style={mainTitleStyle}>{item.title}</div>
                       <div style={subContentStyle}>{item.content}</div>
@@ -176,9 +201,9 @@ const MyActivityList = () => {
                   <div style={rightMetaStyle}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
                       {renderVerifyBadge(item.adminStatus)}
-                      {['REJECTED', 'AUTO_REJECTED'].includes(item.adminStatus) && item.rejectionReason && (
+                      {item.adminStatus === 'REJECTED' && item.rejectionReason && (
                         <div style={{ fontSize: '11px', color: '#e03131', fontWeight: 'bold', marginTop: '4px', maxWidth: '120px', textAlign: 'right' }}>
-                          <strong>{item.adminStatus === 'AUTO_REJECTED' ? '🤖 AI 반려 사유: ' : '❌ 반려 사유: '}</strong> {item.rejectionReason}
+                          <strong>반려 사유: </strong> {item.rejectionReason}
                         </div>
                       )}
                     </div>
@@ -244,7 +269,7 @@ const MyActivityList = () => {
 // ==========================================
 // 🎨 스타일 명세 
 // ==========================================
-const pageContainer = { padding: '40px 20px', maxWidth: '900px', margin: '0 auto', backgroundColor: '#fdfdfd', minHeight: '100vh', fontFamily: 'sans-serif' };
+const pageContainer = { padding: '40px 20px', maxWidth: '900px', margin: '0 auto', backgroundColor: '#fdfdfd', minHeight: '100vh', fontFamily: "'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" };
 
 const headerWrapperStyle = { marginBottom: '30px', display: 'flex', flexDirection: 'column', gap: '8px' };
 const backLinkStyle = { textDecoration: 'none', color: '#adb5bd', fontSize: '14px', fontWeight: 'bold' };
@@ -264,12 +289,12 @@ const thumbnailImgStyle = { width: '50px', height: '50px', borderRadius: '8px', 
 const verifyBadgeStyle = (bg, color) => ({ padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', backgroundColor: bg, color: color, display: 'inline-block' });
 const iconCircleStyle = (bg, color) => ({ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: bg, color: color, display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0 });
 
-const statusBadgeStyle = (status) => ({ padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', backgroundColor: status === 'CANCELED' ? '#fff5f5' : '#e7f5ff', color: status === 'CANCELED' ? '#fa5252' : '#1c7ed6' });
-const viewVoucherBtnStyle = { padding: '6px 12px', backgroundColor: '#339af0', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' };
+const statusBadgeStyle = (status) => ({ padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', backgroundColor: status === 'CANCELED' ? '#fff5f5' : '#E6F7F1', color: status === 'CANCELED' ? '#fa5252' : '#0D7A58' });
+const viewVoucherBtnStyle = { padding: '6px 12px', backgroundColor: '#16A87A', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' };
 const cancelBtnStyle = { padding: '6px 12px', backgroundColor: '#fff', color: '#fa5252', border: '1px solid #fa5252', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' };
 const disabledCancelBtnStyle = { padding: '6px 12px', backgroundColor: '#f8f9fa', color: '#adb5bd', border: '1px solid #dee2e6', borderRadius: '6px', cursor: 'not-allowed', fontSize: '12px', fontWeight: 'bold' };
 
-const loadMoreBtnStyle = { padding: '12px 30px', backgroundColor: '#fff', border: '1px solid #dee2e6', borderRadius: '10px', color: '#339af0', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', transition: 'all 0.2s' };
+const loadMoreBtnStyle = { padding: '12px 30px', backgroundColor: '#fff', border: '1px solid #dee2e6', borderRadius: '10px', color: '#16A87A', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', transition: 'all 0.2s' };
 const emptyTextStyle = { textAlign: 'center', padding: '60px 0', color: '#adb5bd', fontSize: '15px' };
 
 export default MyActivityList;

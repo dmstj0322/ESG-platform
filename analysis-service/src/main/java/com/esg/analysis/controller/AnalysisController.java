@@ -161,8 +161,9 @@ public class AnalysisController {
             @RequestPart("totalItems") String totalItemsStr,
             @RequestPart(value = "file",      required = false) MultipartFile file,
             @RequestPart(value = "eMetrics",  required = false) String eMetricsJson,
-            @RequestPart(value = "ksicCode",  required = false) String ksicCode,
-            @RequestPart(value = "envMode",   required = false) String envMode) {
+            @RequestPart(value = "ksicCode",      required = false) String ksicCode,
+            @RequestPart(value = "envMode",       required = false) String envMode,
+            @RequestPart(value = "employeeCount", required = false) String employeeCountStr) {
 
         log.info("======================================================");
         log.info("[CATEGORY-START] /api/v1/analysis/category RECEIVED");
@@ -202,9 +203,16 @@ public class AnalysisController {
                 log.info("[Category] E 수치 입력 파싱 완료 metrics={}", eMetricInputs.keySet());
             }
 
+            int employeeCount = 0;
+            if (employeeCountStr != null && !employeeCountStr.isBlank()) {
+                try { employeeCount = Integer.parseInt(employeeCountStr.trim()); }
+                catch (NumberFormatException ignored) {}
+            }
+            log.info("[Category] employeeCount={} (from request)", employeeCount);
+
             CategoryAnalysisResponse result =
                     categoryAnalysisService.analyze(category, answers, checkedCount, totalItems,
-                            file, eMetricInputs, ksicCode, envMode);
+                            file, eMetricInputs, ksicCode, envMode, employeeCount);
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
             log.warn("[Category] 요청 거부 category={} 원인={}", category, e.getMessage());

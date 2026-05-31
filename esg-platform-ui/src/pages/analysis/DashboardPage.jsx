@@ -14,6 +14,7 @@ import { exportAnalysisResult } from '../../components/analysis/exportAnalysisRe
 
 // ── 상수 ─────────────────────────────────────────────────────────────
 const GRADE_COLOR = { S: '#7c3aed', A: '#059669', B: '#2563eb', C: '#d97706', D: '#dc2626' };
+const ACTIVITY_LABEL = { TUMBLER: '텀블러/다회용기', TRANSPORT: '대중교통', RECYCLE: '분리배출' };
 
 const SEV_STYLE = {
   HIGH: { bar: 'bg-red-500',   badgeCls: 'bg-red-50 text-red-600 border-red-200' },
@@ -86,6 +87,7 @@ export default function DashboardPage() {
   const [showAllHistory,   setShowAllHistory]   = useState(false);
   const [ecoPool,          setEcoPool]          = useState(null);
   const [recentPosts,      setRecentPosts]      = useState([]);
+  const [totalActivityCount, setTotalActivityCount] = useState(0);
 
   const analysisId = latestReport?.analysisId
     ?? localStorage.getItem('esg_latest_analysis_id');
@@ -124,13 +126,16 @@ export default function DashboardPage() {
       .catch(() => setEcoPool(null));
     api.get('/community/posts', { params: { size: 5, sort: 'createdDate,desc' } })
       .then(r => {
-        const list = Array.isArray(r.data) ? r.data
-                   : Array.isArray(r.data?.content) ? r.data.content
+        const raw  = r.data;
+        const list = Array.isArray(raw) ? raw
+                   : Array.isArray(raw?.content) ? raw.content
                    : [];
-        const approvedPosts = list.filter(post => post.adminStatus === 'APPROVED');
-        setRecentPosts(approvedPosts);
+        setRecentPosts(list);
+        setTotalActivityCount(raw?.totalElements ?? list.length);
+        // const approvedPosts = list.filter(post => post.adminStatus === 'APPROVED');
+        // setRecentPosts(approvedPosts);
       })
-      .catch(() => setRecentPosts([]));
+      .catch(() => { setRecentPosts([]); setTotalActivityCount(0); });
   }, [user?.companyId]);
 
   const kpis         = useMemo(() => computeDashboardKPIs(rawData), [rawData]);
@@ -218,10 +223,6 @@ export default function DashboardPage() {
       return `${Math.floor(hrs / 24)}일 전`;
     } catch { return ''; }
   };
-
-  const uniqueParticipants = useMemo(() =>
-    new Set(recentPosts.map(p => p.memberId)).size,
-  [recentPosts]);
 
   const trendMetrics = useMemo(() => {
     const delta = (arr) => arr.length >= 2
@@ -385,8 +386,7 @@ export default function DashboardPage() {
               </div>
 
               {/* EcoPoint 현황 */}
-              <div className={`${kpiCellBase} cursor-pointer hover:bg-gray-50/70`}
-                onClick={() => navigate('/community')}>
+              <div className={`${kpiCellBase}`}>
                 <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-1.5">
                   EcoPoint 현황
                 </p>
@@ -445,48 +445,62 @@ export default function DashboardPage() {
         {/* ── Row 1: AI Action Center + ESG Snapshot ───────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-4 items-stretch">
 
-          {/* EcoPoint 참여 현황 */}
+          {/* EcoPoint 활동 현황 */}
           <div className="bg-white rounded-xl border border-emerald-200 shadow-sm overflow-hidden flex flex-col">
 
             {/* 헤더 */}
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-emerald-100 bg-emerald-50/30">
+            <div className="flex items-center gap-3 px-5 py-3 border-b border-emerald-100 bg-emerald-50/30">
               <span className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
                 <Leaf size={13} className="text-emerald-600" />
               </span>
               <div>
-                <p className="text-[13px] font-semibold text-gray-900">EcoPoint 참여 현황</p>
-                <p className="text-[11px] text-gray-400">직원 친환경 활동 기반 참여 현황</p>
+                <p className="text-[13px] font-semibold text-gray-900">EcoPoint 활동 현황</p>
+                <p className="text-[11px] text-gray-400">활동 인증 게시글 기반 현황</p>
               </div>
-              {ecoPool?.esgPoints > 0 && (
+              {totalActivityCount > 0 && (
                 <span className="ml-auto text-[10px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg whitespace-nowrap">
-                  누적 활동 중
+                  활동 중
                 </span>
               )}
             </div>
 
             {/* 2열 지표 */}
             <div className="grid grid-cols-2 divide-x divide-gray-100 border-b border-gray-100">
-              <div className="px-4 py-3 text-center">
-                <p className="text-[10px] text-gray-400 mb-1">참여 직원</p>
+              <div className="px-4 py-2 text-center">
+                <p className="text-[10px] text-gray-400 mb-1">누적 활동 수</p>
                 <p className="text-[20px] font-black text-gray-800 tabular-nums leading-none">
-                  {uniqueParticipants > 0 ? uniqueParticipants : '—'}
+                  {totalActivityCount > 0 ? totalActivityCount : '—'}
                 </p>
-                <p className="text-[9px] text-gray-300 mt-0.5">명</p>
+                <p className="text-[9px] text-gray-300 mt-0.5">건</p>
               </div>
-              <div className="px-4 py-3 text-center">
-                <p className="text-[10px] text-gray-400 mb-1">최근 활동</p>
-                <p className="text-[20px] font-black text-gray-800 tabular-nums leading-none">
-                  {recentPosts.length > 0 ? recentPosts.length : '—'}
-                </p>
-                <p className="text-[9px] text-gray-300 mt-0.5">건 확인</p>
+              <div className="px-4 py-2 text-center">
+                <p className="text-[10px] text-gray-400 mb-1">최근 인증 활동</p>
+                {(() => {
+                  const recent = recentPosts[0];
+                  const typeKey = recent?.activityType ?? recent?.aiResult;
+                  const label   = ACTIVITY_LABEL[typeKey] ?? recent?.title;
+                  return label ? (
+                    <>
+                      <p className="text-[12px] font-black text-emerald-700 leading-tight truncate px-1">
+                        {label}
+                      </p>
+                      <p className="text-[9px] text-gray-300 mt-0.5">가장 최근</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-[20px] font-black text-gray-300 leading-none">—</p>
+                      <p className="text-[9px] text-gray-300 mt-0.5">없음</p>
+                    </>
+                  );
+                })()}
               </div>
             </div>
 
             {/* 최근 활동 피드 */}
-            <div className="px-5 py-3 flex-1 flex flex-col">
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-2">최근 참여 활동</p>
+            <div className="px-5 py-2 flex-1 flex flex-col">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-1.5">최근 활동 목록</p>
               {recentPosts.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center py-6 gap-2 text-center">
+                <div className="flex-1 flex flex-col items-center justify-center py-4 gap-2 text-center">
                   <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
                     <Leaf size={16} className="text-emerald-400" />
                   </div>
@@ -500,24 +514,37 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="divide-y divide-gray-50">
-                  {recentPosts.slice(0, 4).map((post, i) => (
-                    <div key={post.id ?? i} className="flex items-center gap-3 py-2.5">
-                      <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 text-[11px] font-bold text-emerald-700">
-                        {(post.nickname ?? '?')[0]}
+                  {recentPosts.slice(0, 3).map((post, i) => {
+                    const typeKey     = post.activityType ?? post.aiResult;
+                    const actLabel    = ACTIVITY_LABEL[typeKey] ?? post.title ?? '친환경 활동 인증';
+                    const statusColor = post.adminStatus === 'APPROVED' ? 'text-emerald-600'
+                                      : post.adminStatus === 'REJECTED' ? 'text-red-400'
+                                      : 'text-amber-500';
+                    const statusText  = post.adminStatus === 'APPROVED' ? '인증 완료'
+                                      : post.adminStatus === 'REJECTED' ? '반려'
+                                      : '심사 중';
+                    return (
+                      <div key={post.id ?? i} className="flex items-center gap-3 py-2">
+                        <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 text-[11px] font-bold text-emerald-700">
+                          {(post.nickname ?? '?')[0]}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] font-semibold text-gray-800 leading-snug truncate">
+                            {actLabel}
+                          </p>
+                          <p className="text-[10px] text-gray-400 truncate">
+                            {maskNickname(post.nickname)}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-0.5 shrink-0">
+                          <span className={`text-[9px] font-semibold ${statusColor}`}>{statusText}</span>
+                          <span className="text-[9px] text-gray-300 tabular-nums">
+                            {fmtFeedTime(post.createdDate)}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-semibold text-gray-800 leading-snug">
-                          {maskNickname(post.nickname)}
-                        </p>
-                        <p className="text-[10px] text-gray-400 truncate">
-                          {post.activityType ?? post.title ?? '친환경 활동 인증'}
-                        </p>
-                      </div>
-                      <span className="text-[9px] text-gray-300 shrink-0 tabular-nums">
-                        {fmtFeedTime(post.createdDate)}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
               <div className="pt-2.5 border-t border-gray-100 mt-auto">
@@ -533,7 +560,7 @@ export default function DashboardPage() {
 
           {/* ESG Score Snapshot */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100">
               <span className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
                 <BarChart2 size={13} className="text-indigo-500" />
               </span>
@@ -544,14 +571,14 @@ export default function DashboardPage() {
             </div>
 
             {!hasData ? (
-              <div className="flex flex-col items-center justify-center py-14 gap-3">
+              <div className="flex flex-col items-center justify-center py-10 gap-3">
                 <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
                   <Activity size={16} className="text-gray-400" />
                 </div>
                 <p className="text-[13px] text-gray-400 font-medium">분석 결과 없음</p>
               </div>
             ) : (
-              <div className="px-5 py-4 space-y-3 flex flex-col flex-1">
+              <div className="px-5 py-3 space-y-2.5 flex flex-col flex-1">
                 {[
                   { cat: 'E', label: '환경',     v: kpis.eScore, color: '#059669', bg: '#05966910', Icon: Leaf },
                   { cat: 'S', label: '사회',     v: kpis.sScore, color: '#2563eb', bg: '#2563eb10', Icon: Users },

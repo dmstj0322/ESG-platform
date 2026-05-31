@@ -202,7 +202,7 @@ const MyPage = () => {
                     <div style={{ fontWeight: 'bold' }}>{post.title}</div>
                     <div style={{ fontSize: '12px', color: '#868e96' }}>{new Date(post.createdDate).toLocaleDateString()}</div>
                   </div>
-                  <div style={{ fontWeight: 'bold', color: '#339af0', flexShrink: 0 }}>
+                  <div style={{ fontWeight: 'bold', color: '#16A87A', flexShrink: 0 }}>
                     +{co2ReductionMap[post.aiResult] || 0}g
                   </div>
                 </div>
@@ -237,14 +237,14 @@ const MyPage = () => {
         <div style={{ ...co2CardStyle, cursor: 'pointer' }} onClick={() => setShowCo2Modal(true)}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '100%' }}>
             <div>
-              <h3 style={{ margin: '0 0 8px 0', fontSize: '15px', color: '#0062b3' }}>나의 탄소 절감 이력</h3>
-              <p style={{ margin: '0', fontSize: '28px', fontWeight: 'bold', color: '#339af0' }}>
+              <h3 style={{ margin: '0 0 8px 0', fontSize: '15px', color: '#0D7A58' }}>나의 탄소 절감 이력</h3>
+              <p style={{ margin: '0', fontSize: '28px', fontWeight: 'bold', color: '#16A87A' }}>
                 {totalKg} <span style={{ fontSize: '16px', fontWeight: 'normal', color: '#495057' }}>kg CO₂</span>
               </p>
             </div>
             <div style={treeVisualStyle}>
               <span style={{ fontSize: '28px' }}>🌲</span>
-              <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#0062b3', marginTop: '4px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#0D7A58', marginTop: '4px' }}>
                 소나무 {pineTrees}그루
               </span>
             </div>
@@ -255,7 +255,7 @@ const MyPage = () => {
         <div style={badgeCardStyle}>
           <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', color: '#343a40', display: 'flex', justifyContent: 'space-between' }}>
             <span>나의 뱃지 진행도</span>
-            <span style={{ fontSize: '11px', color: '#339af0', fontWeight: 'normal', alignSelf: 'flex-end' }}>* 획득한 뱃지를 눌러 대표로 설정하세요</span>
+            <span style={{ fontSize: '11px', color: '#16A87A', fontWeight: 'normal', alignSelf: 'flex-end' }}>* 획득한 뱃지를 눌러 대표로 설정하세요</span>
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
@@ -279,8 +279,8 @@ const MyPage = () => {
                     style={{
                       ...badgeIconCircleStyle(isUnlocked),
                       cursor: (isUnlocked && earnedMatchedBadge) ? 'pointer' : 'default',
-                      border: isRepresentative ? '2px solid #339af0' : (isUnlocked ? '1px solid #ccedff' : 'none'),
-                      boxShadow: isRepresentative ? '0 0 8px rgba(51, 154, 240, 0.4)' : 'none',
+                      border: isRepresentative ? '2px solid #16A87A' : (isUnlocked ? '1px solid #A8DFD0' : 'none'),
+                      boxShadow: isRepresentative ? '0 0 8px rgba(22, 168, 122, 0.4)' : 'none',
                       transition: 'all 0.2s'
                     }}
                   >
@@ -291,10 +291,10 @@ const MyPage = () => {
 
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '6px' }}>
-                      <span style={{ fontSize: '13px', fontWeight: 'bold', color: isUnlocked ? '#0062b3' : '#adb5bd' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 'bold', color: isUnlocked ? '#0D7A58' : '#adb5bd' }}>
                         {displayBadge.name}
                         {/* 🌟 대표 뱃지 라벨 추가 */}
-                        {isRepresentative && <span style={{ marginLeft: '6px', fontSize: '10px', color: '#339af0', backgroundColor: '#e8f7ff', padding: '2px 6px', borderRadius: '10px' }}>대표</span>}
+                        {isRepresentative && <span style={{ marginLeft: '6px', fontSize: '10px', color: '#0D7A58', backgroundColor: '#E6F7F1', padding: '2px 6px', borderRadius: '10px' }}>대표</span>}
                       </span>
                       <span style={{ fontSize: '11px', color: '#868e96', fontWeight: 'bold' }}>
                         {currentCount} <span style={{ fontWeight: 'normal' }}>/ {targetCount}회</span>
@@ -305,7 +305,7 @@ const MyPage = () => {
                       <div style={{
                         width: `${progressPercent}%`,
                         height: '100%',
-                        backgroundColor: '#339af0',
+                        backgroundColor: '#16A87A',
                         borderRadius: '4px',
                         transition: 'width 0.5s ease-in-out'
                       }} />
@@ -316,7 +316,7 @@ const MyPage = () => {
                         다음 단계: <span style={{ fontSize: '12px' }}>{nextBadge.defaultImg}</span> {nextBadge.name}
                       </div>
                     ) : (
-                      <div style={{ fontSize: '10px', color: '#339af0', marginTop: '6px', textAlign: 'right', fontWeight: 'bold' }}>
+                      <div style={{ fontSize: '10px', color: '#16A87A', marginTop: '6px', textAlign: 'right', fontWeight: 'bold' }}>
                         🏆 최고 레벨 달성!
                       </div>
                     )}
@@ -358,7 +358,7 @@ const MyPage = () => {
                     <div key={o.orderId || o.id} style={listCardStyle}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, opacity: o.status === 'CANCELED' ? 0.5 : 1 }}>
                         {o.category === 'GIFTICON' ? (
-                          <div style={iconCircleStyle('#e7f5ff', '#1c7ed6')}>🎁</div>
+                          <div style={iconCircleStyle('#E6F7F1', '#16A87A')}>🎁</div>
                         ) : (
                           <div style={iconCircleStyle('#f3f0ff', '#7048e8')}>🤝</div>
                         )}
@@ -368,7 +368,7 @@ const MyPage = () => {
                             {o.status === 'CANCELED' ? <del>{o.productName}</del> : o.productName}
                           </div>
                           <div style={{ fontSize: '13px', color: '#868e96', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ color: '#22b8cf', fontWeight: '800' }}>{o.totalPrice?.toLocaleString()} P</span>
+                            <span style={{ color: '#16A87A', fontWeight: '800' }}>{o.totalPrice?.toLocaleString()} P</span>
                             <span>|</span>
                             <span>{new Date(o.orderDate || o.createdDate).toLocaleDateString()}</span>
                           </div>
@@ -413,7 +413,7 @@ const MyPage = () => {
                     {/* {post.imageUrls?.[0] ? (
                       <img src={post.imageUrls[0]} style={thumbnailImgStyle} alt="thumb" />
                     ) : (
-                      <div style={iconCircleStyle('#e7f5ff', '#339af0')}>📝</div>
+                      <div style={iconCircleStyle('#E6F7F1', '#16A87A')}>📝</div>
                     )} */}
                     <div style={{ position: 'relative', width: '50px', height: '50px' }}>
                       {post.imageUrls?.[0] ? (
@@ -438,7 +438,7 @@ const MyPage = () => {
                           )}
                         </>
                       ) : (
-                        <div style={iconCircleStyle('#e7f5ff', '#339af0')}>📝</div>
+                        <div style={iconCircleStyle('#E6F7F1', '#16A87A')}>📝</div>
                       )}
                     </div>
                     <div style={{ textAlign: 'left', flex: 1, overflow: 'hidden' }}>
@@ -523,23 +523,23 @@ const MyPage = () => {
 };
 
 // 스타일 가이드
-const pageContainer = { padding: '40px 20px', maxWidth: '900px', margin: '0 auto', fontFamily: 'sans-serif', backgroundColor: '#fdfdfd', minHeight: '100vh' };
-const dashboardCardStyle = { display: 'flex', alignItems: 'center', padding: '30px', marginBottom: '20px', backgroundColor: '#fff', borderRadius: '20px', border: '1px solid #e9ecef', boxShadow: '0 12px 30px rgba(51, 154, 240, 0.04)' };
+const pageContainer = { padding: '40px 20px', maxWidth: '900px', margin: '0 auto', fontFamily: "'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", backgroundColor: '#fdfdfd', minHeight: '100vh' };
+const dashboardCardStyle = { display: 'flex', alignItems: 'center', padding: '30px', marginBottom: '20px', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e9ecef', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
 const profileSectionStyle = { display: 'flex', alignItems: 'center', gap: '18px', flex: 1 };
 const avatarStyle = { width: '54px', height: '54px', borderRadius: '50%', backgroundColor: '#f1f3f5', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '24px' };
 const nicknameStyle = { fontSize: '20px', fontWeight: '800', color: '#212529', marginBottom: '6px' };
-const roleBadgeStyle = { display: 'inline-block', backgroundColor: '#e8f7ff', color: '#0062b3', padding: '3px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold' };
+const roleBadgeStyle = { display: 'inline-block', backgroundColor: '#E6F7F1', color: '#0D7A58', padding: '3px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold' };
 
 const verticalDividerStyle = { width: '1px', height: '60px', backgroundColor: '#e9ecef', margin: '0 30px' };
 
 const pointSectionStyle = { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' };
 const pointLabelStyle = { fontSize: '13px', color: '#868e96', fontWeight: '600' };
 const pointHistoryLinkStyle = { fontSize: '12px', color: '#adb5bd', textDecoration: 'none', fontWeight: '600', transition: 'color 0.2s' };
-const pointValueStyle = { fontSize: '30px', fontWeight: '900', color: '#339af0', letterSpacing: '-0.5px' };
+const pointValueStyle = { fontSize: '30px', fontWeight: '800', color: '#16A87A', letterSpacing: '-0.5px' };
 
 const tabContainerStyle = { display: 'flex', borderBottom: '1px solid #dee2e6', backgroundColor: '#fff', borderRadius: '16px 16px 0 0', border: '1px solid #e9ecef' };
 const tabStyle = { padding: '16px 20px', backgroundColor: 'transparent', color: '#868e96', border: 'none', borderBottom: '3px solid transparent', cursor: 'pointer', fontWeight: 'bold' };
-const activeTabStyle = { ...tabStyle, color: '#0062b3', borderBottom: '3px solid #339af0' };
+const activeTabStyle = { ...tabStyle, color: '#0D7A58', borderBottom: '3px solid #16A87A' };
 const contentContainerStyle = { padding: '24px 0' };
 
 const sectionHeaderStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '15px', marginBottom: '15px', borderBottom: '2px solid #f1f3f5' };
@@ -547,7 +547,7 @@ const sectionTitleStyle = { margin: 0, fontSize: '18px', fontWeight: 'bold', col
 const viewAllBtnStyle = { background: 'none', border: 'none', color: '#868e96', fontSize: '14px', fontWeight: '600', cursor: 'pointer', padding: '0' };
 
 const listWrapper = { display: 'flex', flexDirection: 'column', gap: '12px' };
-const listCardStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 24px', backgroundColor: '#fff', border: '1px solid #e9ecef', borderRadius: '12px' };
+const listCardStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 24px', backgroundColor: '#fff', border: '1px solid #e9ecef', borderRadius: '12px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' };
 
 const mainTitleStyle = { fontWeight: '700', color: '#212529', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 const subContentStyle = { fontSize: '14px', color: '#868e96', marginTop: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
@@ -560,22 +560,22 @@ const thumbnailImgStyle = { width: '50px', height: '50px', borderRadius: '8px', 
 const verifyBadgeStyle = (bg, color) => ({ padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', backgroundColor: bg, color: color, display: 'inline-block' });
 const iconCircleStyle = (bg, color) => ({ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: bg, color: color, display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0 });
 
-const statusBadgeStyle = (status) => ({ padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', backgroundColor: status === 'CANCELED' ? '#fff5f5' : '#e7f5ff', color: status === 'CANCELED' ? '#fa5252' : '#1c7ed6' });
-const viewVoucherBtnStyle = { padding: '6px 12px', backgroundColor: '#339af0', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' };
+const statusBadgeStyle = (status) => ({ padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', backgroundColor: status === 'CANCELED' ? '#fff5f5' : '#E6F7F1', color: status === 'CANCELED' ? '#fa5252' : '#0D7A58' });
+const viewVoucherBtnStyle = { padding: '6px 12px', backgroundColor: '#16A87A', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' };
 const cancelBtnStyle = { padding: '6px 12px', backgroundColor: '#fff', color: '#fa5252', border: '1px solid #fa5252', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' };
 const disabledCancelBtnStyle = { padding: '6px 12px', backgroundColor: '#f8f9fa', color: '#adb5bd', border: '1px solid #dee2e6', borderRadius: '6px', cursor: 'not-allowed', fontSize: '12px', fontWeight: 'bold' };
 
 const emptyTextStyle = { textAlign: 'center', padding: '60px 0', color: '#adb5bd', fontSize: '15px', fontWeight: '500' };
 
 const esgDashboardWrapperStyle = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '35px' };
-const co2CardStyle = { backgroundColor: '#ffffff', borderRadius: '14px', padding: '24px', border: '1px solid #e9ecef', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' };
-const badgeCardStyle = { backgroundColor: '#ffffff', borderRadius: '14px', padding: '24px', border: '1px solid #e9ecef', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' };
-const treeVisualStyle = { display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: '#e8f7ff', padding: '12px 18px', borderRadius: '12px', border: '1px solid #ccedff' };
-const badgeIconCircleStyle = (unlocked) => ({ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: unlocked ? '#e1f3ff' : '#e9ecef', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '6px' });
+const co2CardStyle = { backgroundColor: '#ffffff', borderRadius: '12px', padding: '24px', border: '1px solid #e9ecef', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
+const badgeCardStyle = { backgroundColor: '#ffffff', borderRadius: '12px', padding: '24px', border: '1px solid #e9ecef', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
+const treeVisualStyle = { display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: '#E6F7F1', padding: '12px 18px', borderRadius: '12px', border: '1px solid #A8DFD0' };
+const badgeIconCircleStyle = (unlocked) => ({ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: unlocked ? '#E6F7F1' : '#e9ecef', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '6px' });
 
 const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 };
 const modalContentStyle = { backgroundColor: '#fff', padding: '24px', borderRadius: '16px', width: '400px', maxWidth: '90%' };
 const historyItemStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #f1f3f5' };
-const closeBtnStyle = { marginTop: '20px', width: '100%', padding: '12px', border: 'none', borderRadius: '8px', backgroundColor: '#339af0', color: '#fff', cursor: 'pointer', fontWeight: 'bold' };
+const closeBtnStyle = { marginTop: '20px', width: '100%', padding: '12px', border: 'none', borderRadius: '8px', backgroundColor: '#16A87A', color: '#fff', cursor: 'pointer', fontWeight: 'bold' };
 
 export default MyPage;

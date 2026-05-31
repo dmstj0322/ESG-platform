@@ -8,9 +8,9 @@ import lombok.Getter;
  *
  * <pre>
  * 헤더 예시:
- *   month,electricity_kwh,gas_mj,carbon_tco2,waste_kg,water_m3
+ *   month,electricity_kwh,gas_nm3,carbon_tco2,waste_kg,water_m3
  * 데이터 예시:
- *   2026-01,1200,530,0.8,500,5000
+ *   2026-01,1200,300,0.8,500,5000
  * </pre>
  *
  * 수치 필드는 null 허용 (해당 컬럼이 없거나 빈 셀인 경우).
@@ -25,7 +25,7 @@ public class EnvironmentDataRow {
     /** E-101: 전력 사용량 (kWh) */
     private final Double electricityKwh;
 
-    /** E-102: 가스 사용량 (MJ) */
+    /** E-102: 가스 사용량 (Nm³) — CSV 컬럼 gas_nm3 값을 그대로 저장 */
     private final Double gasMj;
 
     /** E-103: 탄소 배출량 (tCO2-eq) */

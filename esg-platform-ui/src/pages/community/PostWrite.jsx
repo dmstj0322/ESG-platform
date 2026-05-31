@@ -56,7 +56,7 @@ const PostWrite = () => {
 
       const response = await api.post('/community/posts/analyze-image', formData);
       const result = response.data;
-      
+
       setAiResult(result);
       if (result !== 'FAIL') {
         setActivityType(result);
@@ -97,9 +97,11 @@ const PostWrite = () => {
 
     try {
       await api.post('/community/posts', formData);
+      // alert("성공적으로 등록되었습니다!");
       toast.success("🌱 게시글이 성공적으로 등록되었습니다!", { containerId: 'main-toast' });
       navigate('/community');
     } catch (err) {
+      // alert("작성 실패: " + (err.response?.data?.message || "서버 오류"));
       toast.error("게시글 등록에 실패했습니다.", { containerId: 'main-toast' });
     }
   };
@@ -135,21 +137,21 @@ const PostWrite = () => {
             <label style={{ fontWeight: 'bold', fontSize: '14px', color: '#333' }}>
               활동 유형 {isAnalyzing && <span style={{fontSize: '12px', color: '#339af0', fontWeight: 'normal'}}>(🔄 AI 분석 중...)</span>}
             </label>
-            
+
             <select
-              value={activityType} 
+              value={activityType}
               onChange={(e) => setActivityType(e.target.value)}
               disabled={isAnalyzing} // 분석 중에는 선택 변경 불가
               style={{
                 padding: '12px',
                 fontSize: '15px',
-                border: '1px solid #339af0', 
+                border: '1px solid #339af0',
                 borderRadius: '8px',
                 outline: 'none',
                 backgroundColor: isAnalyzing ? '#f8f9fa' : '#e7f5ff',
                 cursor: isAnalyzing ? 'not-allowed' : 'pointer',
                 fontWeight: 'bold',
-                color: '#0062b3', 
+                color: '#0062b3',
                 appearance: 'auto'
               }}
             >
@@ -160,12 +162,12 @@ const PostWrite = () => {
 
             {/* 사진을 올렸을 때만 나타나는 AI 안내 문구 */}
             {previews.length > 0 && !isAnalyzing && (
-              <div style={{ 
-                fontSize: '12px', 
-                color: activityType === 'FAIL' ? '#d32f2f' : '#0062b3', 
-                paddingLeft: '4px' 
+              <div style={{
+                fontSize: '12px',
+                color: activityType === 'FAIL' ? '#d32f2f' : '#0062b3',
+                paddingLeft: '4px'
               }}>
-                {aiResult === 'FAIL' 
+                {aiResult === 'FAIL'
                   ? "⚠️ AI가 사진을 명확히 인식하지 못했습니다. 알맞은 활동을 직접 선택해 주세요."
                   : "🤖 AI가 사진을 분석하여 추천한 항목입니다. 맞지 않다면 직접 수정해 주세요."}
               </div>
@@ -201,9 +203,8 @@ const PostWrite = () => {
 
 // --- 스타일 정의 ---
 const containerStyle = { maxWidth: '500px', margin: '40px auto', padding: '0 20px', textAlign: 'left' };
-const formStyle = { backgroundColor: '#fff', padding: '30px', borderRadius: '15px', boxShadow: '0 10px 30px rgba(0,0,0,0.08)' };
-// 🌟 헤더 색상을 프로젝트 테마(블루)에 맞게 변경
-const headerStyle = { fontSize: '24px', fontWeight: '800', marginBottom: '25px', color: '#0062b3' };
+const formStyle = { backgroundColor: '#fff', padding: '30px', borderRadius: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 0 1px rgba(0,0,0,0.04)' };
+const headerStyle = { fontSize: '24px', fontWeight: '800', marginBottom: '25px', color: '#2b8a3e' };
 
 const uploadBoxStyle = { marginBottom: '20px' };
 const emptyUploadStyle = { display: 'flex', height: '200px', border: '2px dashed #ddd', borderRadius: '10px', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#888' };
@@ -218,8 +219,8 @@ const titleInputStyle = { padding: '12px', fontSize: '16px', border: '1px solid 
 const textAreaStyle = { padding: '12px', fontSize: '15px', border: '1px solid #eee', borderRadius: '8px', outline: 'none', minHeight: '150px', resize: 'none' };
 
 const submitBtnStyle = (disabled) => ({
-  width: '100%', padding: '15px', marginTop: '20px', backgroundColor: disabled ? '#adb5bd' : '#339af0', color: '#fff',
-  border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: disabled ? 'not-allowed' : 'pointer'
+  width: '100%', padding: '15px', marginTop: '20px', backgroundColor: disabled ? '#adb5bd' : '#16A87A', color: '#fff',
+  border: 'none', borderRadius: '10px', fontSize: '16px', fontWeight: 'bold', cursor: disabled ? 'not-allowed' : 'pointer'
 });
 const cancelBtnStyle = { width: '100%', padding: '10px', marginTop: '10px', background: 'none', border: 'none', color: '#888', cursor: 'pointer' };
 

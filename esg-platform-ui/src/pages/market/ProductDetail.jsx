@@ -136,17 +136,17 @@ const ProductDetail = () => {
 // --- 원본 Styles 유지 ---
 const containerStyle = { display: 'flex', gap: '50px', padding: '50px', maxWidth: '1200px', margin: '0 auto' };
 const imageContainerStyle = { flex: 1, position: 'relative' };
-const imageStyle = { width: '100%', maxWidth: '500px', height: 'auto', borderRadius: '15px', border: '1px solid #e9ecef', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', margin: '0 auto', display: 'block' };
+const imageStyle = { width: '100%', maxWidth: '500px', height: 'auto', borderRadius: '12px', border: '1px solid #e9ecef', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', margin: '0 auto', display: 'block' };
 const infoContainerStyle = { flex: 1, display: 'flex', flexDirection: 'column' };
-const categoryStyle = { color: '#339af0', fontWeight: 'bold', fontSize: '18px' };
+const categoryStyle = { color: '#16A87A', fontWeight: 'bold', fontSize: '18px' };
 const titleStyle = { fontSize: '36px', margin: '10px 0 20px 0' };
 const descriptionStyle = { color: '#666', lineHeight: '1.6', marginBottom: '30px' };
 const priceCardStyle = { backgroundColor: '#f8f9fa', padding: '20px', borderRadius: '12px', marginBottom: '30px' };
 const priceRowStyle = { display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '18px' };
-const priceStyle = { fontSize: '24px', fontWeight: 'bold', color: '#22b8cf' };
+const priceStyle = { fontSize: '24px', fontWeight: 'bold', color: '#16A87A' };
 const noticeBoxStyle = { backgroundColor: '#fff4f2', padding: '20px', borderRadius: '10px', marginBottom: '30px', fontSize: '14px' };
 const noticeTitle = { fontWeight: 'bold', color: '#fa5252', marginBottom: '10px' };
-const activeBtnStyle = { padding: '20px', fontSize: '20px', fontWeight: 'bold', color: '#fff', backgroundColor: '#339af0', border: 'none', borderRadius: '10px', cursor: 'pointer' };
+const activeBtnStyle = { padding: '20px', fontSize: '20px', fontWeight: 'bold', color: '#fff', backgroundColor: '#16A87A', border: 'none', borderRadius: '10px', cursor: 'pointer' };
 const disabledBtnStyle = { ...activeBtnStyle, backgroundColor: '#adb5bd', cursor: 'not-allowed' };
 const soldOutBadge = { position: 'absolute', top: '20px', left: '20px', backgroundColor: 'rgba(0,0,0,0.7)', color: '#fff', padding: '10px 20px', borderRadius: '5px', fontWeight: 'bold' };
 const donationProgressBox = { backgroundColor: '#f3f0ff', padding: '20px', borderRadius: '12px', marginBottom: '20px' };

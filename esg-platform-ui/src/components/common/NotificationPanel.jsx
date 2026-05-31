@@ -183,14 +183,14 @@ const panelContainerStyle = { position: 'absolute', top: '60px', right: '0', wid
 const panelHeaderStyle = { padding: '18px 20px', borderBottom: '1px solid #f1f3f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' };
 const countBadgeStyle = { backgroundColor: '#fa5252', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '10px', fontWeight: 'bold' };
 const filterTabStyle = { display: 'flex', gap: '8px', padding: '12px 20px', borderBottom: '1px solid #f1f3f5', backgroundColor: '#fcfcfc' };
-const filterBtnStyle = (active) => ({ padding: '6px 12px', borderRadius: '20px', border: 'none', fontSize: '12px', cursor: 'pointer', backgroundColor: active ? '#339af0' : '#e9ecef', color: active ? '#fff' : '#495057', fontWeight: active ? 'bold' : '500' });
+const filterBtnStyle = (active) => ({ padding: '6px 12px', borderRadius: '20px', border: 'none', fontSize: '12px', cursor: 'pointer', backgroundColor: active ? '#16A87A' : '#e9ecef', color: active ? '#fff' : '#495057', fontWeight: active ? 'bold' : '500' });
 const listScrollStyle = { maxHeight: '420px', overflowY: 'auto' };
 const dateHeaderStyle = { padding: '12px 20px 6px', fontSize: '11px', fontWeight: 'bold', color: '#adb5bd', backgroundColor: '#f8f9fa' };
-const itemStyle = (isRead) => ({ padding: '16px 20px', display: 'flex', gap: '12px', alignItems: 'center', cursor: 'pointer', borderBottom: '1px solid #f8f9fa', backgroundColor: isRead ? '#fff' : '#f8fcff' });
+const itemStyle = (isRead) => ({ padding: '16px 20px', display: 'flex', gap: '12px', alignItems: 'center', cursor: 'pointer', borderBottom: '1px solid #f8f9fa', backgroundColor: isRead ? '#fff' : '#f0faf5' });
 const messageStyle = (isRead) => ({ fontSize: '14px', fontWeight: isRead ? '400' : '600', color: isRead ? '#868e96' : '#212529', lineHeight: '1.4' });
 const timeStyle = { fontSize: '11px', color: '#adb5bd', marginTop: '4px' };
-const dotStyle = { width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#339af0' };
-const textBtnStyle = (active) => ({ background: 'none', border: 'none', color: active ? '#339af0' : '#adb5bd', fontSize: '12px', fontWeight: 'bold', cursor: active ? 'pointer' : 'default' });
+const dotStyle = { width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#16A87A' };
+const textBtnStyle = (active) => ({ background: 'none', border: 'none', color: active ? '#16A87A' : '#adb5bd', fontSize: '12px', fontWeight: 'bold', cursor: active ? 'pointer' : 'default' });
 const closeBtnStyle = { background: 'none', border: 'none', cursor: 'pointer', color: '#adb5bd', fontSize: '18px' };
 
 export default NotificationPanel;

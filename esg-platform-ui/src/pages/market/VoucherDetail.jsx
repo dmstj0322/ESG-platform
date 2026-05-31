@@ -179,7 +179,7 @@ const containerStyle = { display: 'flex', flexDirection: 'column', alignItems: '
 const topNavStyle = { width: '100%', maxWidth: '400px', marginBottom: '20px' };
 const backBtnStyle = { background: 'none', border: 'none', color: '#868e96', cursor: 'pointer', fontSize: '14px' };
 
-const voucherCardStyle = { backgroundColor: '#fff', width: '100%', maxWidth: '400px', padding: '30px', borderRadius: '24px', boxShadow: '0 15px 35px rgba(0,0,0,0.08)', boxSizing: 'border-box' };
+const voucherCardStyle = { backgroundColor: '#fff', width: '100%', maxWidth: '400px', padding: '30px', borderRadius: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 0 1px rgba(0,0,0,0.04)', boxSizing: 'border-box' };
 const certCardStyle = { ...voucherCardStyle, border: '10px double #d4af37', backgroundColor: '#fffcf5', padding: '12px', minHeight: '600px', display: 'flex', flexDirection: 'column' };
 const certInnerStyle = { border: '1px solid #d4af37', padding: '50px 20px', textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', boxSizing: 'border-box' };
 const certMiddleWrapper = { margin: '50px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' };
@@ -191,7 +191,7 @@ const certDateStyle = { color: '#999', fontSize: '14px' };
 const brandNameStyle = { marginTop: '20px', fontWeight: '900', color: '#1a1a1a' };
 
 const voucherHeaderStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' };
-const categoryBadgeStyle = { backgroundColor: '#e7f5ff', color: '#339af0', padding: '4px 10px', borderRadius: '5px', fontSize: '11px', fontWeight: 'bold' };
+const categoryBadgeStyle = { backgroundColor: '#E6F7F1', color: '#0D7A58', padding: '4px 10px', borderRadius: '5px', fontSize: '11px', fontWeight: 'bold' };
 
 const imageContainerStyle = { width: '100%', height: '250px', borderRadius: '16px', overflow: 'hidden', marginBottom: '20px', backgroundColor: '#f8f9fa' };
 const productImgStyle = { width: '100%', height: '100%', objectFit: 'cover' };
@@ -205,7 +205,7 @@ const serialNumberText = { marginTop: '10px', fontSize: '17px', fontWeight: 'bol
 const guideBoxStyle = { backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '12px', fontSize: '13px', color: '#868e96', lineHeight: '1.6' };
 
 const buttonGroupStyle = { display: 'flex', gap: '10px', width: '100%', maxWidth: '400px', marginTop: '25px' };
-const primaryBtnStyle = { flex: 1, padding: '14px', backgroundColor: '#339af0', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '15px', cursor: 'pointer' };
+const primaryBtnStyle = { flex: 1, padding: '14px', backgroundColor: '#16A87A', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', fontSize: '15px', cursor: 'pointer' };
 const secondaryBtnStyle = { ...primaryBtnStyle, backgroundColor: '#495057' };
 
 // const printStyles = `

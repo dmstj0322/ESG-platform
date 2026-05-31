@@ -62,7 +62,7 @@ const navBtnStyle = {
 const indicatorWrapperStyle = { position: 'absolute', bottom: '15px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', zIndex: 2 };
 const indicatorDotStyle = (isActive) => ({
   width: '6px', height: '6px', borderRadius: '50%',
-  backgroundColor: isActive ? '#339af0' : 'rgba(255, 255, 255, 0.5)',
+  backgroundColor: isActive ? '#16A87A' : 'rgba(255, 255, 255, 0.5)',
   transition: 'background-color 0.2s'
 });
 
