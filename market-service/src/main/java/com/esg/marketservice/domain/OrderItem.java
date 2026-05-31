@@ -40,8 +40,6 @@ public class OrderItem {
   }
 
   public void cancel() {
-    // 취소 시 재고 원복
-    this.product.addStock(count);
   }
 
   public Long getTotalPrice() {

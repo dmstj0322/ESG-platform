@@ -36,7 +36,7 @@ const ProductAdmin = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("ALL");
 
-  const [page, setPage] = useState(0); 
+  const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const PAGE_SIZE = 10;
 
@@ -126,10 +126,22 @@ const ProductAdmin = () => {
       await api.patch(`/market/admin/products/${productId}/status`, JSON.stringify(newStatus), {
         headers: { 'X-Company-Id': companyId, 'Content-Type': 'application/json' }
       });
-      toast.success(newStatus === 'HIDDEN' ? "상품이 숨김 처리되었습니다." : "상태가 변경되었습니다.", { containerId: 'main-toast' });
+      toast.success("상태가 변경되었습니다.", { containerId: 'main-toast' });
       fetchProducts();
     } catch (err) {
       toast.error("상태 변경에 실패했습니다.", { containerId: 'main-toast' });
+    }
+  };
+
+  const handleUpdateHidden = async (productId, isHidden) => {
+    try {
+      await api.patch(`/market/admin/products/${productId}/hidden`, isHidden, {
+        headers: { 'X-Company-Id': companyId, 'Content-Type': 'application/json' }
+      });
+      toast.success(isHidden ? "상품이 숨김 처리되었습니다." : "상품이 노출되었습니다.", { containerId: 'main-toast' });
+      fetchProducts();
+    } catch (err) {
+      toast.error("숨김 처리에 실패했습니다.", { containerId: 'main-toast' });
     }
   };
 
@@ -195,7 +207,6 @@ const ProductAdmin = () => {
   const getStatusName = (status) => {
     if (status === 'ON_SALE') return '판매중';
     if (status === 'SOLD_OUT') return '품절';
-    if (status === 'HIDDEN') return '숨김';
     return status;
   };
 
@@ -349,13 +360,13 @@ const ProductAdmin = () => {
               <th width="200">상품 정보</th>
               <th width="150">가격/참여목표액</th>
               <th width="120">잔여 재고</th>
-              <th>관리</th>
+              <th width="200">관리</th>
             </tr>
           </thead>
           <tbody>
             {filteredProducts.map(p => (
               // 숨김 상태면 살짝 흐리게 표시해서 직관적으로 인지
-              <tr key={p.id} style={{...tdRowStyle, opacity: p.status === 'HIDDEN' ? 0.6 : 1}}>
+              <tr key={p.id} style={{ ...tdRowStyle, opacity: p.hidden ? 0.6 : 1 }}>
                 <td align="center">
                   <ImagePlaceholder
                     src={p.voucherUrl}
@@ -368,6 +379,7 @@ const ProductAdmin = () => {
                 <td align="center">
                   <div style={badgeCategory(p.category)}>{p.category === 'DONATION' ? '기부 캠페인' : '기프티콘'}</div>
                   <div style={badgeStatus(p.status)}>{getStatusName(p.status)}</div>
+                  {p.hidden && <div style={{ fontSize: '11px', color: '#fa5252', marginTop: '4px', fontWeight: 'bold' }}>숨김</div>}
                 </td>
                 <td style={{ padding: '0 20px', textAlign: 'center' }}>
                   <div style={tableTitle}>{p.name}</div>
@@ -386,7 +398,7 @@ const ProductAdmin = () => {
                 <td align="center" style={{ fontWeight: 'bold', fontSize: '15px', color: p.category === 'DONATION' ? '#16A87A' : (p.stock < 5 ? '#fa5252' : '#495057') }}>
                   {p.category === 'DONATION' ? '∞' : `${p.stock} 개`}
                 </td>
-                
+
                 {/* <td align="center">
                   <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
                     <button onClick={() => handleEdit(p)} style={btnAction('#16A87A')}>수정</button>
@@ -403,16 +415,25 @@ const ProductAdmin = () => {
                     <button onClick={() => handleDelete(p.id)} style={btnDeleteIcon} title="삭제">🗑️</button>
                   </div>
                 </td> */}
-                
+
                 <td align="center">
                   <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
                     <button onClick={() => handleEdit(p)} style={btnOutline('#339af0')}>수정</button>
-                    {p.status === 'ON_SALE'
-                      ? <button onClick={() => handleUpdateStatus(p.id, 'SOLD_OUT')} style={btnOutline('#fa5252')}>종료</button>
-                      : <button onClick={() => handleUpdateStatus(p.id, 'ON_SALE')} style={btnOutline('#20c997')}>판매</button>}
-                    {p.status === 'HIDDEN'
-                      ? <button onClick={() => handleDelete(p.id)} style={btnIcon} title="삭제">🗑️</button>
-                      : <button onClick={() => handleUpdateStatus(p.id, 'HIDDEN')} style={btnOutline('#adb5bd')}>숨김</button>}
+                    {!p.hidden && (
+                      <>
+                        {p.status === 'ON_SALE'
+                          ? <button onClick={() => handleUpdateStatus(p.id, 'SOLD_OUT')} style={btnOutline('#fa5252')}>종료</button>
+                          : <button onClick={() => handleUpdateStatus(p.id, 'ON_SALE')} style={btnOutline('#20c997')}>판매</button>
+                        }
+                        <button onClick={() => handleUpdateHidden(p.id, true)} style={btnOutline('#adb5bd')}>숨김</button>
+                      </>
+                    )}
+                    {p.hidden && (
+                      <>
+                        <button onClick={() => handleUpdateHidden(p.id, false)} style={btnOutline('#20c997')}>노출</button>
+                        <button onClick={() => handleDelete(p.id)} style={btnIcon} title="삭제">🗑️</button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>

@@ -29,7 +29,7 @@ const MarketList = () => {
       }
 
       const res = await api.get(url, { headers: { 'X-Company-Id': companyId } });
-      const visibleProducts = (res.data.content || []).filter(p => p.status !== 'HIDDEN');
+      const visibleProducts = (res.data.content || []).filter(p => !p.hidden);
 
       setProducts(visibleProducts);
       setTotalPages(res.data.totalPages || 1);

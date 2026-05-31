@@ -72,6 +72,16 @@ public class ProductAdminController {
   }
 
   @PreAuthorize("hasRole('ADMIN')")
+  @PatchMapping("/{productId}/hidden")
+  public ResponseEntity<Void> updateProductHidden(
+    @RequestHeader("X-Company-Id") Long companyId,
+    @PathVariable Long productId,
+    @RequestBody boolean hidden) {
+    productService.updateHiddenStatus(companyId, productId, hidden);
+    return ResponseEntity.ok().build();
+  }
+
+  @PreAuthorize("hasRole('ADMIN')")
   @DeleteMapping("/{productId}")
   public ResponseEntity<Void> deleteProduct(
     @RequestHeader("X-Company-Id") Long companyId,
