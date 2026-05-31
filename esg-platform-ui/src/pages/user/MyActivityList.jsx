@@ -64,7 +64,7 @@ const MyActivityList = () => {
   };
 
   const handleCancel = async (orderId, productName) => {
-    if (!window.confirm(`[${productName}] 결제를 취소하시겠습니까?`)) return;
+    if (!window.confirm(`[${productName}] 주문을 취소하시겠습니까?`)) return;
     try {
       await api.post(`/market/orders/${orderId}/cancel`, {}, { headers: { 'X-Member-Id': user.memberId } });
       // alert("취소 및 포인트 환불이 완료되었습니다.");
@@ -92,8 +92,7 @@ const MyActivityList = () => {
 
   const renderVerifyBadge = (status) => {
     if (status === 'APPROVED') return <span style={verifyBadgeStyle('#ebfbee', '#2b8a3e')}>✅ 인증 완료</span>;
-    if (status === 'REJECTED') return <span style={verifyBadgeStyle('#fff5f5', '#e03131')}>❌ 관리자 반려</span>;
-    if (status === 'AUTO_REJECTED') return <span style={verifyBadgeStyle('#fff0f0', '#c92a2a')}>🤖❌ AI 자동 반려</span>;
+    if (status === 'REJECTED') return <span style={verifyBadgeStyle('#fff5f5', '#e03131')}>❌ 인증 반려</span>;
     return <span style={verifyBadgeStyle('#fff4e6', '#fd7e14')}>⏳ 심사 대기</span>;
   };
 
@@ -158,11 +157,37 @@ const MyActivityList = () => {
               return (
                 <div key={item.id || index} style={listCardStyle} onClick={() => navigate(`/posts/${item.id}`)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, overflow: 'hidden', cursor: 'pointer' }}>
-                    {item.imageUrls?.[0] ? (
+                    {/* {item.imageUrls?.[0] ? (
                       <img src={item.imageUrls[0]} style={thumbnailImgStyle} alt="thumb" />
                     ) : (
                       <div style={iconCircleStyle('#E6F7F1', '#16A87A')}>📝</div>
-                    )}
+                    )} */}
+                    <div style={{ position: 'relative', width: '50px', height: '50px' }}>
+                      {item.imageUrls?.[0] ? (
+                        <>
+                          <img src={item.imageUrls[0]} style={thumbnailImgStyle} alt="thumb" />
+                          {/* 사진이 1장보다 많을 때만 표시 */}
+                          {item.imageUrls.length > 1 && (
+                            <div style={{
+                              position: 'absolute',
+                              top: 0, left: 0, width: '100%', height: '100%',
+                              backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                              color: '#fff',
+                              display: 'flex',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              fontSize: '12px',
+                              fontWeight: 'bold',
+                              borderRadius: '8px'
+                            }}>
+                              +{item.imageUrls.length - 1}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div style={iconCircleStyle('#E6F7F1', '#16A87A')}>📝</div>
+                      )}
+                    </div>
                     <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                       <div style={mainTitleStyle}>{item.title}</div>
                       <div style={subContentStyle}>{item.content}</div>
@@ -176,9 +201,9 @@ const MyActivityList = () => {
                   <div style={rightMetaStyle}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
                       {renderVerifyBadge(item.adminStatus)}
-                      {['REJECTED', 'AUTO_REJECTED'].includes(item.adminStatus) && item.rejectionReason && (
+                      {item.adminStatus === 'REJECTED' && item.rejectionReason && (
                         <div style={{ fontSize: '11px', color: '#e03131', fontWeight: 'bold', marginTop: '4px', maxWidth: '120px', textAlign: 'right' }}>
-                          <strong>{item.adminStatus === 'AUTO_REJECTED' ? '🤖 AI 반려 사유: ' : '❌ 반려 사유: '}</strong> {item.rejectionReason}
+                          <strong>반려 사유: </strong> {item.rejectionReason}
                         </div>
                       )}
                     </div>

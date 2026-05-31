@@ -39,4 +39,4 @@ WHERE NOT EXISTS (SELECT 1 FROM badge WHERE name = '지구 방위대');
 
 INSERT INTO badge (name, description, target_activity_type, target_count, image_url)
 SELECT '환경부 장관', '분리배출 50회 달성', 'RECYCLE', 50, '👑'
-ZWHERE NOT EXISTS (SELECT 1 FROM badge WHERE name = '환경부 장관');
+WHERE NOT EXISTS (SELECT 1 FROM badge WHERE name = '환경부 장관');

@@ -13,6 +13,11 @@ const MyPage = () => {
   const [activeTab, setActiveTab] = useState('ORDERS');
   const [showCo2Modal, setShowCo2Modal] = useState(false);
 
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [totalPosts, setTotalPosts] = useState(0);
+  const [totalComments, setTotalComments] = useState(0);
+  const [totalLikes, setTotalLikes] = useState(0);
+
   // 🌟 대시보드 전용 상태
   const [totalCo2Reduction, setTotalCo2Reduction] = useState(0);
   const [activityCounts, setActivityCounts] = useState({ TUMBLER: 0, TRANSPORT: 0, RECYCLE: 0 });
@@ -74,6 +79,7 @@ const MyPage = () => {
     try {
       const res = await api.get('/market/orders/my?sort=id,desc', { headers: { 'X-Member-Id': user.memberId } });
       setOrders(res.data.content || []);
+      setTotalOrders(res.data.totalElements || 0);
     } catch (err) { console.error("주문 내역 조회 실패"); }
   };
 
@@ -91,8 +97,13 @@ const MyPage = () => {
         api.get('/community/posts/my-likes?sort=id,desc', config)
       ]);
       setMyPosts(postsRes.data.content || []);
+      setTotalPosts(postsRes.data.totalElements || 0);
+
       setMyComments(commentsRes.data.content || []);
+      setTotalComments(commentsRes.data.totalElements || 0);
+
       setLikedPosts(likesRes.data.content || []);
+      setTotalLikes(likesRes.data.totalElements || 0);
     } catch (err) { console.error("활동 내역 로드 실패"); }
   };
 
@@ -319,16 +330,16 @@ const MyPage = () => {
 
       <div style={tabContainerStyle}>
         <button style={activeTab === 'ORDERS' ? activeTabStyle : tabStyle} onClick={() => setActiveTab('ORDERS')}>
-          마켓 주문 내역 ({orders.length})
+          마켓 주문 내역 ({totalOrders})
         </button>
         <button style={activeTab === 'POSTS' ? activeTabStyle : tabStyle} onClick={() => setActiveTab('POSTS')}>
-          내가 쓴 글 ({myPosts.length})
+          내가 쓴 글 ({totalPosts})
         </button>
         <button style={activeTab === 'COMMENTS' ? activeTabStyle : tabStyle} onClick={() => setActiveTab('COMMENTS')}>
-          작성한 댓글 ({myComments.length})
+          작성한 댓글 ({totalComments})
         </button>
         <button style={activeTab === 'LIKES' ? activeTabStyle : tabStyle} onClick={() => setActiveTab('LIKES')}>
-          좋아요 한 글 ({likedPosts.length})
+          좋아요 한 글 ({totalLikes})
         </button>
       </div>
 
@@ -399,11 +410,37 @@ const MyPage = () => {
               {myPosts.length === 0 ? <div style={emptyTextStyle}>작성한 글이 없습니다.</div> : myPosts.slice(0, 10).map(post => (
                 <div key={post.id} style={listCardStyle} onClick={() => navigate(`/posts/${post.id}`)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, overflow: 'hidden', cursor: 'pointer' }}>
-                    {post.imageUrls?.[0] ? (
+                    {/* {post.imageUrls?.[0] ? (
                       <img src={post.imageUrls[0]} style={thumbnailImgStyle} alt="thumb" />
                     ) : (
                       <div style={iconCircleStyle('#E6F7F1', '#16A87A')}>📝</div>
-                    )}
+                    )} */}
+                    <div style={{ position: 'relative', width: '50px', height: '50px' }}>
+                      {post.imageUrls?.[0] ? (
+                        <>
+                          <img src={post.imageUrls[0]} style={thumbnailImgStyle} alt="thumb" />
+                          {/* 사진이 1장보다 많을 때만 표시 */}
+                          {post.imageUrls.length > 1 && (
+                            <div style={{
+                              position: 'absolute',
+                              top: 0, left: 0, width: '100%', height: '100%',
+                              backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                              color: '#fff',
+                              display: 'flex',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              fontSize: '12px',
+                              fontWeight: 'bold',
+                              borderRadius: '8px'
+                            }}>
+                              +{post.imageUrls.length - 1}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div style={iconCircleStyle('#E6F7F1', '#16A87A')}>📝</div>
+                      )}
+                    </div>
                     <div style={{ textAlign: 'left', flex: 1, overflow: 'hidden' }}>
                       <div style={mainTitleStyle}>{post.title}</div>
                       <div style={subContentStyle}>{post.content}</div>
@@ -415,7 +452,7 @@ const MyPage = () => {
                       {renderVerifyBadge(post.adminStatus)}
                       {post.adminStatus === 'REJECTED' && post.rejectionReason && (
                         <div style={{ fontSize: '11px', color: '#e03131', fontWeight: 'bold', marginTop: '4px', maxWidth: '120px', textAlign: 'right' }}>
-                          <strong>❌ 반려 사유: </strong> {post.rejectionReason}
+                          <strong>반려 사유: </strong> {post.rejectionReason}
                         </div>
                       )}
                     </div>

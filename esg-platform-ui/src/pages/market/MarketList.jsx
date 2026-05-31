@@ -119,7 +119,9 @@ const MarketList = () => {
                       : `재고: ${p.stock}개`}
                   </span>
                   <span style={{ color: isSoldOut ? '#adb5bd' : '#16A87A', fontWeight: 'bold' }}>
-                    {isSoldOut ? '종료됨' : '상세보기 →'}
+                    {isSoldOut
+                      ? (p.category === 'DONATION' ? '종료' : '품절')
+                      : '상세보기 →'}
                   </span>
                 </div>
               </div>

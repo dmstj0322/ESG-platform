@@ -132,6 +132,8 @@ export default function DashboardPage() {
                    : [];
         setRecentPosts(list);
         setTotalActivityCount(raw?.totalElements ?? list.length);
+        // const approvedPosts = list.filter(post => post.adminStatus === 'APPROVED');
+        // setRecentPosts(approvedPosts);
       })
       .catch(() => { setRecentPosts([]); setTotalActivityCount(0); });
   }, [user?.companyId]);

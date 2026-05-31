@@ -369,7 +369,7 @@ const ProductAdmin = () => {
                   <div style={badgeCategory(p.category)}>{p.category === 'DONATION' ? '기부 캠페인' : '기프티콘'}</div>
                   <div style={badgeStatus(p.status)}>{getStatusName(p.status)}</div>
                 </td>
-                <td style={{ padding: '0 20px', textAlign: 'left' }}>
+                <td style={{ padding: '0 20px', textAlign: 'center' }}>
                   <div style={tableTitle}>{p.name}</div>
                   <div style={tableSub}>ID: {p.id}</div>
                 </td>
@@ -406,7 +406,7 @@ const ProductAdmin = () => {
                 
                 <td align="center">
                   <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                    <button onClick={() => handleEdit(p)} style={btnOutline('#16A87A')}>수정</button>
+                    <button onClick={() => handleEdit(p)} style={btnOutline('#339af0')}>수정</button>
                     {p.status === 'ON_SALE'
                       ? <button onClick={() => handleUpdateStatus(p.id, 'SOLD_OUT')} style={btnOutline('#fa5252')}>종료</button>
                       : <button onClick={() => handleUpdateStatus(p.id, 'ON_SALE')} style={btnOutline('#20c997')}>판매</button>}

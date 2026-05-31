@@ -88,4 +88,12 @@ public class ProductAdminController {
     productService.addVouchers(productId, vouchers);
     return ResponseEntity.ok().build();
   }
+
+  @PreAuthorize("hasRole('ADMIN')")
+  @GetMapping("/{productId}/vouchers")
+  public ResponseEntity<List<String>> getUnusedVouchers(
+    @RequestHeader("X-Company-Id") Long companyId,
+    @PathVariable Long productId) {
+    return ResponseEntity.ok(productService.getUnusedVouchers(companyId, productId));
+  }
 }
