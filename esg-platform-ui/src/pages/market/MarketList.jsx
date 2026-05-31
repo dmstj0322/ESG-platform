@@ -118,7 +118,7 @@ const MarketList = () => {
                       ? (isSoldOut ? '캠페인 종료' : '참여 무제한')
                       : `재고: ${p.stock}개`}
                   </span>
-                  <span style={{ color: isSoldOut ? '#adb5bd' : '#339af0', fontWeight: 'bold' }}>
+                  <span style={{ color: isSoldOut ? '#adb5bd' : '#16A87A', fontWeight: 'bold' }}>
                     {isSoldOut ? '종료됨' : '상세보기 →'}
                   </span>
                 </div>
@@ -151,13 +151,13 @@ const MarketList = () => {
 };
 
 // --- 스타일 객체 ---
-const adminLinkBtnStyle = { backgroundColor: '#343a40', color: '#fff', padding: '10px 22px', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' };
-const cardStyle = { borderRadius: '20px', overflow: 'hidden', backgroundColor: '#fff', boxShadow: '0 10px 25px rgba(0,0,0,0.03)', cursor: 'pointer', transition: 'transform 0.2s ease, boxShadow 0.2s ease', border: '1px solid #f1f3f5' };
+const adminLinkBtnStyle = { backgroundColor: '#16A87A', color: '#fff', padding: '10px 22px', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', boxShadow: '0 4px 10px rgba(22,168,122,0.2)' };
+const cardStyle = { borderRadius: '12px', overflow: 'hidden', backgroundColor: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', cursor: 'pointer', transition: 'transform 0.2s ease, boxShadow 0.2s ease', border: '1px solid #f1f3f5' };
 const imageStyle = { width: '100%', height: '100%', objectFit: 'cover' };
-const categoryTagStyle = (category) => ({ position: 'absolute', top: '15px', left: '15px', backgroundColor: category === 'DONATION' ? 'rgba(132, 94, 247, 0.9)' : 'rgba(51, 154, 240, 0.9)', color: '#fff', padding: '5px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold' });
+const categoryTagStyle = (category) => ({ position: 'absolute', top: '15px', left: '15px', backgroundColor: category === 'DONATION' ? 'rgba(132, 94, 247, 0.9)' : 'rgba(22, 168, 122, 0.9)', color: '#fff', padding: '5px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold' });
 const soldOutOverlayStyle = { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', color: '#fff', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '22px', fontWeight: '800', backdropFilter: 'blur(2px)' };
 const productTitleStyle = { fontSize: '19px', margin: '0 0 8px 0', color: '#333', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
-const priceStyle = { color: '#22b8cf', fontWeight: '900', fontSize: '24px', margin: '0 0 15px 0' };
+const priceStyle = { color: '#16A87A', fontWeight: '700', fontSize: '24px', margin: '0 0 15px 0' };
 const progressBarBg = { height: '6px', backgroundColor: '#f1f3f5', borderRadius: '3px', overflow: 'hidden' };
 const progressBarFill = (pct, color) => ({ width: `${pct}%`, height: '100%', backgroundColor: color, transition: 'width 0.5s' });
 
@@ -165,8 +165,8 @@ const progressBarFill = (pct, color) => ({ width: `${pct}%`, height: '100%', bac
 const tabContainerStyle = { display: 'flex', gap: '10px', marginBottom: '30px', borderBottom: '1px solid #e9ecef', paddingBottom: '12px' };
 const tabButtonStyle = (isActive) => ({
   padding: '10px 20px', borderRadius: '8px', border: 'none',
-  backgroundColor: isActive ? '#f3f0ff' : 'transparent',
-  color: isActive ? '#7048e8' : '#495057',
+  backgroundColor: isActive ? '#E6F7F1' : 'transparent',
+  color: isActive ? '#0D7A58' : '#495057',
   fontWeight: 'bold', fontSize: '14px', cursor: 'pointer',
   transition: '0.2s ease'
 });
@@ -175,9 +175,9 @@ const tabButtonStyle = (isActive) => ({
 const paginationWrapper = { display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px 0', gap: '15px', marginTop: '20px' };
 const pageInfoStyle = { fontSize: '14px', fontWeight: '700', color: '#495057', minWidth: '40px', textAlign: 'center' };
 const pageBtnStyle = (disabled) => ({
-  padding: '8px 18px', borderRadius: '8px', border: '1px solid #dee2e6',
+  padding: '8px 18px', borderRadius: '10px', border: '1px solid #dee2e6',
   backgroundColor: disabled ? '#f8f9fa' : '#fff',
-  color: disabled ? '#adb5bd' : '#339af0',
+  color: disabled ? '#adb5bd' : '#16A87A',
   cursor: disabled ? 'not-allowed' : 'pointer',
   fontWeight: 'bold', fontSize: '13px', transition: '0.2s ease'
 });

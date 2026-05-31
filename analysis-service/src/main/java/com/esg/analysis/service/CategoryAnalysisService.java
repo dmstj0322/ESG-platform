@@ -49,12 +49,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CategoryAnalysisService {
 
-    private final UpstageService            upstageService;
-    private final ReportRagService          reportRagService;
-    private final ConfidenceService         confidenceService;
-    private final ESGScoreCalculator        scoreCalculator;
-    private final ESGIndicatorRepository    indicatorRepository;
-    private final NumericExtractionService  numericExtractionService;
+    private final UpstageService               upstageService;
+    private final ReportRagService             reportRagService;
+    private final ConfidenceService            confidenceService;
+    private final ESGScoreCalculator           scoreCalculator;
+    private final ESGIndicatorRepository       indicatorRepository;
+    private final NumericExtractionService     numericExtractionService;
+    private final EnvironmentBenchmarkService  environmentBenchmarkService;
 
     /**
      * @param category         "E" / "S" / "G"
@@ -71,7 +72,8 @@ public class CategoryAnalysisService {
                                             MultipartFile file,
                                             Map<String, Double> eMetricInputs,
                                             String ksicCode,
-                                            String envMode) {
+                                            String envMode,
+                                            int employeeCount) {
 
         int checklistScore = computeChecklistScore(checkedCount, totalItems);
         log.info("[CATEGORY-START] category={} checklistScore={} hasFile={} eMetricInputsSize={} ksicCode={} envMode={}",
@@ -168,6 +170,19 @@ public class CategoryAnalysisService {
             log.info("[INDICATOR-INIT] category={} hasEMetrics={} userInputKeys={}",
                     category, hasEMetrics,
                     eMetricInputs != null ? eMetricInputs.keySet() : "null");
+
+            // ── E 카테고리 벤치마크 업종 평균값 사전 로드 ─────────────────────────
+            // 지표별 (company입력값 / 업종평균)으로 환경 성과를 평가
+            Map<String, Double> industryAvgValues = new HashMap<>();
+            boolean anyBenchmarkUsed = false;
+            if (hasEMetrics && ksicCode != null && !ksicCode.isBlank() && employeeCount > 0) {
+                for (String metric : List.of("electricity", "gas", "carbon", "waste", "water")) {
+                    Double avg = environmentBenchmarkService.getIndustryAvgForMetric(ksicCode, employeeCount, metric);
+                    if (avg != null && avg > 0) industryAvgValues.put(metric, avg);
+                }
+                log.info("[BenchmarkPreload] ksicCode={} emp={} availableMetrics={} values={}",
+                        ksicCode, employeeCount, industryAvgValues.keySet(), industryAvgValues);
+            }
 
             // ── E 수치 검증: 전체 마크다운에서 5개 메트릭 선(先)추출 ────────────
             // 사용자 입력값 유무와 무관하게 항상 스캔 (fallback 맵 생성)
@@ -417,18 +432,37 @@ public class CategoryAnalysisService {
                                         indicator.getCode(), numericMetric, inputVal, extractedVal,
                                         numericMatch.diffPercent(), numericMatch.level());
 
+                                // ── 벤치마크 기반 E 지표 점수 산출 ─────────────────────────────
+                                Double industryAvg = industryAvgValues.get(numericMetric);
+                                if (industryAvg != null && industryAvg > 0) {
+                                    // 환경 성과(낮을수록 우수) × 데이터 신뢰도 보정
+                                    double ratio = inputVal / industryAvg;
+                                    int benchScore = EsgScoreConstants.calcBenchmarkScore(ratio);
+                                    double validityMult = EsgScoreConstants.calcValidityMultiplier(numericMatch.level());
+                                    score = (int) Math.round(benchScore * validityMult);
+                                    anyBenchmarkUsed = true;
+                                    log.info("[BenchmarkScore] indicator={} metric={} input={} industryAvg={} ratio={} benchScore={} validity={}x → score={}",
+                                            indicator.getCode(), numericMetric, inputVal, industryAvg,
+                                            String.format("%.3f", ratio), benchScore, validityMult, score);
+                                } else {
+                                    // fallback: 벤치마크 없음 → numericMatch 기반
+                                    score = EsgScoreConstants.calcFallbackEScore(numericMatch.level(), evidenceBonus);
+                                    log.info("[FallbackScore] indicator={} metric={} matchLevel={} → score={}",
+                                            indicator.getCode(), numericMetric, numericMatch.level(), score);
+                                }
+
+                                // confidence는 numericMatch level 기반 (benchmark 여부 무관)
                                 if (numericMatch.isHigh()) {
-                                    score = Math.min(100, 90 + evidenceBonus);
-                                    conf  = 85;
+                                    conf = 85;
                                     highMatchCount++;
                                 } else if (numericMatch.isMedium()) {
-                                    // MEDIUM: 경미 불일치 — HIGH와 차이가 체감되도록 기준점 하향
-                                    score = Math.min(100, 50 + evidenceBonus);
-                                    conf  = 55;
+                                    conf = 55;
                                     mediumMatchCount++;
                                 } else { // LOW
-                                    score = 20;
-                                    conf  = 25;
+                                    conf = 25;
+                                    if (!anyBenchmarkUsed || industryAvgValues.get(numericMetric) == null) {
+                                        // 벤치마크 없이 LOW → 기존 avgRag 페널티 적용 대상
+                                    }
                                 }
                                 if (numericMatch.isLow())         conf = Math.min(conf, 40);
                                 else if (numericMatch.isMedium()) conf = Math.min(conf, 62);
@@ -740,17 +774,21 @@ public class CategoryAnalysisService {
             }
 
             // ── 수치 불일치 기반 avgRag 가중 감산 ──────────────────────────────
-            if (hasEMetrics && lowCount >= 4)      avgRag = Math.max(0, (int)(avgRag * 0.35));
-            else if (hasEMetrics && lowCount >= 3) avgRag = Math.max(0, (int)(avgRag * 0.55));
-            else if (hasEMetrics && lowCount >= 1) avgRag = Math.max(0, (int)(avgRag * 0.75));
+            // 벤치마크 사용 시: validity multiplier가 이미 페널티 포함 → 추가 감산 생략
+            // 벤치마크 미사용(fallback) 시에만 기존 감산 적용
+            if (hasEMetrics && !anyBenchmarkUsed) {
+                if      (lowCount >= 4) avgRag = Math.max(0, (int)(avgRag * 0.35));
+                else if (lowCount >= 3) avgRag = Math.max(0, (int)(avgRag * 0.55));
+                else if (lowCount >= 1) avgRag = Math.max(0, (int)(avgRag * 0.75));
 
-            // MEDIUM 불일치 카테고리 감산 (LOW 없는 경우에만): HIGH vs MEDIUM 차이 가시화
-            if (hasEMetrics && lowCount == 0) {
-                if      (mediumMatchCount >= 3) avgRag = Math.max(0, (int)(avgRag * 0.90));
-                else if (mediumMatchCount >= 2) avgRag = Math.max(0, (int)(avgRag * 0.93));
-                else if (mediumMatchCount >= 1) avgRag = Math.max(0, (int)(avgRag * 0.96));
-                if (mediumMatchCount > 0)
-                    log.info("[MediumPenalty] medium={} → avgRag={}", mediumMatchCount, avgRag);
+                if (lowCount == 0) {
+                    if      (mediumMatchCount >= 3) avgRag = Math.max(0, (int)(avgRag * 0.90));
+                    else if (mediumMatchCount >= 2) avgRag = Math.max(0, (int)(avgRag * 0.93));
+                    else if (mediumMatchCount >= 1) avgRag = Math.max(0, (int)(avgRag * 0.96));
+                    if (mediumMatchCount > 0)
+                        log.info("[MediumPenalty-Fallback] medium={} → avgRag={}", mediumMatchCount, avgRag);
+                }
+                log.info("[AvgRagPenalty-Fallback] low={} medium={} → avgRag={}", lowCount, mediumMatchCount, avgRag);
             }
 
             // ── finalScore 공식 분기 ────────────────────────────────────────

@@ -95,7 +95,7 @@ const PostDetails = () => {
 
   // 🌟 배지 데이터 계산
   const getBadgeInfo = () => {
-    if (post.adminStatus === 'APPROVED') return { text: '✅ 인증 완료', color: '#339af0', bgColor: '#e7f5ff' };
+    if (post.adminStatus === 'APPROVED') return { text: '✅ 인증 완료', color: '#16A87A', bgColor: '#E6F7F1' };
     if (post.adminStatus === 'REJECTED') return { text: '❌ 인증 반려', color: '#fa5252', bgColor: '#fff5f5' };
     if (post.aiStatus === 'PROCESSING') return { text: '🤖 분석 중', color: '#adb5bd', bgColor: '#f8f9fa' };
     return { text: '⏳ 심사 대기', color: '#fd7e14', bgColor: '#fff4e6' };
@@ -188,7 +188,7 @@ const containerStyle = { maxWidth: '640px', margin: 'auto', padding: '0 20px', t
 const headerSectionStyle = { marginBottom: '30px' };
 const mainTitleStyle = { fontSize: '32px', fontWeight: '850', color: '#1a1a1a', margin: '15px 0', letterSpacing: '-0.5px' };
 const authorInfoStyle = { display: 'flex', alignItems: 'center', gap: '10px', marginTop: '20px' };
-const miniAvatarStyle = { width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#f1f3f5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 'bold', color: '#339af0' };
+const miniAvatarStyle = { width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#f1f3f5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 'bold', color: '#16A87A' };
 const detailSliderWrapper = { borderRadius: '16px', overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)', marginBottom: '40px' };
 const bodyContentStyle = { padding: '0 10px', marginBottom: '50px' };
 const paragraphStyle = { fontSize: '18px', lineHeight: '1.8', color: '#343a40', whiteSpace: 'pre-wrap' };

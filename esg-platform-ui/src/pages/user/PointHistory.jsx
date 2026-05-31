@@ -57,7 +57,7 @@ const PointHistory = () => {
                     textAlign: 'right', 
                     fontWeight: 'bold',
                     // 유형별 텍스트 색상 차별화 (적립: 블루, 사용: 레드, 환불: 퍼플)
-                    color: history.type === 'USE' ? '#ff6b6b' : (history.type === 'REFUND' ? '#7048e8' : '#339af0')
+                    color: history.type === 'USE' ? '#ff6b6b' : (history.type === 'REFUND' ? '#7048e8' : '#16A87A')
                   }}>
                     {history.amount > 0 ? `+${history.amount.toLocaleString()}` : history.amount.toLocaleString()} P
                   </td>
@@ -134,8 +134,8 @@ const badgeStyle = (type) => {
   let color = '#ff6b6b';
   
   if (isEarn) {
-    backgroundColor = '#e7f5ff';   // EARN: 포인트 컬러 팔레트 연동 (연파랑)
-    color = '#339af0';
+    backgroundColor = '#E6F7F1';   // EARN: 포인트 컬러 팔레트 연동 (연초록)
+    color = '#16A87A';
   } else if (isRefund) {
     backgroundColor = '#f3f0ff';   // REFUND: 신규 아키텍처 디자인 반영 (연보라)
     color = '#7048e8';             

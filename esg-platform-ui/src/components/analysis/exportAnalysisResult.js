@@ -153,8 +153,11 @@ const sanitizeOpinion = (text, lowMismatchCount) => {
     .replace(/확인되지\s+않았습니다\s*지표는\s+없습니다[.!?。]?/g, '')
     .replace(/[^.!?。]*확인되지\s+않[^.!?。]*지표는\s+없습니다[.!?。]?/g, '')
     .replace(/[^.!?。]*지표는\s+없습니다[.!?。]?/g, '')
-    .replace(/[^.!?。]*일부 지표에 대한[^.!?。]*확인되지 않았습니다[.!?。]?/g, '')
-    .replace(/[^.!?。]*일부 지표에 대한[^.!?。]*제한적[^.!?。]*[.!?。]?/g, '')
+    .replace(/[^.!?。]*(?:일부|특정)\s*지표에 대한[^.!?。]*(?:증빙은?\s*)?확인되지 않았습니다[.!?。]?/g, '')
+    .replace(/[^.!?。]*(?:일부|특정)\s*지표에 대한[^.!?。]*제한적[^.!?。]*[.!?。]?/g, '')
+    .replace(/[^.!?。]*증빙[^.!?。]*확인되지\s*않았습니다[.!?。]?/g, '')
+    .replace(/\.\s*확인되지\s*않았습니다[.!?。]?/g, '.')
+    .replace(/확인되지\s*않았습니다[.!?。]?\s*$/g, '')
     .replace(/\s{2,}/g, ' ')
     .trim();
   if ((lowMismatchCount ?? 0) > 0) return cleaned;
@@ -673,25 +676,47 @@ export const exportAnalysisResult = async (data, analysisId, esgPoolCurrent = nu
     });
     ys += 40;
 
-    // ── NO EVIDENCE 지표 목록 (보완 필요 지표) ──────────────
+    // ── NO EVIDENCE 지표 목록 (보완 필요 지표) — 전체 출력, 페이지 오버플로우 시 다음 페이지 ──
     const noEvidenceList = completeList.filter(e => getVST(e) === 'NO_EVIDENCE');
-    if (noEvidenceList.length > 0 && ys < 250) {
-      const neSlice = noEvidenceList.slice(0, 5);
-      const neBoxH = Math.min(neSlice.length * 12 + 14, 80);
-      setFill(doc, [248, 250, 252]); doc.roundedRect(14, ys, 182, neBoxH, 2.5, 2.5, 'F');
-      setDraw(doc, [100, 116, 139]); doc.setLineWidth(0.2); doc.roundedRect(14, ys, 182, neBoxH, 2.5, 2.5, 'S');
-      setF(doc, 7.5); setC(doc, [100, 116, 139]); doc.text('추가 증빙 권장 지표', 20, ys + 8);
-      neSlice.forEach((ev, i) => {
-        const ry = ys + 14 + i * 12;
+    if (noEvidenceList.length > 0) {
+      const ROW_H = 14;           // 지표 1행 높이
+      const HEADER_H = 12;        // "추가 증빙 권장 지표" 헤더 높이
+      const PAGE_BOTTOM = 272;    // 페이지 하단 여백 경계
+
+      // 현재 페이지에 헤더+최소 1행이라도 들어갈 공간이 없으면 새 페이지
+      if (ys + HEADER_H + ROW_H > PAGE_BOTTOM) {
+        doc.addPage(); ys = 18;
+      }
+
+      // 헤더 렌더링
+      setFill(doc, [248, 250, 252]); doc.roundedRect(14, ys, 182, HEADER_H, 2.5, 2.5, 'F');
+      setDraw(doc, [100, 116, 139]); doc.setLineWidth(0.2); doc.roundedRect(14, ys, 182, HEADER_H, 2.5, 2.5, 'S');
+      setF(doc, 7.5); setC(doc, [100, 116, 139]);
+      doc.text(`추가 증빙 권장 지표 (${noEvidenceList.length}개)`, 20, ys + 8);
+      ys += HEADER_H;
+
+      // 지표 행 렌더링 — 페이지 경계 초과 시 새 페이지
+      noEvidenceList.forEach((ev) => {
+        if (ys + ROW_H > PAGE_BOTTOM) {
+          doc.addPage(); ys = 18;
+          // 새 페이지 연속 헤더
+          setFill(doc, [248, 250, 252]); doc.roundedRect(14, ys, 182, HEADER_H, 2.5, 2.5, 'F');
+          setDraw(doc, [100, 116, 139]); doc.setLineWidth(0.2); doc.roundedRect(14, ys, 182, HEADER_H, 2.5, 2.5, 'S');
+          setF(doc, 7.5); setC(doc, [100, 116, 139]); doc.text('추가 증빙 권장 지표 (이어서)', 20, ys + 8);
+          ys += HEADER_H;
+        }
         const catChar = ev.indicatorCode?.[0] ?? '-';
         const catRgb = catChar === 'E' ? EMERALD : catChar === 'S' ? [55, 100, 200] : PURPLE;
-        setFill(doc, catRgb); doc.roundedRect(20, ry, 2, 4, 0.5, 0.5, 'F');
+        setFill(doc, [248, 250, 252]); doc.rect(14, ys, 182, ROW_H, 'F');
+        setDraw(doc, BORDER); doc.setLineWidth(0.15); doc.rect(14, ys, 182, ROW_H, 'S');
+        setFill(doc, catRgb); doc.roundedRect(20, ys + 5, 2, 4, 0.5, 0.5, 'F');
         setF(doc, 7.5); setC(doc, TEXT);
-        doc.text(`${ev.indicatorCode ?? '-'} — ${String(ev.indicatorTitle ?? ALL_INDICATOR_CODES_PDF[ev.indicatorCode] ?? '-').slice(0, 30)}`, 25, ry + 4);
+        doc.text(`${ev.indicatorCode ?? '-'} — ${String(ev.indicatorTitle ?? ALL_INDICATOR_CODES_PDF[ev.indicatorCode] ?? '-').slice(0, 30)}`, 25, ys + 5.5);
         const rec = NO_EVIDENCE_RECOMMEND[ev.indicatorCode ?? ''];
-        if (rec) { setF(doc, 6); setC(doc, MUTED); doc.text(rec.slice(0, 65), 25, ry + 9.5); }
+        if (rec) { setF(doc, 6); setC(doc, MUTED); doc.text(rec.slice(0, 65), 25, ys + 11); }
+        ys += ROW_H;
       });
-      ys += neBoxH + 6;
+      ys += 6;
     }
 
     // ── E/S/G 영역별 점수 분포 ─────────────────────────────────
@@ -801,7 +826,8 @@ export const exportAnalysisResult = async (data, analysisId, esgPoolCurrent = nu
     }
 
     // ── Confidence Tier badge ───────────────────────────────
-    if (data.overallConfidence != null && ys < 268) {
+    if (ys + 34 > 272) { doc.addPage(); ys = 18; }
+    if (data.overallConfidence != null) {
       const confV   = data.overallConfidence;
       const confRgb = confV >= 70 ? EMERALD : confV >= 50 ? AMBER : [180, 140, 80];
       const confTier = confV >= 80 ? '높음 — 검증 완성도 우수' : confV >= 60 ? '보통 — 부분 검증 포함' : '낮음 — 검증 범위 제한';
@@ -1049,9 +1075,11 @@ export const exportAnalysisResult = async (data, analysisId, esgPoolCurrent = nu
         evidenceStr = processEvidenceSnippet(ev.evidenceText ?? '') || '—';
       }
 
-      // 신뢰도
+      // 신뢰도 — E 카테고리는 numericMatchLevel 기반, S/G는 semantic similarity 기반
       const sp = toPct(ev.similarity);
-      const relStr = sp != null ? `${sp}%` : (ev.numericMatchLevel ? '수치' : '—');
+      const relStr = (cat === 'E' && ev.numericMatchLevel != null)
+        ? (ev.numericMatchLevel === 'HIGH' ? '97%' : ev.numericMatchLevel === 'MEDIUM' ? '72%' : '38%')
+        : (sp != null ? `${sp}%` : (ev.numericMatchLevel ? '수치' : '—'));
 
       // 검증 상태
       let vstStr;
@@ -1154,7 +1182,7 @@ export const exportAnalysisResult = async (data, analysisId, esgPoolCurrent = nu
       startY: yb,
       head: [['지표명', '단위', '우리 기업', '업종 평균', '차이', '평가', '데이터 출처 (업종 평균)']],
       body: data.benchmarkComparison.metrics.map(m => {
-        // 가스: 백엔드에서 이미 Nm³로 변환되어 옴 (company: MJ/35.8, industryAvg: CSV Nm³)
+        // 가스: 백엔드에서 Nm³ 단위로 직접 전달됨 (CSV gas_nm3 기준, 변환 없음)
         const isGas = (m.unit ?? '').toLowerCase().includes('nm') || (m.name ?? '').includes('가스');
         const cv  = m.company    ?? 0;
         const iv  = m.industryAvg ?? 0;

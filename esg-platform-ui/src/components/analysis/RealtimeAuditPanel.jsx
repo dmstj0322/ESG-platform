@@ -99,7 +99,7 @@ export default function RealtimeAuditPanel({
     const now = new Date().toTimeString().slice(0, 8);
     return [
       { id: ++_uid, level: 'READY', text: '기업 프로파일 확인 완료',          time: now },
-      { id: ++_uid, level: 'READY', text: 'GreenTrace ESG 감사 시스템 준비 완료', time: now },
+      { id: ++_uid, level: 'READY', text: 'GreenTrace ESG 분석 시스템 준비 완료', time: now },
       { id: ++_uid, level: 'IDLE',  text: '문서 업로드를 기다리는 중...',    time: now },
     ];
   });

@@ -122,6 +122,13 @@ public class PostService {
   public Page<PostResponseDto> getPosts(Long memberId, Long companyId, String role, Pageable pageable) {
     Page<Post> posts = postRepository.findAllByCompanyIdOrderByCreatedDateDesc(companyId, pageable);
 
+    posts.getContent().forEach(post ->
+            System.out.println(
+                    "POST ID = " + post.getId()
+                            + ", AI_STATUS = " + post.getAiStatus()
+            )
+    );
+
     Map<Long, String> badgeMap = getBadgeMap(posts);
 
     return posts.map(post -> {

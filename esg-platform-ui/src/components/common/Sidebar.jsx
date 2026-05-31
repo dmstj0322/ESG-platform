@@ -85,13 +85,6 @@ function CompanyInfoCard() {
           </p>
         )}
       </div>
-      <button
-        onClick={() => navigate('/analysis')}
-        className="mt-3 w-full flex items-center gap-1 text-[11px] font-semibold text-gray-400 hover:text-emerald-600 transition-colors duration-150"
-      >
-        회사 정보 관리
-        <ChevronRight size={10} />
-      </button>
     </div>
   );
 }
@@ -119,18 +112,6 @@ export default function Sidebar() {
       {/* ── 기업 정보 카드 ────────────────────────────────────── */}
       <CompanyInfoCard />
 
-      {/* ── Footer ───────────────────────────────────────────── */}
-      <div className="px-4 py-4 border-t border-gray-100">
-        <div className="flex items-center gap-2.5">
-          <div className="w-6 h-6 bg-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0">
-            <Leaf size={11} color="#fff" />
-          </div>
-          <div>
-            <p className="text-[11px] font-medium text-gray-500">K-ESG 가이드라인</p>
-            <p className="text-[10px] text-gray-400">산업통상자원부, 2021</p>
-          </div>
-        </div>
-      </div>
     </aside>
   );
 }

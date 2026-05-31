@@ -897,7 +897,7 @@ export default function LandingPage() {
               </div>
               GreenTrace
             </div>
-            <span className="eco-nav-badge">ESG 감사</span>
+            <span className="eco-nav-badge">ESG 분석</span>
           </div>
           <div className="eco-nav-links">
             <a href="#eco-features">기능 소개</a>
@@ -933,7 +933,7 @@ export default function LandingPage() {
             </div>
             <div className="eco-hero-kpis">
               <div className="eco-kpi-pill"><span className="eco-kpi-icon">📊</span><span className="eco-kpi-text">K-ESG 핵심 지표 기반 분석</span></div>
-              <div className="eco-kpi-pill"><span className="eco-kpi-icon">🔍</span><span className="eco-kpi-text">감사 근거 자동 추적</span></div>
+              <div className="eco-kpi-pill"><span className="eco-kpi-icon">🔍</span><span className="eco-kpi-text">분석 근거 자동 추적</span></div>
               <div className="eco-kpi-pill"><span className="eco-kpi-icon">📥</span><span className="eco-kpi-text">ESG 리포트 즉시 생성</span></div>
             </div>
           </div>
@@ -1009,7 +1009,7 @@ export default function LandingPage() {
                     <div id="eco-p0-tbl-wrap" className="eco-uc" style={{ padding: '6px', marginBottom: 0 }}>
                       <div style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--text-2)', marginBottom: 4, paddingLeft: 4 }}>
                         📋 증빙 문서 검토 결과
-                        <span className="eco-tag eco-tg" style={{ marginLeft: 6, fontSize: 9 }}>감사 검증 완료</span>
+                        <span className="eco-tag eco-tg" style={{ marginLeft: 6, fontSize: 9 }}>분석 검증 완료</span>
                       </div>
                       <table className="eco-p0-tbl">
                         <thead>
@@ -1204,7 +1204,7 @@ export default function LandingPage() {
           <div className="eco-inner">
             <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
               <div className="eco-eyebrow">핵심 기능</div>
-              <h2 className="eco-sec-title eco-reveal">ESG 감사 분석 시스템</h2>
+              <h2 className="eco-sec-title eco-reveal">ESG 분석 시스템</h2>
               <p className="eco-sec-desc eco-reveal eco-d1" style={{ margin: '0 auto' }}>
                 PDF·CSV 업로드부터 K-ESG 자동 평가, 검증 근거 추적, ESG 리포트 생성까지
                 기업 ESG 관리에 필요한 기능을 하나의 플랫폼에서 제공합니다.
@@ -1212,7 +1212,7 @@ export default function LandingPage() {
             </div>
             <div className="eco-fgrid">
               {[
-                { ico: '🔎', title: 'ESG 감사 분석 엔진', desc: 'PDF·CSV 기반 ESG 데이터를 자동 검증하고, K-ESG 기준 등급과 감사 신뢰도를 산출합니다.', bullets: ['PDF/CSV 업로드 + OCR 자동 파싱', 'K-ESG 핵심 지표 자동 평가', '검증 근거 자동 추적', '감사 신뢰도 (Confidence) 제공', 'Benchmark 비교 + 등급 시각화'] },
+                { ico: '🔎', title: 'ESG 분석 엔진', desc: 'PDF·CSV 기반 ESG 데이터를 자동 검증하고, K-ESG 기준 등급과 신뢰도를 산출합니다.', bullets: ['PDF/CSV 업로드 + OCR 자동 파싱', 'K-ESG 핵심 지표 자동 평가', '검증 근거 자동 추적', '신뢰도 (Confidence) 제공', 'Benchmark 비교 + 등급 시각화'] },
                 { ico: '📊', title: 'ESG 분석 대시보드', desc: '기업 ESG 성과를 실시간으로 시각화하고, 업종 Benchmark와 비교해 개선 방향을 제시합니다.', bullets: ['E/S/G 카테고리별 실시간 추적', '업종 Benchmark 비교 시각화', '분석 이력 및 등급 변화 추이', '즉시조치 권고 및 개선 알림'] },
                 { ico: '🤝', title: 'ESG 참여 커뮤니티', desc: '임직원이 친환경 활동을 공유하면 자동 인식하고 에코포인트를 지급해 ESG 문화를 내재화합니다.', bullets: ['임직원 친환경 활동 사진 공유', '자동 인식 · 포인트 즉시 적립', 'S 지표 개선 데이터로 자동 연동'] },
                 { ico: '🎁', title: 'ESG 리워드 마켓', desc: '에코포인트를 다양한 리워드로 교환해 임직원의 ESG 참여를 지속적으로 장려하는 인센티브 시스템입니다.', bullets: ['에코포인트 기반 리워드 교환', '친환경 상품 · 문화생활 교환권', '즉시 발송 · 실시간 재고 관리'] },
@@ -1292,7 +1292,7 @@ export default function LandingPage() {
         {/* ── CTA ── */}
         <div className="eco-cta-sec">
           <h2>AI ESG 분석,<br />지금 바로 시작하세요</h2>
-          <p>PDF·CSV 업로드만으로<br />K-ESG 리포트를 자동 생성합니다.</p>
+          <p>PDF·CSV 업로드만으로<br />ESG 리포트를 자동 생성합니다.</p>
           <button className="eco-btn-green" onClick={() => navigate('/login')}>무료 ESG 진단 시작</button>
         </div>
 
@@ -1307,7 +1307,7 @@ export default function LandingPage() {
               </div>
               GreenTrace
             </div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', marginTop: 4 }}>ESG 감사 분석 플랫폼 | K-ESG Verification</div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', marginTop: 4 }}>ESG 분석 플랫폼 | K-ESG Verification</div>
           </div>
           <div className="eco-flinks">
             <a href="#">서비스 소개</a><a href="#">요금제</a>

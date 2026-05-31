@@ -24,6 +24,14 @@ public class S3Uploader {
   private String bucket;
 
   public String upload(MultipartFile multipartFile, String dirName) throws IOException {
+
+    System.out.println("===== S3 DEBUG =====");
+    System.out.println("BUCKET = " + bucket);
+    System.out.println("DIR = " + dirName);
+    System.out.println("FILE = " + multipartFile.getOriginalFilename());
+    System.out.println("SIZE = " + multipartFile.getSize());
+    System.out.println("CONTENT_TYPE=" + multipartFile.getContentType());
+
     String fileName = dirName + "/" + UUID.randomUUID() + "_" + multipartFile.getOriginalFilename();
     PutObjectRequest putObjectRequest = PutObjectRequest.builder()
       .bucket(bucket)

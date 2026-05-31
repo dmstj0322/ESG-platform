@@ -89,7 +89,17 @@
       "Bash(npx acorn *)",
       "Bash(Get-Content *)",
       "Bash(Select-Object -ExpandProperty FullName)",
-      "Bash(grep -v \"import\\\\|export\\\\|const\\\\|function\\\\|interface\\\\|type\\\\|props\\\\|{conf}\\\\|{.*conf.*}\\\\|\\\\\\\\.conf\\\\b\")"
+      "Bash(grep -v \"import\\\\|export\\\\|const\\\\|function\\\\|interface\\\\|type\\\\|props\\\\|{conf}\\\\|{.*conf.*}\\\\|\\\\\\\\.conf\\\\b\")",
+      "Bash(git diff *)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('scripts:', list\\(d.get\\('scripts',{}\\).keys\\(\\)\\)\\); print\\('port from vite.config?'\\); \")",
+      "Bash(npx playwright *)",
+      "Bash(node -e \"require\\('playwright'\\)\")",
+      "Bash(node *)",
+      "PowerShell(node \"C:\\\\Temp\\\\verify_units.js\")",
+      "Bash(Remove-Item *)",
+      "Bash(rm \"C:/SW_Academy/final project/ESG-platform/analysis-service/src/main/java/com/esg/analysis/client/KepcoRegionalClient.java\")",
+      "Bash(rm \"C:/SW_Academy/final project/ESG-platform/analysis-service/src/main/java/com/esg/analysis/dto/external/KepcoRegionalResponseDto.java\")",
+      "Bash(xargs ls -la)"
     ]
   }
 }

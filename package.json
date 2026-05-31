@@ -4,9 +4,12 @@
     "antd": "^6.3.6",
     "apparel": "^0.0.2",
     "axios": "^1.15.1",
+    "browser-image-compression": "^2.0.2",
+    "event-source-polyfill": "^1.0.31",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "marked": "^18.0.2",
+    "react-toastify": "^11.1.0",
     "recharts": "^3.8.1"
   }
 }

@@ -34,41 +34,41 @@ const GOV_ITEMS = [
 // ── E 환경 데이터 상수 ────────────────────────────────────────────────────
 const KSIC_BENCHMARK = {
   '제조업':    { industry: '제조업',    metrics: [
-    { key: 'electricity', name: '전력 사용량',   unit: 'MWh',  industryAvg: 12000 },
-    { key: 'gas',         name: '가스 사용량',   unit: 'Nm³',  industryAvg: 8500  },
-    { key: 'carbon',      name: '탄소 배출량',   unit: 'tCO₂', industryAvg: 5200  },
-    { key: 'waste',       name: '폐기물 발생량', unit: 'ton',  industryAvg: 320   },
-    { key: 'water',       name: '수자원 사용량', unit: 'm³',   industryAvg: 45000 },
+    { key: 'electricity', name: '전력 사용량',   unit: 'kWh',  industryAvg: 12000000 },
+    { key: 'gas',         name: '가스 사용량',   unit: 'Nm³',  industryAvg: 8500     },
+    { key: 'carbon',      name: '탄소 배출량',   unit: 'tCO₂', industryAvg: 5200     },
+    { key: 'waste',       name: '폐기물 발생량', unit: 'kg',   industryAvg: 320000   },
+    { key: 'water',       name: '수자원 사용량', unit: 'm³',   industryAvg: 45000    },
   ]},
   'IT서비스업': { industry: 'IT서비스업', metrics: [
-    { key: 'electricity', name: '전력 사용량',   unit: 'MWh',  industryAvg: 3200  },
-    { key: 'gas',         name: '가스 사용량',   unit: 'Nm³',  industryAvg: 1100  },
-    { key: 'carbon',      name: '탄소 배출량',   unit: 'tCO₂', industryAvg: 980   },
-    { key: 'waste',       name: '폐기물 발생량', unit: 'ton',  industryAvg: 42    },
-    { key: 'water',       name: '수자원 사용량', unit: 'm³',   industryAvg: 8200  },
+    { key: 'electricity', name: '전력 사용량',   unit: 'kWh',  industryAvg: 3200000  },
+    { key: 'gas',         name: '가스 사용량',   unit: 'Nm³',  industryAvg: 1100     },
+    { key: 'carbon',      name: '탄소 배출량',   unit: 'tCO₂', industryAvg: 980      },
+    { key: 'waste',       name: '폐기물 발생량', unit: 'kg',   industryAvg: 42000    },
+    { key: 'water',       name: '수자원 사용량', unit: 'm³',   industryAvg: 8200     },
   ]},
   '물류업':    { industry: '물류업',    metrics: [
-    { key: 'electricity', name: '전력 사용량',   unit: 'MWh',  industryAvg: 6800  },
-    { key: 'gas',         name: '가스 사용량',   unit: 'Nm³',  industryAvg: 3400  },
-    { key: 'carbon',      name: '탄소 배출량',   unit: 'tCO₂', industryAvg: 7300  },
-    { key: 'waste',       name: '폐기물 발생량', unit: 'ton',  industryAvg: 180   },
-    { key: 'water',       name: '수자원 사용량', unit: 'm³',   industryAvg: 12000 },
+    { key: 'electricity', name: '전력 사용량',   unit: 'kWh',  industryAvg: 6800000  },
+    { key: 'gas',         name: '가스 사용량',   unit: 'Nm³',  industryAvg: 3400     },
+    { key: 'carbon',      name: '탄소 배출량',   unit: 'tCO₂', industryAvg: 7300     },
+    { key: 'waste',       name: '폐기물 발생량', unit: 'kg',   industryAvg: 180000   },
+    { key: 'water',       name: '수자원 사용량', unit: 'm³',   industryAvg: 12000    },
   ]},
   '식품업':    { industry: '식품업',    metrics: [
-    { key: 'electricity', name: '전력 사용량',   unit: 'MWh',  industryAvg: 8400  },
-    { key: 'gas',         name: '가스 사용량',   unit: 'Nm³',  industryAvg: 5600  },
-    { key: 'carbon',      name: '탄소 배출량',   unit: 'tCO₂', industryAvg: 3100  },
-    { key: 'waste',       name: '폐기물 발생량', unit: 'ton',  industryAvg: 560   },
-    { key: 'water',       name: '수자원 사용량', unit: 'm³',   industryAvg: 95000 },
+    { key: 'electricity', name: '전력 사용량',   unit: 'kWh',  industryAvg: 8400000  },
+    { key: 'gas',         name: '가스 사용량',   unit: 'Nm³',  industryAvg: 5600     },
+    { key: 'carbon',      name: '탄소 배출량',   unit: 'tCO₂', industryAvg: 3100     },
+    { key: 'waste',       name: '폐기물 발생량', unit: 'kg',   industryAvg: 560000   },
+    { key: 'water',       name: '수자원 사용량', unit: 'm³',   industryAvg: 95000    },
   ]},
 };
 
 const ENV_FIELDS = [
-  { key: 'electricity', label: '전력 사용량',   unit: 'MWh',  placeholder: '예: 12000' },
-  { key: 'gas',         label: '가스 사용량',   unit: 'Nm³',  placeholder: '예: 8500'  },
-  { key: 'carbon',      label: '탄소 배출량',   unit: 'tCO₂', placeholder: '예: 5200'  },
-  { key: 'waste',       label: '폐기물 발생량', unit: 'ton',  placeholder: '예: 320'   },
-  { key: 'water',       label: '수자원 사용량', unit: 'm³',   placeholder: '예: 45000' },
+  { key: 'electricity', label: '전력 사용량',   unit: 'kWh',  placeholder: '예: 1200000' },
+  { key: 'gas',         label: '가스 사용량',   unit: 'Nm³',  placeholder: '예: 8500'    },
+  { key: 'carbon',      label: '탄소 배출량',   unit: 'tCO₂', placeholder: '예: 5200'    },
+  { key: 'waste',       label: '폐기물 발생량', unit: 'kg',   placeholder: '예: 320000'  },
+  { key: 'water',       label: '수자원 사용량', unit: 'm³',   placeholder: '예: 45000'   },
 ];
 
 // ── 위저드 스텝 정의 ──────────────────────────────────────────────────────
@@ -816,6 +816,10 @@ export default function AnalysisPage() {
     if (ksic) {
       fd.append('ksicCode', new Blob([ksic], { type: 'text/plain' }));
     }
+    const empCount = companyProfile.employeeCount;
+    if (empCount && Number(empCount) > 0) {
+      fd.append('employeeCount', new Blob([String(Number(empCount))], { type: 'text/plain' }));
+    }
 
     console.log('[E-DEBUG] FormData prepared. Keys:', [...fd.keys()],
       '| eMetrics:', eMetrics, '| ksic:', ksic, '| Calling POST /api/v1/analysis/category');
@@ -1106,8 +1110,8 @@ export default function AnalysisPage() {
       <div className="max-w-6xl mx-auto px-8 py-10">
 
         <div className="mb-8">
-          <p className="text-[11px] font-semibold text-emerald-600 uppercase tracking-[0.1em] mb-1.5">GreenTrace ESG 감사</p>
-          <h1 className="text-[22px] font-bold text-gray-900 tracking-tight leading-none">ESG 감사 진단</h1>
+          <p className="text-[11px] font-semibold text-emerald-600 uppercase tracking-[0.1em] mb-1.5">GreenTrace ESG 분석</p>
+          <h1 className="text-[22px] font-bold text-gray-900 tracking-tight leading-none">ESG 분석 진단</h1>
           <p className="text-[13px] text-gray-500 mt-2">
             환경(E) · 사회(S) · 지배구조(G) 핵심 ESG 지표를 기반으로 증빙 문서 감사를 수행합니다
           </p>
@@ -1384,7 +1388,7 @@ export default function AnalysisPage() {
                         const poolBonus = Math.min(5, Math.floor(userPoints / 1000));
                         const poolUsed  = poolBonus * 1000;
                         return [
-                          { label: '회사 ESG Pool', value: userPoints.toLocaleString(),  unit: 'EP',   color: '#059669' },
+                          { label: '회사 보유 에코포인트', value: userPoints.toLocaleString(),  unit: 'EP',   color: '#059669' },
                           { label: 'S 가산점',       value: `+${poolBonus}`,              unit: '점',   color: '#3b82f6' },
                           { label: '차감 예정 EP',   value: poolUsed.toLocaleString(),    unit: 'EP',   color: '#f59e0b' },
                         ];
