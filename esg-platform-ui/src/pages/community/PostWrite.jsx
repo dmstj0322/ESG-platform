@@ -202,8 +202,8 @@ const PostWrite = () => {
 };
 
 // --- 스타일 정의 ---
-const containerStyle = { maxWidth: '500px', margin: '40px auto', padding: '0 20px', textAlign: 'left' };
-const formStyle = { backgroundColor: '#fff', padding: '30px', borderRadius: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 0 1px rgba(0,0,0,0.04)' };
+const containerStyle = { maxWidth: '500px', margin: '20px auto', padding: '0 20px', textAlign: 'left' };
+const formStyle = { backgroundColor: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 0 1px rgba(0,0,0,0.04)' };
 const headerStyle = { fontSize: '24px', fontWeight: '800', marginBottom: '25px', color: '#2b8a3e' };
 
 const uploadBoxStyle = { marginBottom: '20px' };

@@ -375,9 +375,6 @@ const LANDING_STYLE = `
   }
   .eco-flogo { font-size: 15px; font-weight: 700; color: #fff; }
   .eco-fcopy { font-size: 12px; color: rgba(255,255,255,.25); }
-  .eco-flinks { display: flex; gap: 1.5rem; }
-  .eco-flinks a { font-size: 12.5px; color: rgba(255,255,255,.38); text-decoration: none; transition: color .15s; }
-  .eco-flinks a:hover { color: rgba(255,255,255,.75); }
 
   /* ── Reveal animation ── */
   .eco-reveal { opacity: 0; transform: translateY(18px); transition: opacity .55s ease, transform .55s ease; }
@@ -540,11 +537,12 @@ const LANDING_STYLE = `
     .eco-nav-links { display: none; }
     .eco-hero-wrap { flex-direction: column; padding: 86px 1.25rem 48px; gap: 2.5rem; }
     .eco-hero-right { flex: none; width: 100%; }
-    .eco-hero-title { font-size: 32px; }
+    .eco-hero-title { font-size: 32px; line-height: 1.25; word-break: keep-all; }
     .eco-section { padding: 56px 1.25rem; }
     .eco-fgrid, .eco-sgrid, .eco-rgrid { grid-template-columns: 1fr; }
     .eco-sec-title { font-size: 26px; }
-    .eco-footer { flex-direction: column; gap: 1.25rem; text-align: center; }
+    .eco-footer { flex-direction: column; gap: 1.25rem; text-align: center; padding: 2.5rem 1.25rem; }
+    .eco-cta-sec h2 { font-size: 28px; line-height: 1.25; word-break: keep-all; }
   }
 `;
 
@@ -1213,7 +1211,7 @@ export default function LandingPage() {
             <div className="eco-fgrid">
               {[
                 { ico: '🔎', title: 'ESG 분석 엔진', desc: 'PDF·CSV 기반 ESG 데이터를 자동 검증하고, K-ESG 기준 등급과 신뢰도를 산출합니다.', bullets: ['PDF/CSV 업로드 + OCR 자동 파싱', 'K-ESG 핵심 지표 자동 평가', '검증 근거 자동 추적', '신뢰도 (Confidence) 제공', 'Benchmark 비교 + 등급 시각화'] },
-                { ico: '📊', title: 'ESG 분석 대시보드', desc: '기업 ESG 성과를 실시간으로 시각화하고, 업종 Benchmark와 비교해 개선 방향을 제시합니다.', bullets: ['E/S/G 카테고리별 실시간 추적', '업종 Benchmark 비교 시각화', '분석 이력 및 등급 변화 추이', '즉시조치 권고 및 개선 알림'] },
+                { ico: '📊', title: 'ESG 분석 대시보드', desc: '기업 ESG 성과를 실시간으로 시각화하고, 업종 Benchmark와 비교해 개선 방향을 제시합니다.', bullets: ['E/S/G 카테고리별 추적', '업종 Benchmark 비교 시각화', '분석 이력 및 등급 변화 추이', '즉시조치 권고 및 개선 알림'] },
                 { ico: '🤝', title: 'ESG 참여 커뮤니티', desc: '임직원이 친환경 활동을 공유하면 자동 인식하고 에코포인트를 지급해 ESG 문화를 내재화합니다.', bullets: ['임직원 친환경 활동 사진 공유', '자동 인식 · 포인트 즉시 적립', 'S 지표 개선 데이터로 자동 연동'] },
                 { ico: '🎁', title: 'ESG 리워드 마켓', desc: '에코포인트를 다양한 리워드로 교환해 임직원의 ESG 참여를 지속적으로 장려하는 인센티브 시스템입니다.', bullets: ['에코포인트 기반 리워드 교환', '친환경 상품 · 문화생활 교환권', '즉시 발송 · 실시간 재고 관리'] },
               ].map((f, i) => (
@@ -1309,10 +1307,7 @@ export default function LandingPage() {
             </div>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', marginTop: 4 }}>ESG 분석 플랫폼 | K-ESG Verification</div>
           </div>
-          <div className="eco-flinks">
-            <a href="#">서비스 소개</a><a href="#">요금제</a>
-            <a href="#">개인정보처리방침</a><a href="#">이용약관</a><a href="#">고객센터</a>
-          </div>
+
           <div className="eco-fcopy">© 2025 GreenTrace. All rights reserved.</div>
         </footer>
 

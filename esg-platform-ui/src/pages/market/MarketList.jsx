@@ -49,10 +49,10 @@ const MarketList = () => {
   };
 
   return (
-    <div style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ padding: '20px 16px', maxWidth: '1200px', margin: '0 auto' }}>
       <header style={{ marginBottom: '35px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2 style={{ fontSize: '32px', fontWeight: '800', color: '#1a1a1a', margin: 0 }}>🌱 ESG Market</h2>
+          <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#1a1a1a', margin: 0 }}>🌱 ESG Market</h2>
           {/* <p style={{ margin: '5px 0 0 0', color: '#868e96', fontSize: '14px' }}>친환경 ESG 활동으로 모은 포인트로 가치 있는 소비를 실천하세요.</p> */}
         </div>
         {isAdmin && (
@@ -166,11 +166,11 @@ const progressBarFill = (pct, color) => ({ width: `${pct}%`, height: '100%', bac
 // 🌟 카테고리 탭 메뉴 스타일 추가
 const tabContainerStyle = { display: 'flex', gap: '10px', marginBottom: '30px', borderBottom: '1px solid #e9ecef', paddingBottom: '12px' };
 const tabButtonStyle = (isActive) => ({
-  padding: '10px 20px', borderRadius: '8px', border: 'none',
+  padding: '10px 10px', borderRadius: '8px', border: 'none',
   backgroundColor: isActive ? '#E6F7F1' : 'transparent',
   color: isActive ? '#0D7A58' : '#495057',
-  fontWeight: 'bold', fontSize: '14px', cursor: 'pointer',
-  transition: '0.2s ease'
+  fontWeight: 'bold', fontSize: '13px', cursor: 'pointer',
+  transition: '0.2s ease', whiteSpace: 'nowrap',
 });
 
 // 🌟 하단 페이지네이션 컴포넌트 스킨 스타일

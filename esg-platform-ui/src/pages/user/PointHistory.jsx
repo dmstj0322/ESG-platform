@@ -104,13 +104,13 @@ const PointHistory = () => {
 };
 
 // UI 스타일 컴포넌트 구조 정의
-const containerStyle = { maxWidth: '1000px', margin: '40px auto', padding: '0 20px', textAlign: 'left' };
+const containerStyle = { maxWidth: '1000px', margin: '20px auto', padding: '0 20px', textAlign: 'left' };
 const headerWrapperStyle = { marginBottom: '25px' };
 const titleStyle = { fontSize: '24px', fontWeight: '800', color: '#212529', margin: '0 0 8px 0' };
 const subtitleStyle = { fontSize: '14px', color: '#868e96', margin: 0 };
 
-const cardStyle = { backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e9ecef', boxShadow: '0 4px 12px rgba(0,0,0,0.02)', overflow: 'hidden' };
-const tableStyle = { width: '100%', borderCollapse: 'collapse', textAlign: 'left' };
+const cardStyle = { backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e9ecef', boxShadow: '0 4px 12px rgba(0,0,0,0.02)', overflowX: 'auto' };
+const tableStyle = { width: '100%', minWidth: '620px', borderCollapse: 'collapse', textAlign: 'left' };
 
 const thStyle = { 
   padding: '16px 20px', 
@@ -123,7 +123,7 @@ const thStyle = {
 };
 
 const trStyle = { borderBottom: '1px solid #f1f3f5', transition: 'background-color 0.2s' };
-const tdStyle = { padding: '18px 20px', fontSize: '15px', color: '#343a40', verticalAlign: 'middle' };
+const tdStyle = { padding: '18px 20px', fontSize: '15px', color: '#343a40', verticalAlign: 'middle', whiteSpace: 'nowrap' };
 
 // 🌟 적립/사용/환불 상태값 뱃지 디자인 스타일링 함수
 const badgeStyle = (type) => {

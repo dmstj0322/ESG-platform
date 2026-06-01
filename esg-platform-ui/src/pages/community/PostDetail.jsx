@@ -186,14 +186,14 @@ const PostDetails = () => {
 // 스타일 가이드 (기존과 동일)
 const containerStyle = { maxWidth: '640px', margin: 'auto', padding: '0 20px', textAlign: 'left' };
 const headerSectionStyle = { marginBottom: '30px' };
-const mainTitleStyle = { fontSize: '32px', fontWeight: '850', color: '#1a1a1a', margin: '15px 0', letterSpacing: '-0.5px' };
+const mainTitleStyle = { fontSize: '24px', fontWeight: '850', color: '#1a1a1a', margin: '15px 0', letterSpacing: '-0.5px' };
 const authorInfoStyle = { display: 'flex', alignItems: 'center', gap: '10px', marginTop: '20px' };
 const miniAvatarStyle = { width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#f1f3f5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 'bold', color: '#16A87A' };
 const detailSliderWrapper = { borderRadius: '16px', overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)', marginBottom: '40px' };
 const bodyContentStyle = { padding: '0 10px', marginBottom: '50px' };
 const paragraphStyle = { fontSize: '18px', lineHeight: '1.8', color: '#343a40', whiteSpace: 'pre-wrap' };
 const statsRowStyle = { marginTop: '30px', fontSize: '14px', color: '#adb5bd', display: 'flex', gap: '15px' };
-const actionRowStyle = { display: 'flex', alignItems: 'center', gap: '12px', padding: '25px 0', borderTop: '1px solid #f1f3f5', borderBottom: '1px solid #f1f3f5' };
+const actionRowStyle = { display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', padding: '25px 0', borderTop: '1px solid #f1f3f5', borderBottom: '1px solid #f1f3f5' };
 const likeBtnStyle = { padding: '12px 24px', borderRadius: '30px', border: '1px solid #dee2e6', backgroundColor: '#fff', cursor: 'pointer', fontWeight: 'bold', transition: '0.2s' };
 const activeLikeBtnStyle = { ...likeBtnStyle, backgroundColor: '#fff0f0', borderColor: '#ffc9c9', color: '#fa5252' };
 const listBackBtnStyle = { padding: '12px 24px', borderRadius: '30px', border: 'none', backgroundColor: '#f1f3f5', cursor: 'pointer', fontWeight: 'bold' };
