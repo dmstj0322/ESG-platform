@@ -106,3 +106,6 @@ ollama:
 
 jwt:
   secret: vms_secret_key_testing_1234567890_vms_secret_key
+
+chroma:
+  base-url: http://${CHROMA_HOST:localhost}:8000
