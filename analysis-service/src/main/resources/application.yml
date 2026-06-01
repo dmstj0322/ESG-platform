@@ -13,7 +13,7 @@ spring:
       fail-fast: true
       uri: http://localhost:8888
   config:
-    import: "optional:configserver:http://localhost:8888"
+    import: "optional:configserver:http://${CONFIG_HOST:localhost}:8888"
   profiles:
     active: default
 
@@ -24,7 +24,7 @@ upstage:
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: http://${EUREKA_HOST:localhost}:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
   instance:
