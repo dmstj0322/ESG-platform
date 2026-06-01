@@ -114,3 +114,10 @@
   background-color: #0D7A58;
   box-shadow: 0 8px 20px rgba(22, 168, 122, 0.5);
 }
+
+@media (max-width: 767px) {
+  .post-header {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+}

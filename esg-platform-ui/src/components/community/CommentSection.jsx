@@ -126,8 +126,8 @@ const CommentSection = ({ postId, currentMemberId }) => {
             value={editContent}
             onChange={(e) => setEditContent(e.target.value)}
           />
-          <button onClick={() => handleSaveEdit(comment.id)}>저장</button>
-          <button onClick={() => setEditingId(null)}>취소</button>
+          <button style={editSaveBtnStyle} onClick={() => handleSaveEdit(comment.id)}>저장</button>
+          <button style={editCancelBtnStyle} onClick={() => setEditingId(null)}>취소</button>
         </div>
       ) : (
         <div style={{ fontSize: '15px', color: '#444', lineHeight: '1.5' }}>
@@ -210,5 +210,7 @@ const CommentSection = ({ postId, currentMemberId }) => {
 const textBtnStyle = { background: 'none', border: 'none', color: '#868e96', fontSize: '12px', cursor: 'pointer', padding: 0, fontWeight: '500' };
 const activeBtnStyle = { padding: '5px 12px', backgroundColor: '#16A87A', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' };
 const cancelBtnStyle = { padding: '5px 12px', backgroundColor: '#e9ecef', color: '#495057', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' };
+const editSaveBtnStyle = { padding: '8px 14px', minHeight: '44px', backgroundColor: '#16A87A', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' };
+const editCancelBtnStyle = { padding: '8px 14px', minHeight: '44px', backgroundColor: '#e9ecef', color: '#495057', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' };
 
 export default CommentSection;
