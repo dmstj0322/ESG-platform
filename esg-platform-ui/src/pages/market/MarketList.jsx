@@ -166,11 +166,11 @@ const progressBarFill = (pct, color) => ({ width: `${pct}%`, height: '100%', bac
 // 🌟 카테고리 탭 메뉴 스타일 추가
 const tabContainerStyle = { display: 'flex', gap: '10px', marginBottom: '30px', borderBottom: '1px solid #e9ecef', paddingBottom: '12px' };
 const tabButtonStyle = (isActive) => ({
-  padding: '10px 20px', borderRadius: '8px', border: 'none',
+  padding: '10px 10px', borderRadius: '8px', border: 'none',
   backgroundColor: isActive ? '#E6F7F1' : 'transparent',
   color: isActive ? '#0D7A58' : '#495057',
-  fontWeight: 'bold', fontSize: '14px', cursor: 'pointer',
-  transition: '0.2s ease'
+  fontWeight: 'bold', fontSize: '13px', cursor: 'pointer',
+  transition: '0.2s ease', whiteSpace: 'nowrap',
 });
 
 // 🌟 하단 페이지네이션 컴포넌트 스킨 스타일

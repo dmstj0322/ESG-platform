@@ -120,9 +120,9 @@ const CommentSection = ({ postId, currentMemberId }) => {
 
       {/* 댓글 본문 및 수정 모드 */}
       {editingId === comment.id ? (
-        <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '5px' }}>
           <input
-            style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+            style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
             value={editContent}
             onChange={(e) => setEditContent(e.target.value)}
           />
@@ -152,9 +152,9 @@ const CommentSection = ({ postId, currentMemberId }) => {
 
       {/* 답글 입력창 (왼쪽 정렬) */}
       {replyingToId === comment.id && (
-        <div style={{ marginTop: '12px', display: 'flex', gap: '8px', backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '4px' }}>
+        <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px', backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '4px' }}>
           <input
-            style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+            style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
             placeholder="답글 내용을 입력하세요..."
             value={replyContent}
             onChange={(e) => setReplyContent(e.target.value)}
@@ -187,7 +187,7 @@ const CommentSection = ({ postId, currentMemberId }) => {
       {isLoggedIn ? (
         <div style={{ marginBottom: '30px', display: 'flex', gap: '10px' }}>
           <input
-            style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #e9ecef', outline: 'none' }}
+            style={{ flex: 1, minWidth: '0', padding: '12px', borderRadius: '8px', border: '1px solid #e9ecef', outline: 'none' }}
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="칭찬과 격려의 댓글은 큰 힘이 됩니다!"
@@ -207,10 +207,10 @@ const CommentSection = ({ postId, currentMemberId }) => {
 };
 
 // 버튼 스타일들
-const textBtnStyle = { background: 'none', border: 'none', color: '#868e96', fontSize: '12px', cursor: 'pointer', padding: 0, fontWeight: '500' };
+const textBtnStyle = { background: 'none', border: 'none', color: '#868e96', fontSize: '12px', cursor: 'pointer', padding: '4px 2px', fontWeight: '500', whiteSpace: 'nowrap' };
 const activeBtnStyle = { padding: '5px 12px', backgroundColor: '#16A87A', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0 };
 const cancelBtnStyle = { padding: '5px 12px', backgroundColor: '#e9ecef', color: '#495057', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0 };
-const editSaveBtnStyle = { padding: '8px 14px', minHeight: '44px', backgroundColor: '#16A87A', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' };
-const editCancelBtnStyle = { padding: '8px 14px', minHeight: '44px', backgroundColor: '#e9ecef', color: '#495057', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' };
+const editSaveBtnStyle = { padding: '8px 10px', minHeight: '44px', backgroundColor: '#16A87A', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', whiteSpace: 'nowrap', flexShrink: 0 };
+const editCancelBtnStyle = { padding: '8px 10px', minHeight: '44px', backgroundColor: '#e9ecef', color: '#495057', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0 };
 
 export default CommentSection;
