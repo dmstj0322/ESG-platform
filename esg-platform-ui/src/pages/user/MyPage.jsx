@@ -523,8 +523,8 @@ const MyPage = () => {
 };
 
 // 스타일 가이드
-const pageContainer = { padding: '40px 20px', maxWidth: '900px', margin: '0 auto', fontFamily: "'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", backgroundColor: '#fdfdfd', minHeight: '100vh' };
-const dashboardCardStyle = { display: 'flex', alignItems: 'center', padding: '30px', marginBottom: '20px', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e9ecef', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
+const pageContainer = { padding: '20px 16px', maxWidth: '900px', margin: '0 auto', fontFamily: "'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", backgroundColor: '#fdfdfd', minHeight: '100vh' };
+const dashboardCardStyle = { display: 'flex', flexWrap: 'wrap', alignItems: 'center', padding: '30px', marginBottom: '20px', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e9ecef', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
 const profileSectionStyle = { display: 'flex', alignItems: 'center', gap: '18px', flex: 1 };
 const avatarStyle = { width: '54px', height: '54px', borderRadius: '50%', backgroundColor: '#f1f3f5', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '24px' };
 const nicknameStyle = { fontSize: '20px', fontWeight: '800', color: '#212529', marginBottom: '6px' };
@@ -537,7 +537,7 @@ const pointLabelStyle = { fontSize: '13px', color: '#868e96', fontWeight: '600' 
 const pointHistoryLinkStyle = { fontSize: '12px', color: '#adb5bd', textDecoration: 'none', fontWeight: '600', transition: 'color 0.2s' };
 const pointValueStyle = { fontSize: '30px', fontWeight: '800', color: '#16A87A', letterSpacing: '-0.5px' };
 
-const tabContainerStyle = { display: 'flex', borderBottom: '1px solid #dee2e6', backgroundColor: '#fff', borderRadius: '16px 16px 0 0', border: '1px solid #e9ecef' };
+const tabContainerStyle = { display: 'flex', overflowX: 'auto', borderBottom: '1px solid #dee2e6', backgroundColor: '#fff', borderRadius: '16px 16px 0 0', border: '1px solid #e9ecef' };
 const tabStyle = { padding: '16px 20px', backgroundColor: 'transparent', color: '#868e96', border: 'none', borderBottom: '3px solid transparent', cursor: 'pointer', fontWeight: 'bold' };
 const activeTabStyle = { ...tabStyle, color: '#0D7A58', borderBottom: '3px solid #16A87A' };
 const contentContainerStyle = { padding: '24px 0' };
@@ -567,7 +567,7 @@ const disabledCancelBtnStyle = { padding: '6px 12px', backgroundColor: '#f8f9fa'
 
 const emptyTextStyle = { textAlign: 'center', padding: '60px 0', color: '#adb5bd', fontSize: '15px', fontWeight: '500' };
 
-const esgDashboardWrapperStyle = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '35px' };
+const esgDashboardWrapperStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px', marginBottom: '35px' };
 const co2CardStyle = { backgroundColor: '#ffffff', borderRadius: '12px', padding: '24px', border: '1px solid #e9ecef', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
 const badgeCardStyle = { backgroundColor: '#ffffff', borderRadius: '12px', padding: '24px', border: '1px solid #e9ecef', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
 const treeVisualStyle = { display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: '#E6F7F1', padding: '12px 18px', borderRadius: '12px', border: '1px solid #A8DFD0' };

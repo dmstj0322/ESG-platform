@@ -104,12 +104,12 @@ const PointHistory = () => {
 };
 
 // UI 스타일 컴포넌트 구조 정의
-const containerStyle = { maxWidth: '1000px', margin: '40px auto', padding: '0 20px', textAlign: 'left' };
+const containerStyle = { maxWidth: '1000px', margin: '20px auto', padding: '0 20px', textAlign: 'left' };
 const headerWrapperStyle = { marginBottom: '25px' };
 const titleStyle = { fontSize: '24px', fontWeight: '800', color: '#212529', margin: '0 0 8px 0' };
 const subtitleStyle = { fontSize: '14px', color: '#868e96', margin: 0 };
 
-const cardStyle = { backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e9ecef', boxShadow: '0 4px 12px rgba(0,0,0,0.02)', overflow: 'hidden' };
+const cardStyle = { backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e9ecef', boxShadow: '0 4px 12px rgba(0,0,0,0.02)', overflowX: 'auto' };
 const tableStyle = { width: '100%', borderCollapse: 'collapse', textAlign: 'left' };
 
 const thStyle = { 
