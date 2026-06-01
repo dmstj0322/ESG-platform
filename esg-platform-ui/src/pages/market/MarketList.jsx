@@ -49,10 +49,10 @@ const MarketList = () => {
   };
 
   return (
-    <div style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ padding: '20px 16px', maxWidth: '1200px', margin: '0 auto' }}>
       <header style={{ marginBottom: '35px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2 style={{ fontSize: '32px', fontWeight: '800', color: '#1a1a1a', margin: 0 }}>🌱 ESG Market</h2>
+          <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#1a1a1a', margin: 0 }}>🌱 ESG Market</h2>
           {/* <p style={{ margin: '5px 0 0 0', color: '#868e96', fontSize: '14px' }}>친환경 ESG 활동으로 모은 포인트로 가치 있는 소비를 실천하세요.</p> */}
         </div>
         {isAdmin && (
