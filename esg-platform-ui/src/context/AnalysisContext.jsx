@@ -6,7 +6,7 @@ import { marked } from 'marked';
 import { useAuth } from './AuthContext';
 
 const AnalysisContext = createContext(null);
-export const BASE_URL = 'http://localhost:8081/';
+export const BASE_URL = 'http://211.184.227.203:9000/';
 
 const LS_REPORT_CACHE = 'esg_report_cache';
 

@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 
-const BASE_URL = 'http://localhost:5173';
+const BASE_URL = 'http://211.184.227.203:9000:5173';
 const EMAIL    = 'admin@c.com';
 const PASSWORD = '12345678';
 
@@ -52,7 +52,7 @@ await wait(3000);
 const failed = networkReqs.filter(r => r.status >= 400);
 console.log('\n── Failed network requests:', failed.length ? failed : 'none');
 console.log('── All XHR/fetch requests:');
-networkReqs.filter(r => r.url.includes('localhost') && !r.url.includes('vite')).forEach(r => {
+networkReqs.filter(r => r.url.includes('211.184.227.203:9000') && !r.url.includes('vite')).forEach(r => {
   console.log(`  ${r.status} ${r.url}`);
 });
 

@@ -46,6 +46,11 @@ public class PostService {
 
   private Map<Long, String> getBadgeMap(Page<Post> posts) {
     Set<Long> memberIds = posts.stream().map(Post::getMemberId).collect(Collectors.toSet());
+
+    if (memberIds.isEmpty()) {
+      return java.util.Collections.emptyMap();
+    }
+
     return memberBadgeRepository.findByMemberIdInAndIsRepresentativeTrue(memberIds)
       .stream().collect(Collectors.toMap(mb -> mb.getMemberId(), mb -> mb.getBadge().getName()));
   }

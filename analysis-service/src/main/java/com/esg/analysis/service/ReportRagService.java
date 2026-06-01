@@ -2,7 +2,6 @@ package com.esg.analysis.service;
 
 import com.esg.analysis.dto.EvidenceResult;
 import com.esg.analysis.service.domain.ESGIndicator;
-import org.jsoup.Jsoup;
 import dev.langchain4j.data.document.Metadata;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
@@ -16,11 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -40,7 +35,7 @@ public class ReportRagService {
     private final RestTemplate restTemplate;
     private final IndicatorKeywordGate keywordGate;
 
-    @Value("${chroma.base-url:http://127.0.0.1:8000}")
+    @Value("${chroma.base-url:http://esg-chroma:8000}")
     private String chromaBaseUrl;
 
     // 세션별 store 캐싱 — 동일 세션에 대한 ChromaDB 다중 접근 방지

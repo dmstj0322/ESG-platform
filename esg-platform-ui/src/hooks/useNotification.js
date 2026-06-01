@@ -35,7 +35,7 @@ export const useNotification = (memberId, onMessageReceived) => {
 
     // SSE 연결 시작
     const eventSource = new EventSourcePolyfill(
-      `http://localhost:9000/notification/subscribe/${memberId}`,
+      `http://211.184.227.203:9000/notification/subscribe/${memberId}`,
       {
         headers: { Authorization: `Bearer ${token}` },
         heartbeatTimeout: 86400000,

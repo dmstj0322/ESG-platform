@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import { mkdirSync } from 'fs';
 import path from 'path';
 
-const BASE_URL = 'http://localhost:5173';
+const BASE_URL = 'http://211.184.227.203:9000:5173';
 const EMAIL    = 'admin@c.com';
 const PASSWORD = '12345678';
 const OUT_DIR  = './qa_screenshots';

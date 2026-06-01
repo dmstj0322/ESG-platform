@@ -8,7 +8,6 @@ spring:
       max-file-size: 50MB
       max-request-size: 50MB
 
-
   config:
     import: "optional:configserver:http://${CONFIG_HOST:localhost}:8888"
   profiles:

@@ -720,7 +720,7 @@ export default function AnalysisPage() {
     const cId = localStorage.getItem('companyId');
     if (!cId) return;
     const poolUrl = `/points/company/${cId}/esg-pool`;
-    console.log('[POOL-REQUEST-URL]', poolUrl, '→ proxy: localhost:9000 → POINT-SERVICE');
+    console.log('[POOL-REQUEST-URL]', poolUrl, '→ proxy: 211.184.227.203:9000 → POINT-SERVICE');
     api.get(poolUrl)
       .then(res => {
         console.log('[POOL-RESPONSE]', res.data);
