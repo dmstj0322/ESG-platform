@@ -137,9 +137,9 @@ const AUTH_STYLE = `
   .auth-links .s { margin: 0 7px; color: var(--border2); }
   .auth-links.mt { margin-top: 10px; }
 
-  @media (max-width: 800px) {
+  @media (max-width: 767px) {
     .auth-left { display: none; }
-    .auth-right { padding: 32px 20px; }
+    .auth-right { padding: 24px 16px; align-items: flex-start; }
   }
 `;
 

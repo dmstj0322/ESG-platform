@@ -156,9 +156,9 @@ const AUTH_STYLE = `
   .auth-signup-link-top { font-size: 11px; font-weight: 700; color: var(--text-2); margin-bottom: 2px; }
   .auth-signup-link-sub { font-size: 10px; color: var(--text-3); }
 
-  @media (max-width: 800px) {
+  @media (max-width: 767px) {
     .auth-left { display: none; }
-    .auth-right { padding: 32px 20px; }
+    .auth-right { padding: 24px 16px; align-items: flex-start; }
     .auth-roles { grid-template-columns: 1fr; }
     .auth-signup-links { flex-direction: column; }
   }
