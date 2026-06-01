@@ -192,7 +192,7 @@ const CommentSection = ({ postId, currentMemberId }) => {
             onChange={(e) => setContent(e.target.value)}
             placeholder="칭찬과 격려의 댓글은 큰 힘이 됩니다!"
           />
-          <button style={{ padding: '0 20px', backgroundColor: '#16A87A', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }} onClick={handleAddComment}>등록</button>
+          <button style={{ padding: '0 20px', backgroundColor: '#16A87A', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }} onClick={handleAddComment}>등록</button>
         </div>
       ) : (
         <p style={{ color: '#adb5bd', fontSize: '14px', marginBottom: '20px' }}>로그인 후 소통에 참여해보세요.</p>
@@ -208,8 +208,8 @@ const CommentSection = ({ postId, currentMemberId }) => {
 
 // 버튼 스타일들
 const textBtnStyle = { background: 'none', border: 'none', color: '#868e96', fontSize: '12px', cursor: 'pointer', padding: 0, fontWeight: '500' };
-const activeBtnStyle = { padding: '5px 12px', backgroundColor: '#16A87A', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' };
-const cancelBtnStyle = { padding: '5px 12px', backgroundColor: '#e9ecef', color: '#495057', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' };
+const activeBtnStyle = { padding: '5px 12px', backgroundColor: '#16A87A', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0 };
+const cancelBtnStyle = { padding: '5px 12px', backgroundColor: '#e9ecef', color: '#495057', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0 };
 const editSaveBtnStyle = { padding: '8px 14px', minHeight: '44px', backgroundColor: '#16A87A', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' };
 const editCancelBtnStyle = { padding: '8px 14px', minHeight: '44px', backgroundColor: '#e9ecef', color: '#495057', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' };
 
