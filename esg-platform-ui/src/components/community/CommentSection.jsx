@@ -192,7 +192,7 @@ const CommentSection = ({ postId, currentMemberId }) => {
             onChange={(e) => setContent(e.target.value)}
             placeholder="칭찬과 격려의 댓글은 큰 힘이 됩니다!"
           />
-          <button style={{ padding: '0 20px', backgroundColor: '#16A87A', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }} onClick={handleAddComment}>등록</button>
+          <button style={{ padding: '0 16px', minWidth: '64px', backgroundColor: '#16A87A', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }} onClick={handleAddComment}>등록</button>
         </div>
       ) : (
         <p style={{ color: '#adb5bd', fontSize: '14px', marginBottom: '20px' }}>로그인 후 소통에 참여해보세요.</p>
