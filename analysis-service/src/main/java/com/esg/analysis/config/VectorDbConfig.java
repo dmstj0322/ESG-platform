@@ -21,7 +21,7 @@ public class VectorDbConfig {
     private String ollamaBaseUrl;
 
     // 반드시 127.0.0.1 사용 — localhost는 IPv6([::1])로 해석될 수 있어 405 유발
-    @Value("${chroma.base-url:http://127.0.0.1:8000}")
+    @Value("${chroma.base-url:http://esg-chroma:8000}")
     private String chromaBaseUrl;
 
     private static final String COLLECTION_NAME = "k-esg-guidelines";

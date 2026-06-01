@@ -102,10 +102,10 @@ openai:
     model-name: gpt-4o-mini
 
 ollama:
-  base-url: http://${OLLAMA_HOST:localhost}:11434
+  base-url: http://${OLLAMA_HOST:esg-ollama}:11434
 
 jwt:
   secret: vms_secret_key_testing_1234567890_vms_secret_key
 
 chroma:
-  base-url: http://${CHROMA_HOST:localhost}:8000
+  base-url: http://${CHROMA_HOST:esg-chroma}:8000

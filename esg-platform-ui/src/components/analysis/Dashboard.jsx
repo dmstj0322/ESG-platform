@@ -374,7 +374,7 @@ const Dashboard = () => {
     const connectWebSocket = useCallback((id) => {
         if (stompClient.current) stompClient.current.deactivate();
         const client = new Client({
-            webSocketFactory: () => new SockJS('http://localhost:8081/ws-esg'),
+            webSocketFactory: () => new SockJS('http://211.184.227.203:9000/ws-esg'),
             reconnectDelay: 3000,
             onConnect: () => {
                 client.subscribe(`/topic/analysis/${id}`, (msg) => {

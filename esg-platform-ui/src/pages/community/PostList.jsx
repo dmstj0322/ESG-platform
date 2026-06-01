@@ -56,14 +56,15 @@ const PostList = () => {
       setPage(pageNum);
     } catch (error) {
       console.error('데이터 조회 실패:', error);
+      setHasMore(false);
     } finally {
       setIsLoading(false);
     }
-  }, [targetCompanyId, keyword, isLoading]);
+  }, [targetCompanyId, keyword]);
 
   useEffect(() => {
     fetchPosts(0, true);
-  }, [targetCompanyId]);
+  }, [targetCompanyId, fetchPosts]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(

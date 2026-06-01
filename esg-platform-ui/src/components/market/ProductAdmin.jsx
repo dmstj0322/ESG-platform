@@ -238,7 +238,7 @@ const ProductAdmin = () => {
                 <input type="text" style={inputStyle} value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', alignItems: 'center' }}>
                 <div style={inputGroup}>
                   <label style={labelStyle}>카테고리 *</label>
                   <select style={inputStyle} value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} disabled={isEditing}>
@@ -253,12 +253,12 @@ const ProductAdmin = () => {
               </div>
 
               {formData.category === 'DONATION' ? (
-                <div style={{ ...inputGroup, backgroundColor: '#f1faff', padding: '15px', borderRadius: '8px', border: '1px solid #c5f6fa', marginTop: '30px' }}>
+                <div style={{ ...inputGroup, backgroundColor: '#f1faff', padding: '15px', borderRadius: '8px', border: '1px solid #c5f6fa', marginTop: '10px' }}>
                   <label style={{ ...labelStyle, color: '#0b7285' }}>🎯 목표 모금액 (P)</label>
                   <input type="number" style={{ ...inputStyle, border: 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }} value={formData.targetAmount} onChange={e => setFormData({ ...formData, targetAmount: e.target.value })} placeholder="전체 목표 금액을 입력하세요" />
                 </div>
               ) : (
-                <div style={{ ...inputGroup, backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '8px', border: '1px solid #e9ecef', marginTop: '30px' }}>
+                <div style={{ ...inputGroup, backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '8px', border: '1px solid #e9ecef', marginTop: '10px' }}>
                   {isEditing ? (
                     <>
                       <label style={{ ...labelStyle, color: '#495057' }}>
@@ -494,7 +494,7 @@ const formSection = { display: 'flex', flexDirection: 'column', gap: '15px' };
 const inputGroup = { display: 'flex', flexDirection: 'column', gap: '8px' };
 
 const labelStyle = { fontWeight: '600', fontSize: '13px', color: '#495057' };
-const inputStyle = { padding: '14px', border: '1px solid #dee2e6', borderRadius: '8px', fontSize: '14px', color: '#212529', backgroundColor: '#fff', outline: 'none' };
+const inputStyle = { height: '48px', padding: '0 14px', border: '1px solid #dee2e6', borderRadius: '8px', fontSize: '14px', color: '#212529', backgroundColor: '#fff', outline: 'none', boxSizing: 'border-box', width: '100%' };
 
 const existingVoucherBox = { maxHeight: '120px', overflowY: 'auto', padding: '10px 15px', backgroundColor: '#fff', border: '1px solid #dee2e6', borderRadius: '6px', fontSize: '13px', color: '#495057', lineHeight: '1.6', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.03)' };
 
