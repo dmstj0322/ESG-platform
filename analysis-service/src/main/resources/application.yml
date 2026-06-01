@@ -8,10 +8,7 @@ spring:
       max-file-size: 50MB
       max-request-size: 50MB
 
-  cloud:
-    config:
-      fail-fast: true
-      uri: http://localhost:8888
+
   config:
     import: "optional:configserver:http://${CONFIG_HOST:localhost}:8888"
   profiles:
@@ -29,4 +26,4 @@ eureka:
     fetch-registry: true
   instance:
     prefer-ip-address: true
-    ip-address: 127.0.0.1
+    ip-address: ${EUREKA_INSTANCE_IP:127.0.0.1}
