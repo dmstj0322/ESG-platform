@@ -99,7 +99,9 @@
       "Bash(Remove-Item *)",
       "Bash(rm \"C:/SW_Academy/final project/ESG-platform/analysis-service/src/main/java/com/esg/analysis/client/KepcoRegionalClient.java\")",
       "Bash(rm \"C:/SW_Academy/final project/ESG-platform/analysis-service/src/main/java/com/esg/analysis/dto/external/KepcoRegionalResponseDto.java\")",
-      "Bash(xargs ls -la)"
+      "Bash(xargs ls -la)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('scripts',{}\\)\\)\")",
+      "Bash(chromium-cli help *)"
     ]
   }
 }

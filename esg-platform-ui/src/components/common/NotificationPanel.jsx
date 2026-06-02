@@ -152,7 +152,7 @@ const NotificationPanel = ({ memberId, onClose, onRead }) => {
 
       <div style={listScrollStyle}>
         {Object.keys(groupedNotifications).length === 0 ? (
-          <div style={{ padding: '60px 0', textAlign: 'center', color: '#adb5bd' }}>알림이 없습니다.</div>
+          <div style={{ padding: '24px 0', textAlign: 'center', color: '#adb5bd' }}>알림이 없습니다.</div>
         ) : (
           Object.keys(groupedNotifications).map(date => (
             <div key={date}>
@@ -179,7 +179,7 @@ const NotificationPanel = ({ memberId, onClose, onRead }) => {
 };
 
 // --- 스타일 정의 ---
-const panelContainerStyle = { position: 'absolute', top: '60px', right: '0', width: '500px', backgroundColor: '#fff', borderRadius: '16px', boxShadow: '0 12px 40px rgba(0,0,0,0.12)', zIndex: 1000, border: '1px solid #f1f3f5', overflow: 'hidden' };
+const panelContainerStyle = { position: 'fixed', top: '68px', right: '12px', width: '500px', maxWidth: 'calc(100vw - 24px)', backgroundColor: '#fff', borderRadius: '16px', boxShadow: '0 12px 40px rgba(0,0,0,0.12)', zIndex: 1000, border: '1px solid #f1f3f5', overflow: 'hidden' };
 const panelHeaderStyle = { padding: '18px 20px', borderBottom: '1px solid #f1f3f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' };
 const countBadgeStyle = { backgroundColor: '#fa5252', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '10px', fontWeight: 'bold' };
 const filterTabStyle = { display: 'flex', gap: '8px', padding: '12px 20px', borderBottom: '1px solid #f1f3f5', backgroundColor: '#fcfcfc' };

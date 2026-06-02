@@ -94,13 +94,13 @@ export default function Header() {
 
     return (
         <header className="sticky top-0 z-50 border-b border-gray-100" style={{fontFamily: "'Pretendard', sans-serif", background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',}}>
-            <div className="flex items-center justify-between px-6 h-14 max-w-screen-2xl mx-auto">
+            <div className="flex items-center justify-between px-3 sm:px-6 h-14 max-w-screen-2xl mx-auto">
                 <div className="flex items-center gap-2">
                     <Link to={logoTo} className="flex items-center gap-2 no-underline mr-4 group">
                         <div className="w-8 h-8 bg-[#16A87A] rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm group-hover:bg-[#0D7A58] transition-colors duration-150">
                             <Leaf size={15} color="#fff" />
                         </div>
-                        <span className="font-bold text-[15px] text-gray-900 tracking-tight group-hover:text-gray-700 transition-colors duration-150">
+                        <span className="hidden sm:block font-bold text-[15px] text-gray-900 tracking-tight group-hover:text-gray-700 transition-colors duration-150">
                             GreenTrace
                         </span>
                     </Link>
@@ -110,10 +110,10 @@ export default function Header() {
                             {navItems.map(({ to, label, icon: Icon, matchPrefix }) => {
                                 const active = location.pathname.startsWith(matchPrefix);
                                 return (
-                                    <Link key={to} to={to} className={['flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-150 no-underline relative', active
+                                    <Link key={to} to={to} className={['flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-150 no-underline relative', active
                                         ? 'bg-emerald-50 text-emerald-700' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100/70',].join(' ')}>
                                         <Icon size={13} className={active ? 'text-emerald-600' : ''} />
-                                        {label}
+                                        <span className="hidden md:inline">{label}</span>
                                         {active && (<span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 bg-emerald-500 rounded-full" />)}
                                     </Link>
                                 );
@@ -127,8 +127,8 @@ export default function Header() {
                         <>
                             {!isAdmin && (
                                 <>
-                                    <Link to="/my-points" className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-[13px] no-underline transition-all duration-150 font-medium">
-                                        <span className="text-gray-500">포인트</span>
+                                    <Link to="/my-points" className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-[13px] no-underline transition-all duration-150 font-medium">
+                                        <span className="hidden md:inline text-gray-500">포인트</span>
                                         <span className="font-bold text-emerald-600 tabular-nums" style={{ fontFamily: "'Inter', sans-serif" }}>
                                             {points.toLocaleString()}P
                                         </span>

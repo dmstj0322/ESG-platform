@@ -125,9 +125,9 @@ const MyActivityList = () => {
                         {item.status === 'CANCELED' ? <del>{item.productName}</del> : item.productName}
                       </div>
                       <div style={{ fontSize: '13px', color: '#868e96', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ color: '#16A87A', fontWeight: '800' }}>{item.totalPrice?.toLocaleString()} P</span>
+                        <span style={{ color: '#16A87A', fontWeight: '800', whiteSpace: 'nowrap' }}>{item.totalPrice?.toLocaleString()} P</span>
                         <span>|</span>
-                        <span>{new Date(item.createdDate).toLocaleDateString()}</span>
+                        <span style={{ whiteSpace: 'nowrap' }}>{new Date(item.createdDate).toLocaleDateString()}</span>
                       </div>
                     </div>
                   </div>
@@ -276,7 +276,7 @@ const backLinkStyle = { textDecoration: 'none', color: '#adb5bd', fontSize: '14p
 const titleStyle = { color: '#212529', fontSize: '24px', fontWeight: '800', margin: 0 };
 
 const listWrapper = { display: 'flex', flexDirection: 'column', gap: '12px' };
-const listCardStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 24px', backgroundColor: '#fff', border: '1px solid #e9ecef', borderRadius: '12px' };
+const listCardStyle = { display: 'flex', flexWrap: 'wrap', rowGap: '10px', justifyContent: 'space-between', alignItems: 'center', padding: '18px 24px', backgroundColor: '#fff', border: '1px solid #e9ecef', borderRadius: '12px' };
 
 const mainTitleStyle = { fontWeight: '700', color: '#212529', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'left', width: '100%' };
 const subContentStyle = { fontSize: '14px', color: '#868e96', marginTop: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'left', width: '100%' };

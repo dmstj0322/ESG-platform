@@ -134,12 +134,12 @@ const ProductDetail = () => {
 };
 
 // --- 원본 Styles 유지 ---
-const containerStyle = { display: 'flex', gap: '50px', padding: '50px', maxWidth: '1200px', margin: '0 auto' };
-const imageContainerStyle = { flex: 1, position: 'relative' };
+const containerStyle = { display: 'flex', flexWrap: 'wrap', gap: '50px', padding: '30px 20px', maxWidth: '1200px', margin: '0 auto' };
+const imageContainerStyle = { flex: 1, minWidth: '280px', position: 'relative' };
 const imageStyle = { width: '100%', maxWidth: '500px', height: 'auto', borderRadius: '12px', border: '1px solid #e9ecef', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', margin: '0 auto', display: 'block' };
-const infoContainerStyle = { flex: 1, display: 'flex', flexDirection: 'column' };
+const infoContainerStyle = { flex: 1, minWidth: '280px', display: 'flex', flexDirection: 'column' };
 const categoryStyle = { color: '#16A87A', fontWeight: 'bold', fontSize: '18px' };
-const titleStyle = { fontSize: '36px', margin: '10px 0 20px 0' };
+const titleStyle = { fontSize: '26px', margin: '10px 0 20px 0' };
 const descriptionStyle = { color: '#666', lineHeight: '1.6', marginBottom: '30px' };
 const priceCardStyle = { backgroundColor: '#f8f9fa', padding: '20px', borderRadius: '12px', marginBottom: '30px' };
 const priceRowStyle = { display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '18px' };
