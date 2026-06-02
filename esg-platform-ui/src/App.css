@@ -1,184 +1,100 @@
 .counter {
-  font-size: 16px;
-  padding: 5px 10px;
-  border-radius: 5px;
+  font-size: 1rem;
+  padding: 0.3125rem 0.625rem;
+  border-radius: 0.3125rem;
   color: var(--accent);
   background: var(--accent-bg);
-  border: 2px solid transparent;
+  border: 0.125rem solid transparent;
   transition: border-color 0.3s;
-  margin-bottom: 24px;
+  margin-bottom: 1.5rem;
 
-  &:hover {
-    border-color: var(--accent-border);
-  }
-  &:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
+  &:hover { border-color: var(--accent-border); }
+  &:focus-visible { outline: 0.125rem solid var(--accent); outline-offset: 0.125rem; }
 }
 
-.hero {
-  position: relative;
-
-  .base,
-  .framework,
-  .vite {
-    inset-inline: 0;
-    margin: 0 auto;
-  }
-
-  .base {
-    width: 170px;
-    position: relative;
-    z-index: 0;
-  }
-
-  .framework,
-  .vite {
-    position: absolute;
-  }
-
-  .framework {
-    z-index: 1;
-    top: 34px;
-    height: 28px;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(44deg) rotateY(39deg)
-      scale(1.4);
-  }
-
-  .vite {
-    z-index: 0;
-    top: 107px;
-    height: 26px;
-    width: auto;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(40deg) rotateY(39deg)
-      scale(0.8);
-  }
-}
+.hero { position: relative; }
+.hero .base, .hero .framework, .hero .vite { inset-inline: 0; margin: 0 auto; }
+.hero .base { width: 10.625rem; position: relative; z-index: 0; }
+.hero .framework { z-index: 1; top: 2.125rem; height: 1.75rem; position: absolute; transform: perspective(125rem) rotateZ(300deg) rotateX(44deg) rotateY(39deg) scale(1.4); }
+.hero .vite { z-index: 0; top: 6.6875rem; height: 1.625rem; width: auto; position: absolute; transform: perspective(125rem) rotateZ(300deg) rotateX(40deg) rotateY(39deg) scale(0.8); }
 
 #center {
-  display: flex;
-  flex-direction: column;
-  gap: 25px;
-  place-content: center;
-  place-items: center;
-  flex-grow: 1;
+  display: flex; flex-direction: column; gap: 1.5625rem;
+  place-content: center; place-items: center; flex-grow: 1;
+}
 
-  @media (max-width: 1024px) {
-    padding: 32px 20px 24px;
-    gap: 18px;
-  }
+@media (max-width: 64rem) {
+  #center { padding: 2rem 1.25rem 1.5rem; gap: 1.125rem; }
 }
 
 #next-steps {
-  display: flex;
-  border-top: 1px solid var(--border);
-  text-align: left;
-
-  & > div {
-    flex: 1 1 0;
-    padding: 32px;
-    @media (max-width: 1024px) {
-      padding: 24px 20px;
-    }
-  }
-
-  .icon {
-    margin-bottom: 16px;
-    width: 22px;
-    height: 22px;
-  }
-
-  @media (max-width: 1024px) {
-    flex-direction: column;
-    text-align: center;
-  }
+  display: flex; border-top: 1px solid var(--border); text-align: left;
 }
 
-#docs {
-  border-right: 1px solid var(--border);
+#next-steps > div { flex: 1 1 0; padding: 2rem; }
 
-  @media (max-width: 1024px) {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
+@media (max-width: 64rem) {
+  #next-steps > div { padding: 1.5rem 1.25rem; }
+}
+
+#next-steps .icon { margin-bottom: 1rem; width: 1.375rem; height: 1.375rem; }
+
+@media (max-width: 64rem) {
+  #next-steps { flex-direction: column; text-align: center; }
+}
+
+#docs { border-right: 1px solid var(--border); }
+
+@media (max-width: 64rem) {
+  #docs { border-right: none; border-bottom: 1px solid var(--border); }
 }
 
 #next-steps ul {
-  list-style: none;
-  padding: 0;
-  display: flex;
-  gap: 8px;
-  margin: 32px 0 0;
+  list-style: none; padding: 0; display: flex; gap: 0.5rem; margin: 2rem 0 0;
+}
 
-  .logo {
-    height: 18px;
-  }
+#next-steps ul .logo { height: 1.125rem; }
+#next-steps ul a {
+  color: var(--text-h); font-size: 1rem; border-radius: 0.375rem;
+  background: var(--social-bg); display: flex; padding: 0.375rem 0.75rem;
+  align-items: center; gap: 0.5rem; text-decoration: none; transition: box-shadow 0.3s;
+}
 
-  a {
-    color: var(--text-h);
-    font-size: 16px;
-    border-radius: 6px;
-    background: var(--social-bg);
-    display: flex;
-    padding: 6px 12px;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none;
-    transition: box-shadow 0.3s;
+#next-steps ul a:hover { box-shadow: var(--shadow); }
+#next-steps ul a .button-icon { height: 1.125rem; width: 1.125rem; }
 
-    &:hover {
-      box-shadow: var(--shadow);
-    }
-    .button-icon {
-      height: 18px;
-      width: 18px;
-    }
-  }
+@media (max-width: 64rem) {
+  #next-steps ul { margin-top: 1.25rem; flex-wrap: wrap; justify-content: center; }
+  #next-steps ul li { flex: 1 1 calc(50% - 0.5rem); }
+  #next-steps ul a { width: 100%; justify-content: center; box-sizing: border-box; }
+}
 
-  @media (max-width: 1024px) {
-    margin-top: 20px;
-    flex-wrap: wrap;
-    justify-content: center;
+#spacer { height: 5.5rem; border-top: 1px solid var(--border); }
 
-    li {
-      flex: 1 1 calc(50% - 8px);
-    }
+@media (max-width: 64rem) {
+  #spacer { height: 3rem; }
+}
 
-    a {
-      width: 100%;
-      justify-content: center;
-      box-sizing: border-box;
-    }
+.ticks { position: relative; width: 100%; }
+.ticks::before, .ticks::after { content: ''; position: absolute; top: -0.28125rem; border: 0.3125rem solid transparent; }
+.ticks::before { left: 0; border-left-color: var(--border); }
+.ticks::after { right: 0; border-right-color: var(--border); }
+
+html {
+  font-size: 16px !important;
+  transition: font-size 0.3s ease;
+}
+
+/* 태블릿 크기 */
+@media (max-width: 768px) {
+  html {
+    font-size: 14px !important; 
   }
 }
 
-#spacer {
-  height: 88px;
-  border-top: 1px solid var(--border);
-  @media (max-width: 1024px) {
-    height: 48px;
-  }
-}
-
-.ticks {
-  position: relative;
-  width: 100%;
-
-  &::before,
-  &::after {
-    content: '';
-    position: absolute;
-    top: -4.5px;
-    border: 5px solid transparent;
-  }
-
-  &::before {
-    left: 0;
-    border-left-color: var(--border);
-  }
-  &::after {
-    right: 0;
-    border-right-color: var(--border);
+/* 모바일 크기 (캡처 화면 크기) */
+@media (max-width: 480px) {
+  html {
+    font-size: 12px !important; /* 모바일에서 확실하게 줄어들도록 강제 적용 */
   }
 }

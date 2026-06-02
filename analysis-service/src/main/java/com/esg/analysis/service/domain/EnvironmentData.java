@@ -31,7 +31,7 @@ public class EnvironmentData {
     private Long companyId;
 
     /** 측정 연월 (예: "2026-01") */
-    @Column(name = "year_month", nullable = false, length = 7)
+    @Column(name = "`year_month`", nullable = false, length = 7)
     private String yearMonth;
 
     /** E-101: 전력 사용량 (kWh) */

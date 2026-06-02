@@ -153,35 +153,33 @@ const MarketList = () => {
 };
 
 // --- 스타일 객체 ---
-const adminLinkBtnStyle = { backgroundColor: '#16A87A', color: '#fff', padding: '10px 22px', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', boxShadow: '0 4px 10px rgba(22,168,122,0.2)' };
-const cardStyle = { borderRadius: '12px', overflow: 'hidden', backgroundColor: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', cursor: 'pointer', transition: 'transform 0.2s ease, boxShadow 0.2s ease', border: '1px solid #f1f3f5' };
+const adminLinkBtnStyle = { backgroundColor: '#16A87A', color: '#fff', padding: '0.625rem 1.375rem', border: 'none', borderRadius: '0.625rem', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.875rem', boxShadow: '0 0.25rem 0.625rem rgba(51,154,240,0.2)' };
+const cardStyle = { borderRadius: '0.75rem', overflow: 'hidden', backgroundColor: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', cursor: 'pointer', transition: 'transform 0.2s ease, boxShadow 0.2s ease', border: '1px solid #f1f3f5' };
 const imageStyle = { width: '100%', height: '100%', objectFit: 'cover' };
-const categoryTagStyle = (category) => ({ position: 'absolute', top: '15px', left: '15px', backgroundColor: category === 'DONATION' ? 'rgba(132, 94, 247, 0.9)' : 'rgba(22, 168, 122, 0.9)', color: '#fff', padding: '5px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold' });
-const soldOutOverlayStyle = { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', color: '#fff', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '22px', fontWeight: '800', backdropFilter: 'blur(2px)' };
-const productTitleStyle = { fontSize: '19px', margin: '0 0 8px 0', color: '#333', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
-const priceStyle = { color: '#16A87A', fontWeight: '700', fontSize: '24px', margin: '0 0 15px 0' };
-const progressBarBg = { height: '6px', backgroundColor: '#f1f3f5', borderRadius: '3px', overflow: 'hidden' };
+const categoryTagStyle = (category) => ({ position: 'absolute', top: '0.9375rem', left: '0.9375rem', backgroundColor: category === 'DONATION' ? 'rgba(132, 94, 247, 0.9)' : 'rgba(22, 168, 122, 0.9)', color: '#fff', padding: '0.3125rem 0.875rem', borderRadius: '1.25rem', fontSize: '0.6875rem', fontWeight: 'bold' });
+const soldOutOverlayStyle = { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', color: '#fff', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.375rem', fontWeight: '800', backdropFilter: 'blur(2px)' };
+const productTitleStyle = { fontSize: '1.1875rem', margin: '0 0 0.5rem 0', color: '#333', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+const priceStyle = { color: '#16A87A', fontWeight: '700', fontSize: '1.5rem', margin: '0 0 0.9375rem 0' };
+const progressBarBg = { height: '0.375rem', backgroundColor: '#f1f3f5', borderRadius: '0.1875rem', overflow: 'hidden' };
 const progressBarFill = (pct, color) => ({ width: `${pct}%`, height: '100%', backgroundColor: color, transition: 'width 0.5s' });
 
-// 🌟 카테고리 탭 메뉴 스타일 추가
-const tabContainerStyle = { display: 'flex', gap: '10px', marginBottom: '30px', borderBottom: '1px solid #e9ecef', paddingBottom: '12px' };
+const tabContainerStyle = { display: 'flex', gap: '0.625rem', marginBottom: '1.875rem', borderBottom: '1px solid #e9ecef', paddingBottom: '0.75rem' };
 const tabButtonStyle = (isActive) => ({
-  padding: '10px 10px', borderRadius: '8px', border: 'none',
+  padding: '0.625rem 0.625rem', borderRadius: '0.5rem', border: 'none',
   backgroundColor: isActive ? '#E6F7F1' : 'transparent',
   color: isActive ? '#0D7A58' : '#495057',
-  fontWeight: 'bold', fontSize: '13px', cursor: 'pointer',
+  fontWeight: 'bold', fontSize: '0.8125rem', cursor: 'pointer',
   transition: '0.2s ease', whiteSpace: 'nowrap',
 });
 
-// 🌟 하단 페이지네이션 컴포넌트 스킨 스타일
-const paginationWrapper = { display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px 0', gap: '15px', marginTop: '20px' };
-const pageInfoStyle = { fontSize: '14px', fontWeight: '700', color: '#495057', minWidth: '40px', textAlign: 'center' };
+const paginationWrapper = { display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1.25rem 0', gap: '0.9375rem', marginTop: '1.25rem' };
+const pageInfoStyle = { fontSize: '0.875rem', fontWeight: '700', color: '#495057', minWidth: '2.5rem', textAlign: 'center' };
 const pageBtnStyle = (disabled) => ({
-  padding: '8px 18px', borderRadius: '10px', border: '1px solid #dee2e6',
+  padding: '0.5rem 1.125rem', borderRadius: '0.625rem', border: '1px solid #dee2e6',
   backgroundColor: disabled ? '#f8f9fa' : '#fff',
   color: disabled ? '#adb5bd' : '#16A87A',
   cursor: disabled ? 'not-allowed' : 'pointer',
-  fontWeight: 'bold', fontSize: '13px', transition: '0.2s ease'
+  fontWeight: 'bold', fontSize: '0.8125rem', transition: '0.2s ease'
 });
 
 export default MarketList;
