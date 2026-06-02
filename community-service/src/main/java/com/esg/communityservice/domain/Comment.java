@@ -43,6 +43,7 @@ public class Comment extends BaseTimeEntity {
     this.content = content;
   }
 
+  @Builder.Default
   @Column(nullable = false)
   private boolean isDeleted = false;
 

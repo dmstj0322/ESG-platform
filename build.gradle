@@ -63,5 +63,9 @@ subprojects {
 }
 
 // 루트 프로젝트는 실행 가능한 jar로 빌드
-bootJar { enabled = true }
-jar { enabled = false }
+bootJar {
+    enabled = false
+}
+jar {
+    enabled = true
+}
