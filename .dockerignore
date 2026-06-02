@@ -1,0 +1,16 @@
+.git
+.github
+.idea
+.gradle
+
+node_modules
+**/node_modules
+
+build
+**/build
+
+mysql_data
+ollama-data
+chroma-data
+
+*.log
