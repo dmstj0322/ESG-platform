@@ -52,7 +52,11 @@ export const useNotification = (memberId, onMessageReceived) => {
         onClick: () => {
           let navigatePath = '/mypage';
 
-          if (data.type === 'ACTIVITY_PENDING' || data.type === 'ACTIVITY_APPROVED' || data.type === 'ACTIVITY_REJECTED' || data.type === 'POINT_EARNED') {
+          if (data.type === 'COMMENT_RECEIVED' || data.type === 'REPLY_RECEIVED') {
+            // 댓글/답글은 해당 게시글(targetId)로 이동
+            navigatePath = data.targetId ? `/posts/${data.targetId}` : '/community';
+          }
+          else if (data.type === 'ACTIVITY_PENDING' || data.type === 'ACTIVITY_APPROVED' || data.type === 'ACTIVITY_REJECTED' || data.type === 'POINT_EARNED') {
             navigatePath = data.targetId ? `/posts/${data.targetId}` : '/community';
           } else if (data.type === 'POINT_USED' || data.type === 'POINT_REFUNDED') {
             navigatePath = '/mypage';

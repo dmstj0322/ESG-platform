@@ -6,7 +6,16 @@ const NotificationPanel = ({ memberId, onClose, onRead }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [filter, setFilter] = useState('ALL');
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth); // 🌟 반응형 감지
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isMobile = windowWidth < 500;
 
   const fetchData = useCallback(async () => {
     if (!memberId) return;
@@ -15,25 +24,20 @@ const NotificationPanel = ({ memberId, onClose, onRead }) => {
       const listRes = await api.get(`/notification${typeParam}`, {
         headers: { 'X-Member-Id': memberId }
       });
-      console.log("알림 API 응답:", listRes.data);
-
       const fetchedData = listRes.data.content || listRes.data;
       setNotifications(Array.isArray(fetchedData) ? fetchedData : []);
-
       const countRes = await api.get('/notification/count', {
         headers: { 'X-Member-Id': memberId }
       });
       setUnreadCount(countRes.data);
-    } catch (err) {
-      console.error("데이터 로드 실패", err);
-    }
+    } catch (err) { console.error("데이터 로드 실패", err); }
   }, [memberId, filter]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  // 1. 상대 시간 계산 (방금 전, n시간 전 등)
+  // 🌟 반응형 폰트 도우미 함수
+  const fSize = (mobile, desktop) => isMobile ? mobile : desktop;
+
   const getRelativeTime = (dateStr) => {
     const diff = new Date() - new Date(dateStr);
     const min = Math.floor(diff / 60000);
@@ -44,85 +48,43 @@ const NotificationPanel = ({ memberId, onClose, onRead }) => {
     return new Date(dateStr).toLocaleDateString();
   };
 
-  // 2. 메시지 타입별 아이콘 매핑
   const getIcon = (n) => {
     switch (n.type) {
-      case 'POINT_EARNED':
-        return '💰';
-      case 'POINT_USED':
-        return '💸';
-      case 'ACTIVITY_PENDING':
-        return '⏳';
-      case 'ACTIVITY_APPROVED':
-        return '🌱';
-      case 'ACTIVITY_REJECTED':
-        return '❌';
-      case 'BADGE_EARNED':
-        return '🎖️';
-      default:
-        return '🔔';
+      case 'POINT_EARNED': return '💰';
+      case 'POINT_USED': return '💸';
+      case 'ACTIVITY_PENDING': return '⏳';
+      case 'ACTIVITY_APPROVED': return '🌱';
+      case 'ACTIVITY_REJECTED': return '❌';
+      case 'BADGE_EARNED': return '🎖️';
+      case 'COMMENT_RECEIVED': return '💬';
+      case 'REPLY_RECEIVED': return '↪️';
+      default: return '🔔';
     }
   };
 
-  // 3. 클릭 시 읽음 처리 + 페이지 이동
   const handleItemClick = async (n) => {
-    console.log(n.targetId);
     const isReadStatus = n.isRead || n.read;
     if (!isReadStatus) {
-      try {
-        await api.patch(`/notification/${n.id}/read`);
-        onRead();
-      } catch (err) { console.error(err); }
+      try { await api.patch(`/notification/${n.id}/read`); onRead(); } catch (err) { console.error(err); }
     }
-
-    // const isMarketOrPoint = 
-    //   n.type?.includes('USE') ||
-    //   n.message.includes('사용') || 
-    //   n.message.includes('구매') || 
-    //   n.message.includes('취소') || 
-    //   n.message.includes('환불');
-
-    // // 알림 클릭 시 해당 타겟(게시글 등)으로 이동
-    // if (isMarketOrPoint) {
-    //   navigate('/mypage'); // 포인트 관련은 마이페이지로
-    // } else if (n.targetId) {
-    //   navigate(`/posts/${n.targetId}`);
-    // } else {
-    //   navigate('/mypage');
-    // }
-
     let navigatePath = '/mypage';
 
-    if (n.type === 'ACTIVITY_PENDING' || n.type === 'ACTIVITY_APPROVED' || n.type === 'ACTIVITY_REJECTED' || n.type === 'POINT_EARNED') {
+    if (['ACTIVITY_PENDING', 'ACTIVITY_APPROVED', 'ACTIVITY_REJECTED', 'POINT_EARNED', 'COMMENT_RECEIVED', 'REPLY_RECEIVED'].includes(n.type)) {
       navigatePath = n.targetId ? `/posts/${n.targetId}` : '/community';
-    } else if (n.type === 'POINT_USED' || n.type === 'POINT_REFUNDED') {
-      navigatePath = '/mypage';
-    } else if (n.type === 'BADGE_EARNED') {
-      navigatePath = '/mypage';
-    }
+    } else if (['POINT_USED', 'POINT_REFUNDED', 'BADGE_EARNED'].includes(n.type)) { navigatePath = '/mypage'; }
 
     navigate(navigatePath);
-
-    onClose(); // 알림창 닫기
-    fetchData(); // 상태 갱신
+    onClose();
+    fetchData();
   };
 
-  // 4. 모두 읽음 처리
   const handleReadAll = async () => {
     if (unreadCount === 0) return;
-    try {
-      await api.patch(`/notification/read-all`, {}, {
-        headers: { 'X-Member-Id': memberId }
-      });
-      fetchData();
-      onRead();
-    } catch (err) { console.error(err); }
+    try { await api.patch(`/notification/read-all`, {}, { headers: { 'X-Member-Id': memberId } }); fetchData(); onRead(); } catch (err) { console.error(err); }
   };
 
-  // 5. 날짜별 그룹화 로직
   const groupedNotifications = useMemo(() => {
     if (!Array.isArray(notifications)) return {};
-
     return notifications.reduce((acc, n) => {
       const date = new Date(n.createdDate).toLocaleDateString();
       if (!acc[date]) acc[date] = [];
@@ -135,7 +97,7 @@ const NotificationPanel = ({ memberId, onClose, onRead }) => {
     <div style={panelContainerStyle}>
       <div style={panelHeaderStyle}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontWeight: '800', fontSize: '16px' }}>알림</span>
+          <span style={{ fontWeight: '800', fontSize: fSize('13px', '15px') }}>알림</span>
           {unreadCount > 0 && <span style={countBadgeStyle}>{unreadCount}</span>}
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
@@ -145,14 +107,14 @@ const NotificationPanel = ({ memberId, onClose, onRead }) => {
       </div>
 
       <div style={filterTabStyle}>
-        {[{ id: 'ALL', l: '전체' }, { id: 'POINT', l: '💰 포인트' }, { id: 'ACTIVITY', l: '🌱 활동' }].map(t => (
+        {[{ id: 'ALL', l: '전체' }, { id: 'POINT', l: '💰 포인트' }, { id: 'ACTIVITY', l: '🌱 활동' }, { id: 'COMMENT', l: '💬 소통' }].map(t => (
           <button key={t.id} onClick={() => setFilter(t.id)} style={filterBtnStyle(filter === t.id)}>{t.l}</button>
         ))}
       </div>
 
       <div style={listScrollStyle}>
         {Object.keys(groupedNotifications).length === 0 ? (
-          <div style={{ padding: '24px 0', textAlign: 'center', color: '#adb5bd' }}>알림이 없습니다.</div>
+          <div style={{ padding: '24px 0', textAlign: 'center', color: '#adb5bd', fontSize: fSize('12px', '14px') }}>알림이 없습니다.</div>
         ) : (
           Object.keys(groupedNotifications).map(date => (
             <div key={date}>
@@ -161,8 +123,8 @@ const NotificationPanel = ({ memberId, onClose, onRead }) => {
                 const isRead = n.isRead || n.read;
                 return (
                   <div key={n.id} style={itemStyle(isRead)} onClick={() => handleItemClick(n)}>
-                    <div style={{ fontSize: '20px' }}>{getIcon(n)}</div>
-                    <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: fSize('16px', '20px') }}>{getIcon(n)}</div>
+                    <div style={contentWrapperStyle}>
                       <div style={messageStyle(isRead)}>{n.message}</div>
                       <div style={timeStyle}>{getRelativeTime(n.createdDate)}</div>
                     </div>
@@ -178,22 +140,22 @@ const NotificationPanel = ({ memberId, onClose, onRead }) => {
   );
 };
 
+// --- 스타일 정의 (반응형 폰트 도우미 함수 활용) ---
+const panelContainerStyle = { position: 'absolute', right: '0', top: 'calc(100% + 10px)', width: '23rem', maxWidth: '90vw', backgroundColor: '#fff', boxShadow: '0 0.5rem 1rem rgba(0,0,0,0.15)', borderRadius: '0.75rem', overflow: 'hidden', zIndex: 1000 };
+const panelHeaderStyle = { padding: '14px 16px', borderBottom: '1px solid #f1f3f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' };
+const countBadgeStyle = { backgroundColor: '#fa5252', color: '#fff', fontSize: '9px', padding: '1px 5px', borderRadius: '10px', fontWeight: 'bold' };
+const filterTabStyle = { display: 'flex', gap: '5px', padding: '8px 16px', borderBottom: '1px solid #f1f3f5', backgroundColor: '#fcfcfc', flexWrap: 'wrap' };
+const filterBtnStyle = (active) => ({ padding: '4px 10px', borderRadius: '20px', border: 'none', fontSize: window.innerWidth < 500 ? '11px' : '12px', cursor: 'pointer', backgroundColor: active ? '#16A87A' : '#e9ecef', color: active ? '#fff' : '#495057', fontWeight: active ? 'bold' : '500' });
 
+const listScrollStyle = { maxHeight: '60vh', overflowY: 'auto' };
+const dateHeaderStyle = { padding: '8px 16px 4px', fontSize: '10px', fontWeight: 'bold', color: '#adb5bd', backgroundColor: '#f8f9fa' };
+const itemStyle = (isRead) => ({ padding: '10px 16px', display: 'flex', gap: '8px', alignItems: 'center', cursor: 'pointer', backgroundColor: isRead ? '#fff' : '#f0faf5' });
+const contentWrapperStyle = { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' };
+const messageStyle = (isRead) => ({ fontSize: window.innerWidth < 500 ? '10px' : '12px', fontWeight: isRead ? '400' : '600', color: isRead ? '#868e96' : '#212529', lineHeight: '1.3', overflowWrap: 'break-word' });
 
-// --- 스타일 정의 ---
-const panelContainerStyle = { position: 'absolute', right: '-0.5rem', top: '0.5rem', // width: '90vw', 
-  width: '28rem', maxWidth: '23rem', backgroundColor: '#fff', boxShadow: '0 0.25rem 0.75rem rgba(0,0,0,0.1)', borderRadius: '0.75rem', overflow: 'hidden', zIndex: 1000 };
-const panelHeaderStyle = { padding: '18px 20px', borderBottom: '1px solid #f1f3f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' };
-const countBadgeStyle = { backgroundColor: '#fa5252', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '10px', fontWeight: 'bold' };
-const filterTabStyle = { display: 'flex', gap: '8px', padding: '12px 20px', borderBottom: '1px solid #f1f3f5', backgroundColor: '#fcfcfc' };
-const filterBtnStyle = (active) => ({ padding: '6px 12px', borderRadius: '20px', border: 'none', fontSize: '12px', cursor: 'pointer', backgroundColor: active ? '#16A87A' : '#e9ecef', color: active ? '#fff' : '#495057', fontWeight: active ? 'bold' : '500' });
-const listScrollStyle = { maxHeight: '420px', overflowY: 'auto' };
-const dateHeaderStyle = { padding: '12px 20px 6px', fontSize: '11px', fontWeight: 'bold', color: '#adb5bd', backgroundColor: '#f8f9fa' };
-const itemStyle = (isRead) => ({ padding: '1rem 1.25rem', display: 'flex', gap: '0.75rem', alignItems: 'center', cursor: 'pointer', borderBottom: '1px solid #f8f9fa', backgroundColor: isRead ? '#fff' : '#f0faf5', width: '100%', boxSizing: 'border-box' });
-const messageStyle = (isRead) => ({ fontSize: '0.875rem', fontWeight: isRead ? '400' : '600', color: isRead ? '#868e96' : '#212529', lineHeight: '1.4', wordBreak: 'keep-all', width: '100%'});
-const timeStyle = { fontSize: '11px', color: '#adb5bd', marginTop: '4px' };
-const dotStyle = { width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#16A87A' };
-const textBtnStyle = (active) => ({ background: 'none', border: 'none', color: active ? '#16A87A' : '#adb5bd', fontSize: '12px', fontWeight: 'bold', cursor: active ? 'pointer' : 'default' });
-const closeBtnStyle = { background: 'none', border: 'none', cursor: 'pointer', color: '#adb5bd', fontSize: '18px' };
+const timeStyle = { fontSize: '9px', color: '#adb5bd', marginTop: '2px' };
+const dotStyle = { width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#16A87A', flexShrink: 0 };
+const textBtnStyle = (active) => ({ background: 'none', border: 'none', color: active ? '#16A87A' : '#adb5bd', fontSize: '11px', fontWeight: 'bold' });
+const closeBtnStyle = { background: 'none', border: 'none', cursor: 'pointer', color: '#adb5bd', fontSize: '16px' };
 
 export default NotificationPanel;

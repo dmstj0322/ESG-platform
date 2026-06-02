@@ -12,6 +12,18 @@ const VoucherDetail = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [base64Image, setBase64Image] = useState("");
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  
+  // 🌟 화면 크기에 따라 폰트 크기 변경
+  const responsiveFont = (mobile, desktop) => (windowWidth < 500 ? mobile : desktop);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const convertToBase64 = async (url) => {
     try {
@@ -65,14 +77,19 @@ const VoucherDetail = () => {
   }, [orderId, user, navigate]);
 
   const handleDownloadImage = async () => {
+    if (isDownloading) return;
+
     const element = document.querySelector(".ticket-card");
     if (!element) return;
 
     try {
+      setIsDownloading(true);
+      await new Promise(resolve => setTimeout(resolve, 100)); 
+
       const canvas = await html2canvas(element, {
-        scale: 3,
+        scale: 2, 
         useCORS: true,
-        backgroundColor: "#f1f3f5",
+        backgroundColor: "#fcfcfc",
         onclone: (clonedDoc) => {
           const clonedCard = clonedDoc.querySelector(".ticket-card");
           clonedCard.style.width = "400px";
@@ -92,6 +109,8 @@ const VoucherDetail = () => {
       link.click();
     } catch (error) {
       alert("이미지 저장에 실패했습니다.");
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -110,33 +129,38 @@ const VoucherDetail = () => {
 
       <div className="ticket-card" style={isDonation ? certCardStyle : voucherCardStyle}>
         {isDonation ? (
-          <div className="cert-inner" style={certInnerStyle}>
-            <div>
-              <div style={certBadgeStyle}>CERTIFICATE OF DONATION</div>
-              <h1 style={certTitleStyle}>기부 인증서</h1>
-              {/* ✅ 백엔드에서 넘겨주는 증서번호 출력 추가 */}
-              <p style={{ color: '#888', fontSize: '11px', marginBottom: '15px' }}>No. {data.certificateNumber}</p>
+          <div className="cert-inner" style={{
+            ...certInnerStyle,
+            // 🌟 너무 좁았던 여백을 조금 더 자연스럽게(10%) 조정
+            padding: windowWidth < 500 ? '2.5rem 10%' : '4rem 2rem'
+          }}>
+            <div style={{ width: '100%' }}>
+              <div style={{ ...certBadgeStyle, fontSize: responsiveFont('10px', '11px') }}>CERTIFICATE OF DONATION</div>
+              <h1 style={{ ...certTitleStyle, fontSize: responsiveFont('20px', '30px') }}>기부 인증서</h1>
+              <p style={{ color: '#888', fontSize: responsiveFont('10px', '11px'), marginBottom: '15px' }}>No. {data.certificateNumber}</p>
               <div style={dividerStyle} />
             </div>
+            
             <div style={certMiddleWrapper}>
-              <p style={{ ...certDescStyle, margin: 0 }}>
+              <p style={{ ...certDescStyle, margin: 0, fontSize: responsiveFont('13px', '16px'), lineHeight: '1.6' }}>
                 위 사람은 <strong>Green-Trace</strong>를 통해<br />
                 나누어 주신 따뜻한 마음,<br />
                 <span style={{ color: '#b8860b', fontWeight: 'bold' }}>[{data.productName}]</span>에 참여하였기에<br />
                 이 인증서를 수여합니다.
               </p>
             </div>
+            
             <div>
-              <p style={{ ...certDateStyle, margin: '0 0 8px 0' }}>
+              <p style={{ ...certDateStyle, margin: '0 0 8px 0', fontSize: responsiveFont('12px', '14px') }}>
                 {new Date(data.orderDate).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
               </p>
-              <h3 style={{ ...brandNameStyle, margin: 0 }}>Green-Trace ESG Platform</h3>
+              <h3 style={{ ...brandNameStyle, margin: 0, fontSize: responsiveFont('14px', '18px') }}>Green-Trace ESG Platform</h3>
             </div>
           </div>
         ) : (
           <div style={{ textAlign: 'left' }}>
             <div style={voucherHeaderStyle}>
-              <h2 style={{ margin: 0, color: '#333', fontSize: '20px' }}>Mobile Voucher</h2>
+              <h2 style={{ margin: 0, color: '#333', fontSize: responsiveFont('18px', '20px') }}>Mobile Voucher</h2>
               <span style={categoryBadgeStyle}>GIFTICON</span>
             </div>
 
@@ -146,134 +170,151 @@ const VoucherDetail = () => {
 
             <div style={productInfoBox}>
               <div style={productLabelStyle}>상품명</div>
-              <div style={productNameStyle}>{data.productName}</div>
+              <div style={{ ...productNameStyle, fontSize: responsiveFont('16px', '20px') }}>{data.productName}</div>
             </div>
 
             <div style={barcodeAreaStyle}>
-              <div style={{ display: 'inline-block', width: '100%', maxWidth: '280px' }}>
-                {/* <Barcode value={data.serialNumber} width={1.2} height={60} fontSize={14} margin={0} displayValue={false} /> */}
-                <div style={barcodeWrapperStyle}>
-                  <div style={barcodeInnerStyle}>
-                    <Barcode value={data.serialNumber} width={1.2} height={60} fontSize={14} margin={0} displayValue={false} />
-                  </div>
-                </div>
+              <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+                <Barcode 
+                  value={data.serialNumber} 
+                  width={windowWidth < 500 ? 1.0 : 1.2} 
+                  height={windowWidth < 500 ? 50 : 60} 
+                  fontSize={14} 
+                  margin={0} 
+                  displayValue={false} 
+                />
               </div>
-              <div style={serialNumberText}>{data.serialNumber}</div>
+              <div style={{ ...serialNumberText, fontSize: responsiveFont('14px', '17px') }}>
+                {data.serialNumber}
+              </div>
             </div>
 
             <div style={guideBoxStyle}>
-              <p>• 사용처: {data.productName} 전국 제휴 매장</p>
-              <p>• 유효기간: 발행일로부터 90일 이내</p>
-              <p style={{ color: '#fa5252' }}>• 결제 시 바코드를 보여주세요.</p>
+              <p style={{ fontSize: responsiveFont('11px', '13px') }}>• 사용처: {data.productName} 전국 제휴 매장</p>
+              <p style={{ fontSize: responsiveFont('11px', '13px') }}>• 유효기간: 발행일로부터 90일 이내</p>
+              <p style={{ fontSize: responsiveFont('11px', '13px'), color: '#fa5252' }}>• 결제 시 바코드를 보여주세요.</p>
             </div>
           </div>
         )}
       </div>
 
       <div className="no-print" style={buttonGroupStyle}>
-        <button onClick={handleDownloadImage} style={primaryBtnStyle}>📸 이미지로 저장</button>
+        <button 
+          onClick={handleDownloadImage} 
+          style={{ ...primaryBtnStyle, opacity: isDownloading ? 0.7 : 1, cursor: isDownloading ? 'wait' : 'pointer' }}
+          disabled={isDownloading}
+        >
+          {isDownloading ? '⏳ 저장 중...' : '📸 이미지로 저장'}
+        </button>
         <button onClick={() => window.print()} style={secondaryBtnStyle}>🖨️ PDF / 인쇄</button>
       </div>
     </div>
   );
 };
 
-// --- 원본 스타일링 완벽 유지 ---
-const centerStyle = { textAlign: 'center', padding: '100px', color: '#888' };
-const containerStyle = { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px', backgroundColor: '#f1f3f5', minHeight: '100vh' };
-const topNavStyle = { width: '100%', maxWidth: '400px', marginBottom: '20px' };
-const backBtnStyle = { background: 'none', border: 'none', color: '#868e96', cursor: 'pointer', fontSize: '14px' };
+// --- 스타일 객체 ---
 
-const voucherCardStyle = { backgroundColor: '#fff', width: '100%', maxWidth: '400px', padding: '30px', borderRadius: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 0 1px rgba(0,0,0,0.04)', boxSizing: 'border-box' };
-const certCardStyle = { ...voucherCardStyle, border: '10px double #d4af37', backgroundColor: '#fffcf5', padding: '12px', minHeight: '600px', display: 'flex', flexDirection: 'column' };
-const certInnerStyle = { border: '1px solid #d4af37', padding: '50px 20px', textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', boxSizing: 'border-box' };
+// 🌟 핵심 해결: width: '100%'를 추가하여 Z Fold처럼 넓은 화면에서도 가운데 쏠림 보장
+const containerStyle = { 
+  display: 'flex', 
+  flexDirection: 'column', 
+  alignItems: 'center', 
+  padding: '2.5rem 1.25rem', 
+  backgroundColor: '#f1f3f5', 
+  minHeight: '100vh',
+  width: '100%',
+  padding: '1.3rem',
+  boxSizing: 'border-box'
+};
+
+const voucherCardStyle = {
+  backgroundColor: '#fff',
+  width: '100%',
+  maxWidth: '25rem',
+  padding: '1.5rem',
+  borderRadius: '0.75rem',
+  boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+  boxSizing: 'border-box',
+  margin: '0 auto'
+};
+
+const certCardStyle = {
+  ...voucherCardStyle,
+  border: '0.625rem double #d4af37',
+  backgroundColor: '#fffcf5',
+  padding: '0.75rem',
+  minHeight: '35rem',
+  display: 'flex',
+  flexDirection: 'column'
+};
+
+const certInnerStyle = {
+  border: '1px solid #d4af37',
+  backgroundColor: '#fff', 
+  textAlign: 'center',
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'center',
+  alignItems: 'center',
+  boxSizing: 'border-box'
+};
+
+const imageContainerStyle = {
+  width: '100%',
+  aspectRatio: '16 / 10',
+  borderRadius: '1rem',
+  overflow: 'hidden',
+  marginBottom: '1.25rem',
+  backgroundColor: '#f8f9fa'
+};
+
+const buttonGroupStyle = {
+  display: 'flex',
+  gap: '0.625rem',
+  width: '95vw',
+  maxWidth: '25rem',
+  marginTop: '1.5rem'
+};
+
+const topNavStyle = { width: '100%', maxWidth: '25rem', marginBottom: '1.25rem' };
+const backBtnStyle = { background: 'none', border: 'none', color: '#868e96', cursor: 'pointer', fontSize: '14px', padding: 0 };
+const centerStyle = { textAlign: 'center', padding: '100px', color: '#888' };
+
 const certMiddleWrapper = { margin: '50px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' };
-const certBadgeStyle = { color: '#b8860b', fontSize: '11px', fontWeight: 'bold', letterSpacing: '2px', marginBottom: '10px' };
-const certTitleStyle = { fontFamily: 'serif', fontSize: '30px', color: '#5c4033', margin: '0' };
+const certBadgeStyle = { color: '#b8860b', fontWeight: 'bold', letterSpacing: '2px', marginBottom: '10px' };
+const certTitleStyle = { fontFamily: 'serif', color: '#5c4033', margin: '0' };
 const dividerStyle = { borderTop: '2px solid #d4af37', width: '50px', margin: '0 auto 25px' };
-const certDescStyle = { fontSize: '16px', lineHeight: '1.8', color: '#444', marginBottom: '30px' };
-const certDateStyle = { color: '#999', fontSize: '14px' };
+const certDescStyle = { color: '#444', marginBottom: '30px' };
+const certDateStyle = { color: '#999' };
 const brandNameStyle = { marginTop: '20px', fontWeight: '900', color: '#1a1a1a' };
 
 const voucherHeaderStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' };
 const categoryBadgeStyle = { backgroundColor: '#E6F7F1', color: '#0D7A58', padding: '4px 10px', borderRadius: '5px', fontSize: '11px', fontWeight: 'bold' };
 
-const imageContainerStyle = { width: '100%', height: '250px', borderRadius: '16px', overflow: 'hidden', marginBottom: '20px', backgroundColor: '#f8f9fa' };
 const productImgStyle = { width: '100%', height: '100%', objectFit: 'cover' };
-
 const productInfoBox = { marginBottom: '25px' };
 const productLabelStyle = { fontSize: '12px', color: '#adb5bd', marginBottom: '4px' };
-const productNameStyle = { fontSize: '20px', fontWeight: '800', color: '#212529' };
+const productNameStyle = { fontWeight: '800', color: '#212529' };
 
 const barcodeAreaStyle = { textAlign: 'center', backgroundColor: '#fff', padding: '20px 10px', border: '1px solid #e9ecef', borderRadius: '16px', marginBottom: '20px', overflow: 'hidden' };
-const serialNumberText = { marginTop: '10px', fontSize: '17px', fontWeight: 'bold', letterSpacing: '3px', color: '#495057' };
-const guideBoxStyle = { backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '12px', fontSize: '13px', color: '#868e96', lineHeight: '1.6' };
+const serialNumberText = { marginTop: '10px', fontWeight: 'bold', letterSpacing: '3px', color: '#495057' };
+const guideBoxStyle = { backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '12px', color: '#868e96', lineHeight: '1.6' };
 
-const buttonGroupStyle = { display: 'flex', gap: '10px', width: '100%', maxWidth: '400px', marginTop: '25px' };
-const primaryBtnStyle = { flex: 1, padding: '14px', backgroundColor: '#16A87A', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', fontSize: '15px', cursor: 'pointer' };
+const primaryBtnStyle = { flex: 1, padding: '14px', backgroundColor: '#16A87A', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', fontSize: '15px', cursor: 'pointer', whiteSpace: 'nowrap' };
 const secondaryBtnStyle = { ...primaryBtnStyle, backgroundColor: '#495057' };
-
-const barcodeWrapperStyle = {
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  width: '100%',
-  margin: '1.875rem auto',
-  padding: '0 1.25rem',
-  boxSizing: 'border-box',
-  overflow: 'hidden' // 화면 밖으로 튀어나가는 현상 방지
-};
-
-const barcodeInnerStyle = {
-  maxWidth: '100%', // 🌟 모바일에서 부모 너비를 넘지 않게 강제 축소
-  display: 'flex',
-  justifyContent: 'center'
-};
-
-// const printStyles = `
-//   @media print {
-//     @page { margin: 10mm; }
-//     body { background: white !important; margin: 0 !important; }
-//     .no-print { display: none !important; }
-//     .ticket-card { 
-//       width: 400px !important; 
-//       margin: 0 auto !important; 
-//       box-shadow: none !important; 
-//       border: 1px solid #eee !important;
-//       position: static !important; 
-//     }
-//   }
-// `;
 
 const printStyles = `
   @media print {
     @page { margin: 0; }
-    
-    body * {
-      visibility: hidden !important;
-    }
-    
-    .ticket-card, .ticket-card * {
-      visibility: visible !important;
-    }
-    
+    body * { visibility: hidden !important; }
+    .ticket-card, .ticket-card * { visibility: visible !important; }
     .ticket-card {
-      position: absolute !important;
-      left: 50% !important;
-      top: 15mm !important;
-      transform: translateX(-50%) !important;
-      width: 400px !important;
-      height: !important;
-      margin: 0 !important;
-      border: 1px solid #dee2e6 !important;
-      box-shadow: none !important;
+      position: absolute !important; left: 50% !important; top: 15mm !important;
+      transform: translateX(-50%) !important; width: 400px !important; height: !important;
+      margin: 0 !important; border: 1px solid #dee2e6 !important; box-shadow: none !important;
     }
-
-    body { 
-      background: white !important; 
-      -webkit-print-color-adjust: exact; 
-      print-color-adjust: exact;
-    }
+    body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
 `;
 

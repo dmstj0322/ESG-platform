@@ -29,6 +29,17 @@ const MyPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isMobile = windowWidth < 500;
+  const fSize = (mobile, desktop) => isMobile ? mobile : desktop;
+
   const co2ApprovedPosts = useMemo(() =>
     myPosts.filter(post => post.adminStatus === 'APPROVED'),
     [myPosts]);
@@ -233,18 +244,17 @@ const MyPage = () => {
 
       <div style={esgDashboardWrapperStyle}>
         {/* 탄소 임팩트 보드 */}
-        {/* <div style={co2CardStyle}> */}
         <div style={{ ...co2CardStyle, cursor: 'pointer' }} onClick={() => setShowCo2Modal(true)}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '100%' }}>
             <div>
-              <h3 style={{ margin: '0 0 8px 0', fontSize: '15px', color: '#0D7A58' }}>나의 탄소 절감 이력</h3>
-              <p style={{ margin: '0', fontSize: '28px', fontWeight: 'bold', color: '#16A87A' }}>
-                {totalKg} <span style={{ fontSize: '16px', fontWeight: 'normal', color: '#495057' }}>kg CO₂</span>
+              <h3 style={{ margin: '0 0 8px 0', fontSize: fSize('13px', '15px'), color: '#0D7A58' }}>나의 탄소 절감 이력</h3>
+              <p style={{ margin: '0', fontSize: fSize('20px', '28px'), fontWeight: 'bold', color: '#16A87A' }}>
+                {totalKg} <span style={{ fontSize: fSize('14px', '16px'), fontWeight: 'normal', color: '#495057' }}>kg CO₂</span>
               </p>
             </div>
             <div style={treeVisualStyle}>
-              <span style={{ fontSize: '28px' }}>🌲</span>
-              <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#0D7A58', marginTop: '4px' }}>
+              <span style={{ fontSize: fSize('20px', '28px') }}>🌲</span>
+              <span style={{ fontSize: fSize('10px', '12px'), fontWeight: 'bold', color: '#0D7A58', marginTop: '4px' }}>
                 소나무 {pineTrees}그루
               </span>
             </div>
@@ -253,55 +263,62 @@ const MyPage = () => {
 
         {/* 뱃지 컬렉션 보드 */}
         <div style={badgeCardStyle}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', color: '#343a40', display: 'flex', justifyContent: 'space-between' }}>
+          {/* <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', color: '#343a40', display: 'flex', justifyContent: 'space-between' }}>
             <span>나의 뱃지 진행도</span>
             <span style={{ fontSize: '11px', color: '#16A87A', fontWeight: 'normal', alignSelf: 'flex-end' }}>* 획득한 뱃지를 눌러 대표로 설정하세요</span>
+          </h3> */}
+          <h3 style={{ margin: '0 0 16px 0', fontSize: fSize('13px', '15px'), color: '#343a40', display: 'flex', justifyContent: 'space-between' }}>
+            <span>나의 뱃지 진행도</span>
+            <span style={{ fontSize: fSize('9px', '11px'), color: '#16A87A', fontWeight: 'normal', alignSelf: 'flex-end' }}>
+              {/* * 획득한 뱃지 클릭 시 대표 설정 */}
+              * 획득한 뱃지를 눌러 대표로 설정하세요
+            </span>
           </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '16px' }}>
 
             {Object.keys(badgeTiers).map((type) => {
               const { currentCount, currentBadge, nextBadge, baseTier } = getCurrentTierInfo(type);
-
               const displayBadge = currentBadge || baseTier;
               const isUnlocked = !!currentBadge;
               const targetCount = nextBadge ? nextBadge.target : displayBadge.target;
               const progressPercent = nextBadge ? Math.min((currentCount / targetCount) * 100, 100) : 100;
 
-              // 🌟 대표 설정 로직 매핑
               const earnedMatchedBadge = earnedBadges.find(b => b.name === currentBadge?.name);
               const isRepresentative = earnedMatchedBadge && earnedMatchedBadge.id === representativeBadgeId;
 
               return (
-                <div key={type} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  {/* 뱃지 아이콘 - 클릭 이벤트 추가 */}
+                <div key={type} style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '16px' }}>
+                  {/* 뱃지 아이콘 */}
                   <div
                     onClick={() => isUnlocked && earnedMatchedBadge && handleSetRepresentative(earnedMatchedBadge.id)}
                     style={{
                       ...badgeIconCircleStyle(isUnlocked),
                       cursor: (isUnlocked && earnedMatchedBadge) ? 'pointer' : 'default',
                       border: isRepresentative ? '2px solid #16A87A' : (isUnlocked ? '1px solid #A8DFD0' : 'none'),
-                      boxShadow: isRepresentative ? '0 0 8px rgba(22, 168, 122, 0.4)' : 'none',
+                      boxShadow: isRepresentative ? '0 0 6px rgba(22, 168, 122, 0.4)' : 'none',
                       transition: 'all 0.2s'
                     }}
                   >
-                    <span style={{ fontSize: '22px', filter: isUnlocked ? 'none' : 'grayscale(100%) opacity(0.5)' }}>
+                    <span style={{ fontSize: fSize('18px', '22px'), filter: isUnlocked ? 'none' : 'grayscale(100%) opacity(0.5)' }}>
                       {displayBadge.defaultImg}
                     </span>
                   </div>
 
                   <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '6px' }}>
-                      <span style={{ fontSize: '13px', fontWeight: 'bold', color: isUnlocked ? '#0D7A58' : '#adb5bd' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '4px' }}>
+                      <span style={{ fontSize: fSize('12px', '13px'), fontWeight: 'bold', color: isUnlocked ? '#0D7A58' : '#adb5bd' }}>
                         {displayBadge.name}
-                        {/* 🌟 대표 뱃지 라벨 추가 */}
-                        {isRepresentative && <span style={{ marginLeft: '6px', fontSize: '10px', color: '#0D7A58', backgroundColor: '#E6F7F1', padding: '2px 6px', borderRadius: '10px' }}>대표</span>}
+                        {isRepresentative && (
+                          <span style={{ marginLeft: '6px', fontSize: '9px', color: '#0D7A58', backgroundColor: '#E6F7F1', padding: '1px 6px', borderRadius: '10px' }}>대표</span>
+                        )}
                       </span>
-                      <span style={{ fontSize: '11px', color: '#868e96', fontWeight: 'bold' }}>
+                      <span style={{ fontSize: fSize('10px', '11px'), color: '#868e96', fontWeight: 'bold' }}>
                         {currentCount} <span style={{ fontWeight: 'normal' }}>/ {targetCount}회</span>
                       </span>
                     </div>
 
-                    <div style={{ width: '100%', height: '8px', backgroundColor: '#e9ecef', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ width: '100%', height: isMobile ? '6px' : '8px', backgroundColor: '#e9ecef', borderRadius: '4px', overflow: 'hidden' }}>
                       <div style={{
                         width: `${progressPercent}%`,
                         height: '100%',
@@ -312,11 +329,11 @@ const MyPage = () => {
                     </div>
 
                     {nextBadge ? (
-                      <div style={{ fontSize: '10px', color: '#adb5bd', marginTop: '6px', textAlign: 'right' }}>
-                        다음 단계: <span style={{ fontSize: '12px' }}>{nextBadge.defaultImg}</span> {nextBadge.name}
+                      <div style={{ fontSize: fSize('9px', '10px'), color: '#adb5bd', marginTop: '4px', textAlign: 'right' }}>
+                        다음 단계: {nextBadge.defaultImg} {nextBadge.name}
                       </div>
                     ) : (
-                      <div style={{ fontSize: '10px', color: '#16A87A', marginTop: '6px', textAlign: 'right', fontWeight: 'bold' }}>
+                      <div style={{ fontSize: fSize('9px', '10px'), color: '#16A87A', marginTop: '4px', textAlign: 'right', fontWeight: 'bold' }}>
                         🏆 최고 레벨 달성!
                       </div>
                     )}
@@ -356,36 +373,32 @@ const MyPage = () => {
                   const { canCancel, reason } = checkIsCancelable(o);
                   return (
                     <div key={o.orderId || o.id} style={listCardStyle}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flex: '1 1 12.5rem', minWidth: 0, opacity: o.status === 'CANCELED' ? 0.5 : 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flex: '1', minWidth: '150px', opacity: o.status === 'CANCELED' ? 0.5 : 1 }}>
                         {o.category === 'GIFTICON' ? (
                           <div style={iconCircleStyle('#E6F7F1', '#16A87A')}>🎁</div>
                         ) : (
                           <div style={iconCircleStyle('#f3f0ff', '#7048e8')}>🤝</div>
                         )}
-                        <span style={statusBadgeStyle(o.status)}>{o.status}</span>
 
                         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                          {/* 🌟 핵심: 말줄임표(...) 없애고, 글자가 길면 자연스럽게 다음 줄로 다 보이게 설정! */}
-                          <div style={{ fontWeight: '700', fontSize: '0.9375rem', color: '#212529', wordBreak: 'keep-all', lineHeight: '1.4' }}>
+                          <div style={{ fontWeight: '700', fontSize: '0.9375rem', color: '#212529', whiteSpace: 'nowrap', overflow: 'visible' }}>
                             {o.status === 'CANCELED' ? <del>{o.productName}</del> : o.productName}
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: '#868e96', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.375rem', flexWrap: 'wrap' }}>
+                          <div style={{ fontSize: '0.75rem', color: '#868e96', marginTop: '0.25rem', whiteSpace: 'nowrap' }}>
                             <span style={{ color: '#16A87A', fontWeight: '800' }}>{o.totalPrice?.toLocaleString()} P</span>
-                            <span>|</span>
-                            <span>{new Date(o.orderDate || o.createdDate).toLocaleDateString()}</span>
+                            <span> | {new Date(o.orderDate || o.createdDate).toLocaleDateString()}</span>
                           </div>
                         </div>
                       </div>
 
-                      {/* 오른쪽 버튼 영역 */}
-                      <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0, marginLeft: 'auto' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0, alignItems: 'center', marginLeft: 'auto' }}>
                         {o.status !== 'CANCELED' && (
                           <button onClick={() => navigate(`/my-page/${o.orderId}`)} style={viewVoucherBtnStyle}>
                             {o.category === 'DONATION' ? '인증서 확인' : '바우처 확인'}
                           </button>
                         )}
                         {canCancel ? (
-                          <button onClick={() => handleCancel(o.orderId, o.productName)} style={cancelBtnStyle}>결제 취소</button>
+                          <button onClick={() => handleCancel(o.orderId, o.productName)} style={cancelBtnStyle}>주문 취소</button>
                         ) : (
                           o.status !== 'CANCELED' && (
                             <button disabled style={disabledCancelBtnStyle}>{reason}</button>
@@ -413,11 +426,6 @@ const MyPage = () => {
               {myPosts.length === 0 ? <div style={emptyTextStyle}>작성한 글이 없습니다.</div> : myPosts.slice(0, 10).map(post => (
                 <div key={post.id} style={listCardStyle} onClick={() => navigate(`/posts/${post.id}`)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, overflow: 'hidden', cursor: 'pointer' }}>
-                    {/* {post.imageUrls?.[0] ? (
-                      <img src={post.imageUrls[0]} style={thumbnailImgStyle} alt="thumb" />
-                    ) : (
-                      <div style={iconCircleStyle('#E6F7F1', '#16A87A')}>📝</div>
-                    )} */}
                     <div style={{ position: 'relative', width: '50px', height: '50px' }}>
                       {post.imageUrls?.[0] ? (
                         <>
@@ -480,12 +488,10 @@ const MyPage = () => {
                   <div key={comment.id} style={listCardStyle} onClick={() => navigate(`/posts/${comment.postId}`)}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, minWidth: 0, cursor: 'pointer' }}>
                       <div style={iconCircleStyle('#f3f0ff', '#845ef7')}>💬</div>
-
-                      {/* 🌟 2단계: 실제 텍스트 컨테이너 (여기에 minWidth 0이 없으면 뚫고 나감!) */}
                       <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
                         <div style={mainTitleStyle}>"{comment.content}"</div>
                         <div style={postTitleInCommentStyle}>
-                          <span style={{ color: '#adb5bd', fontSize: '14px', flexShrink: 0 }}>→</span>
+                          <span style={{ color: '#adb5bd', flexShrink: 0 }}>→</span>
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {comment.postTitle || '원문 게시글'}
                           </span>
@@ -493,10 +499,9 @@ const MyPage = () => {
                       </div>
                     </div>
 
-                    {/* 🌟 날짜와 화살표 고정 영역 */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#adb5bd', fontSize: '13px', flexShrink: 0 }}>
-                      <span style={{ whiteSpace: 'nowrap' }}>{new Date(comment.createdDate || comment.createdAt).toLocaleDateString()}</span>
-                      <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#ced4da' }}>〉</span>
+                    <div style={rightMetaStyle}>
+                      <span>{new Date(comment.createdDate || comment.createdAt).toLocaleDateString()}</span>
+                      <span style={arrowStyle}>〉</span>
                     </div>
                   </div>
                 ))}
@@ -557,13 +562,13 @@ const sectionTitleStyle = { margin: 0, fontSize: '1.125rem', fontWeight: 'bold',
 const viewAllBtnStyle = { background: 'none', border: 'none', color: '#868e96', fontSize: '0.875rem', fontWeight: '600', cursor: 'pointer', padding: '0' };
 
 const listWrapper = { display: 'flex', flexDirection: 'column', gap: '0.75rem' };
-const listCardStyle = { display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', backgroundColor: '#fff', border: '1px solid #e9ecef', borderRadius: '0.75rem', width: '100%', boxSizing: 'border-box'};
+const listCardStyle = { display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', backgroundColor: '#fff', border: '1px solid #e9ecef', borderRadius: '0.75rem', width: '100%', boxSizing: 'border-box' };
 
-const mainTitleStyle = { fontWeight: '700', color: '#212529', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', width: '100%'};
-const subContentStyle = { fontSize: '14px', color: '#868e96', marginTop: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', width: '100%'};
-const postTitleInCommentStyle = { fontSize: '13px', color: '#868e96', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%'};
+const mainTitleStyle = { fontSize: '0.9375rem', fontWeight: '700', color: '#212529', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', width: '100%' };
+const subContentStyle = { fontSize: '0.8125rem', color: '#868e96', marginTop: '0.25rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', width: '100%' };
+const postTitleInCommentStyle = { fontSize: '0.8125rem', color: '#868e96', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.375rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' };
 
-const rightMetaStyle = { display: 'flex', alignItems: 'center', gap: '0.625rem', color: '#adb5bd', fontSize: '0.8125rem', flexShrink: 0, marginLeft: 'auto'};
+const rightMetaStyle = { display: 'flex', alignItems: 'center', gap: '0.625rem', color: '#adb5bd', fontSize: '0.8125rem', flexShrink: 0, marginLeft: 'auto' };
 const arrowStyle = { fontWeight: 'bold', fontSize: '0.875rem', color: '#ced4da' };
 
 const thumbnailImgStyle = { width: '3.125rem', height: '3.125rem', borderRadius: '0.5rem', objectFit: 'cover', flexShrink: 0 };
@@ -580,11 +585,12 @@ const emptyTextStyle = { textAlign: 'center', padding: '3.75rem 0', color: '#adb
 const esgDashboardWrapperStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(17.5rem, 1fr))', gap: '1.25rem', marginBottom: '2.1875rem' };
 const co2CardStyle = { backgroundColor: '#ffffff', borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid #e9ecef', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
 const badgeCardStyle = { backgroundColor: '#ffffff', borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid #e9ecef', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
-const treeVisualStyle = { display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: '#e7f5ff', padding: '0.75rem 1.125rem', borderRadius: '0.75rem', border: '1px solid #A8DFD0' };
-const badgeIconCircleStyle = (unlocked) => ({ width: '2.75rem', height: '2.75rem', borderRadius: '50%', backgroundColor: unlocked ? '#e7f5ff' : '#e9ecef', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '0.375rem' });
+const treeVisualStyle = { display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: '#E6F7F1', padding: '0.75rem 1.125rem', borderRadius: '0.75rem', border: '1px solid #A8DFD0' };
+const badgeIconCircleStyle = (unlocked) => ({ width: '2.75rem', height: '2.75rem', borderRadius: '50%', backgroundColor: unlocked ? '#E6F7F1' : '#e9ecef', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '0.375rem' });
 
 const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 };
 const modalContentStyle = { backgroundColor: '#fff', padding: '1.5rem', borderRadius: '1rem', width: '25rem', maxWidth: '90%' };
 const historyItemStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 0', borderBottom: '1px solid #f1f3f5' };
 const closeBtnStyle = { marginTop: '1.25rem', width: '100%', padding: '0.75rem', border: 'none', borderRadius: '0.5rem', backgroundColor: '#339af0', color: '#fff', cursor: 'pointer', fontWeight: 'bold' };
+
 export default MyPage;
