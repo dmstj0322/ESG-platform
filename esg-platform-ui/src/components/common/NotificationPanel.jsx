@@ -22,8 +22,7 @@ const NotificationPanel = ({ memberId, onClose, onRead }) => {
   const fetchData = useCallback(async () => {
     if (!memberId) return;
     try {
-      const typeParam = filter === 'ALL' ? '' : `?type=${filter}`;
-      const listRes = await api.get(`/notification${typeParam}`, {
+      const listRes = await api.get(`/notification`, {
         headers: { 'X-Member-Id': memberId }
       });
       const fetchedData = listRes.data.content || listRes.data;
@@ -33,7 +32,7 @@ const NotificationPanel = ({ memberId, onClose, onRead }) => {
       });
       setUnreadCount(countRes.data);
     } catch (err) { console.error("데이터 로드 실패", err); }
-  }, [memberId, filter]);
+  }, [memberId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

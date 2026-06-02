@@ -85,7 +85,8 @@ jobs:
           script: |
             cd /home/ubuntu/esg-deploy
             docker compose pull
-            docker compose up -d --force-recreate
+            docker compose down
+            docker compose up -d
 
   # 🌟 수정 2: 서버 2 배포가 완전히 끝난 뒤에 서버 1(AI 분석)을 배포합니다.
   deploy-server1:
@@ -102,4 +103,5 @@ jobs:
           script: |
             cd /home/ubuntu/esg-deploy
             docker compose pull
-            docker compose up -d --force-recreate
+            docker compose down
+            docker compose up -d
