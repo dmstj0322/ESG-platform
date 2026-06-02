@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - feature/cd-deploy
 
 jobs:
   docker-build-push:
@@ -44,34 +43,3 @@ jobs:
           push: true
           tags: esgplatform/${{ matrix.service }}:latest
 
-  deploy-server1:
-    needs: docker-build-push
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Deploy to Server 1
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER1_HOST }}
-          username: ${{ secrets.SERVER1_USER }}
-          password: ${{ secrets.SERVER_PASSWORD }}
-          script: |
-            cd /home/ubuntu/esg-deploy
-            docker compose pull
-            docker compose up -d
-
-  deploy-server2:
-    needs: deploy-server1
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Deploy to Server 2
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER2_HOST }}
-          username: ${{ secrets.SERVER2_USER }}
-          password: ${{ secrets.SERVER_PASSWORD }}
-          script: |
-            cd /home/ubuntu/esg-deploy
-            docker compose pull
-            docker compose up -d
