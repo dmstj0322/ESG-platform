@@ -112,45 +112,44 @@ const MyActivityList = () => {
               const { canCancel, reason } = checkIsCancelable(item);
               return (
                 <div key={item.orderId || index} style={listCardStyle}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flex: '1 1 12.5rem', minWidth: 0, opacity: item.status === 'CANCELED' ? 0.5 : 1 }}>
-                    {item.category === 'GIFTICON' ? (
-                      <div style={iconCircleStyle('#E6F7F1', '#16A87A')}>🎁</div>
-                    ) : (
-                      <div style={iconCircleStyle('#f3f0ff', '#7048e8')}>🤝</div>
-                    )}
-                    <span style={statusBadgeStyle(item.status)}>{item.status}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flex: '1', minWidth: '150px', opacity: item.status === 'CANCELED' ? 0.5 : 1 }}>
+        {item.category === 'GIFTICON' ? (
+          <div style={iconCircleStyle('#E6F7F1', '#16A87A')}>🎁</div>
+        ) : (
+          <div style={iconCircleStyle('#f3f0ff', '#7048e8')}>🤝</div>
+        )}
+        
+        {/* 텍스트 영역: nowrap 유지 */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <div style={{ fontWeight: '700', fontSize: '0.9375rem', color: '#212529', whiteSpace: 'nowrap', overflow: 'visible' }}>
+            {item.status === 'CANCELED' ? <del>{item.productName}</del> : item.productName}
+          </div>
+          <div style={{ fontSize: '0.75rem', color: '#868e96', marginTop: '0.25rem', whiteSpace: 'nowrap' }}>
+            <span style={{ color: '#16A87A', fontWeight: '800' }}>{item.totalPrice?.toLocaleString()} P</span>
+            <span> | {new Date(item.orderDate || item.createdDate).toLocaleDateString()}</span>
+          </div>
+        </div>
+      </div>
 
-                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                      {/* 🌟 핵심: 말줄임표(...) 없애고, 글자가 길면 자연스럽게 다음 줄로 다 보이게 설정! */}
-                      <div style={{ fontWeight: '700', fontSize: '0.9375rem', color: '#212529', wordBreak: 'keep-all', lineHeight: '1.4' }}>
-                        {item.status === 'CANCELED' ? <del>{item.productName}</del> : item.productName}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: '#868e96', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.375rem', flexWrap: 'wrap' }}>
-                        <span style={{ color: '#16A87A', fontWeight: '800' }}>{item.totalPrice?.toLocaleString()} P</span>
-                        <span>|</span>
-                        <span>{new Date(item.orderDate || item.createdDate).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 오른쪽 버튼 영역 */}
-                  <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0, marginLeft: 'auto' }}>
-                    {item.status !== 'CANCELED' && (
-                      <button onClick={() => navigate(`/my-page/${item.orderId}`)} style={viewVoucherBtnStyle}>
-                        {item.category === 'DONATION' ? '인증서 확인' : '바우처 확인'}
-                      </button>
-                    )}
-                    {canCancel ? (
-                      <button onClick={() => handleCancel(item.orderId, item.productName)} style={cancelBtnStyle}>결제 취소</button>
-                    ) : (
-                      item.status !== 'CANCELED' && (
-                        <button disabled style={disabledCancelBtnStyle}>{reason}</button>
-                      )
-                    )}
-                    {item.status === 'CANCELED' && (
-                      <span style={{ fontSize: '0.75rem', color: '#adb5bd', paddingRight: '0.3125rem' }}>취소 완료</span>
-                    )}
-                  </div>
+      {/* 🌟 2. 버튼 영역: 아래로 내려갈 수 있게 flex-basis를 100%로 강제할 필요 없음. 
+          flex-wrap: wrap이 적용된 부모가 알아서 처리함 */}
+      <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0, alignItems: 'center', marginLeft: 'auto' }}>
+        {item.status !== 'CANCELED' && (
+          <button onClick={() => navigate(`/my-page/${item.orderId}`)} style={viewVoucherBtnStyle}>
+            {item.category === 'DONATION' ? '인증서 확인' : '바우처 확인'}
+          </button>
+        )}
+        {canCancel ? (
+          <button onClick={() => handleCancel(item.orderId, item.productName)} style={cancelBtnStyle}>주문 취소</button>
+        ) : (
+          item.status !== 'CANCELED' && (
+            <button disabled style={disabledCancelBtnStyle}>{reason}</button>
+          )
+        )}
+        {item.status === 'CANCELED' && (
+          <span style={{ fontSize: '0.75rem', color: '#adb5bd', paddingRight: '0.3125rem' }}>취소 완료</span>
+        )}
+      </div>
                 </div>
               );
             }
@@ -286,11 +285,11 @@ const backLinkStyle = { textDecoration: 'none', color: '#adb5bd', fontSize: '0.8
 const titleStyle = { color: '#212529', fontSize: '1.3rem', fontWeight: '800', margin: 0 };
 
 const listWrapper = { display: 'flex', flexDirection: 'column', gap: '0.75rem' };
-const listCardStyle = { display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', backgroundColor: '#fff', border: '1px solid #e9ecef', borderRadius: '0.75rem', width: '100%', boxSizing: 'border-box'};
+const listCardStyle = { display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', backgroundColor: '#fff', border: '1px solid #e9ecef', borderRadius: '0.75rem', width: '100%', boxSizing: 'border-box' };
 
-const mainTitleStyle = { fontWeight: '700', color: '#212529', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', width: '100%'};
-const subContentStyle = { fontSize: '14px', color: '#868e96', marginTop: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', width: '100%'};
-const postTitleInCommentStyle = { fontSize: '13px', color: '#868e96', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%'};
+const mainTitleStyle = { fontSize: '0.9375rem', fontWeight: '700', color: '#212529', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', width: '100%' };
+const subContentStyle = { fontSize: '0.8125rem', color: '#868e96', marginTop: '0.25rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', width: '100%' };
+const postTitleInCommentStyle = { fontSize: '0.8125rem', color: '#868e96', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.375rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' };
 
 const rightMetaStyle = { display: 'flex', alignItems: 'center', gap: '1rem', color: '#adb5bd', fontSize: '0.8125rem', flexShrink: 0 };
 const arrowStyle = { fontWeight: 'bold', fontSize: '0.875rem', color: '#ced4da' };
@@ -306,4 +305,5 @@ const disabledCancelBtnStyle = { padding: '0.375rem 0.75rem', backgroundColor: '
 
 const loadMoreBtnStyle = { padding: '0.75rem 1.875rem', backgroundColor: '#fff', border: '1px solid #dee2e6', borderRadius: '0.625rem', color: '#339af0', fontWeight: 'bold', fontSize: '0.875rem', cursor: 'pointer', transition: 'all 0.2s' };
 const emptyTextStyle = { textAlign: 'center', padding: '3.75rem 0', color: '#adb5bd', fontSize: '0.9375rem' };
+
 export default MyActivityList;

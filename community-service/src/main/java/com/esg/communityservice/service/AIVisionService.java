@@ -4,7 +4,8 @@ import com.esg.common.domain.ActivityType;
 import com.google.cloud.vision.v1.*;
 import com.google.protobuf.ByteString;
 import jakarta.annotation.PreDestroy;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -16,7 +17,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
-@Slf4j
 public class AIVisionService {
   private final ImageAnnotatorClient client;
   private final S3Client s3Client;
@@ -24,6 +24,8 @@ public class AIVisionService {
   // 🌟 AI 검증 임계값 (상수 처리)
   private static final float REJECT_THRESHOLD = 0.6f;
   private static final float ACCEPT_THRESHOLD = 0.5f;
+
+  private static final Logger aiLogger = LoggerFactory.getLogger("ai-analysis");
 
   public AIVisionService(S3Client s3Client) throws IOException {
     this.client = ImageAnnotatorClient.create();
@@ -48,7 +50,7 @@ public class AIVisionService {
         annotation.getScore()))
       .toList();
 
-    log.info("AI가 감지한 라벨 목록: {}", labels);
+    aiLogger.info("AI가 감지한 라벨 목록: {}", labels);
     return labels;
   }
 
@@ -69,7 +71,7 @@ public class AIVisionService {
       allDetectedLabels.addAll(detectLabels(imgBytes));
     }
 
-    log.info("AI 분석된 전체 라벨: {}", allDetectedLabels);
+    aiLogger.info("AI 분석된 전체 라벨: {}", allDetectedLabels);
 
     // 🌟 기본값을 FAIL로 설정
     ActivityType bestType = ActivityType.FAIL;
@@ -85,7 +87,7 @@ public class AIVisionService {
             && label.score() > REJECT_THRESHOLD));
 
       if (isRejected) {
-        log.info("❌ {}: 부정 키워드 감지 → 후보 탈락", type);
+        aiLogger.info("❌ {}: 부정 키워드 감지 → 후보 탈락", type);
         continue;
       }
 
@@ -116,7 +118,7 @@ public class AIVisionService {
       }
     }
 
-    log.info("🎯 최종 추론된 AI 활동 유형: {}, 합산 점수: {}", bestType, highestScore);
+    aiLogger.info("🎯 최종 추론된 AI 활동 유형: {}, 합산 점수: {}", bestType, highestScore);
     return bestType;
   }
 
@@ -144,7 +146,7 @@ public class AIVisionService {
             && label.score() > REJECT_THRESHOLD));
 
         if (isRejected) {
-          log.warn("🚨 부정 키워드 감지됨! AI 자동 탈락 처리. 활동: {}, 이미지: {}", type, urlString);
+          aiLogger.warn("🚨 부정 키워드 감지됨! AI 자동 탈락 처리. 활동: {}, 이미지: {}", type, urlString);
           return -1.0;
         }
 
@@ -176,14 +178,14 @@ public class AIVisionService {
           // 합산 점수가 1.0을 넘지 않도록 캡핑
           currentScore = Math.min(1.0, finalScore);
         } else {
-          log.info("이미지에서 긍정 키워드를 찾을 수 없습니다. (0점 처리)");
+          aiLogger.info("이미지에서 긍정 키워드를 찾을 수 없습니다. (0점 처리)");
         }
 
         maxScore = Math.max(maxScore, currentScore);
-        log.info("이미지 분석 결과 - 현재 합산 점수: {}, 누적 최고 점수: {}", currentScore, maxScore);
+        aiLogger.info("이미지 분석 결과 - 현재 합산 점수: {}, 누적 최고 점수: {}", currentScore, maxScore);
 
       } catch (Exception e) {
-        log.error("S3 이미지 분석 중 오류 발생: {}", urlString, e);
+        aiLogger.error("S3 이미지 분석 중 오류 발생: {}", urlString, e);
       }
     }
     return maxScore;

@@ -1,6 +1,7 @@
 package com.esg.communityservice.service;
 
 import com.esg.communityservice.domain.Comment;
+import com.esg.communityservice.kafka.NotificationProducer;
 import com.esg.communityservice.repository.CommentRepository;
 import com.esg.communityservice.domain.Post;
 import com.esg.communityservice.repository.PostRepository;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 public class CommentService {
   private final CommentRepository commentRepository;
   private final PostRepository postRepository;
+  private final NotificationProducer notificationProducer;
 
   @Transactional
   public CommentResponseDto createComment(Long postId, Long memberId, Long companyId, CommentRequestDto requestDto) {
@@ -30,15 +32,24 @@ public class CommentService {
       throw new IllegalArgumentException("다른 회사의 게시글에는 댓글을 작성할 수 없습니다.");
     }
 
-    Comment comment = Comment.builder()
+    Comment comment = commentRepository.save(Comment.builder()
       .post(post)
       .memberId(memberId)
       .companyId(companyId)
       .nickname(requestDto.nickname())
       .content(requestDto.content())
-      .build();
+      .build());
 
-    return CommentResponseDto.from(commentRepository.save(comment));
+    if (!memberId.equals(post.getMemberId())) {
+      notificationProducer.send(
+        post.getMemberId(),
+        String.format("💬 [%s] 글에 새 댓글이 달렸습니다: %s", post.getTitle(), requestDto.content()),
+        "COMMENT_RECEIVED",
+        postId
+      );
+    }
+
+    return CommentResponseDto.from(comment);
   }
 
   @Transactional(readOnly = true)
@@ -114,16 +125,25 @@ public class CommentService {
       throw new IllegalArgumentException("접근 권한이 없습니다.");
     }
 
-    Comment reply = Comment.builder()
+    Comment reply = commentRepository.save(Comment.builder()
       .post(post)
       .parent(parentComment)
       .memberId(memberId)
       .companyId(companyId)
       .nickname(requestDto.nickname())
       .content(requestDto.content())
-      .build();
+      .build());
 
-    return CommentResponseDto.from(commentRepository.save(reply));
+    if (!memberId.equals(parentComment.getMemberId())) {
+      notificationProducer.send(
+        parentComment.getMemberId(),
+        String.format("↪️ 댓글에 답글이 달렸습니다: %s", requestDto.content()),
+        "REPLY_RECEIVED", // NotificationType
+        postId // targetId
+      );
+    }
+
+    return CommentResponseDto.from(reply);
   }
 
   @Transactional(readOnly = true)
