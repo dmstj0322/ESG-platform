@@ -42,8 +42,8 @@
     { "indicatorCode": "E-105", "indicatorTitle": "용수 사용량",  "numericMatchLevel": "MEDIUM", "numericDiffPercent": 13.6, "inputValue": 15500, "extractedValue": 17608, "unit": "m³",  "isValidEvidence": true,  "confidenceLevel": "MEDIUM" },
     { "indicatorCode": "S-201", "indicatorTitle": "산업안전 교육", "similarity": 0.58, "finalScore": 0.55, "evidenceText": "직원 교육 프로그램 운영 현황입니다.", "isValidEvidence": true, "confidenceLevel": "LOW", "pageNumber": 7 }
   ],
-  "overallOpinion": "스마트솔루션 주식회사는 환경 데이터 일부와 사회·지배구조 증빙 부족으로 평가 정확도에 제한이 있습니다. ESG 관련 정책 문서 제출과 공시 자료 보완을 통해 종합 점수 개선이 가능합니다.",
-  "fullReport": "### ESG 종합 총평\n\n스마트솔루션 주식회사는 환경 데이터 일부와 S/G 증빙 부족으로 평가 정확도에 제한이 있습니다.\n\n### 위험 요소\n\n- 탄소 배출량 수치 불일치 감지\n- S/G 지표 5개 항목 증빙 미제출\n\n### 개선 권고\n\n- ESG 관련 정책 문서 제출 필요\n- 사회·지배구조 관련 공시 자료 보완 권장",
+  "overallOpinion": "K-ESG 감사 결과, 환경(E) 부문은 71점(B등급), 사회(S) 부문은 55점(C등급), 지배구조(G) 부문은 58점(C등급)을 기록하였습니다. 종합 점수는 64점으로 최종 B등급을 부여받았습니다. 사회·지배구조 부문 증빙 자료 보완이 필요합니다.",
+  "fullReport": "### ESG 종합 감사 결과\n\n스마트솔루션 주식회사는 64점(B등급)을 기록하였습니다.\n\n### 주요 확인 사항\n\n- 환경(E): 71점 — 일부 지표 수치 불일치 감지\n- 사회(S): 55점 — 증빙 자료 부족으로 평가 제한\n- 지배구조(G): 58점 — 정책 문서 미제출\n\n### 개선 권고사항\n\n- 사회·지배구조 부문 증빙 자료 제출 및 공시 자료 보완 필요",
   "benchmarkComparison": {
     "industry": "IT/소프트웨어",
     "regionName": "서울특별시",

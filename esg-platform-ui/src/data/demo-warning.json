@@ -43,8 +43,8 @@
     { "indicatorCode": "S-201", "indicatorTitle": "산업안전 교육",  "similarity": 0.76, "finalScore": 0.70, "evidenceText": "안전교육 프로그램을 연간 운영하고 있습니다.", "isValidEvidence": true, "confidenceLevel": "MEDIUM", "pageNumber": 9 },
     { "indicatorCode": "G-301", "indicatorTitle": "윤리경영 정책",  "similarity": 0.62, "finalScore": 0.58, "evidenceText": "윤리경영 방침 수립 여부는 확인되었으나 세부 내용이 미흡합니다.", "isValidEvidence": true, "confidenceLevel": "LOW", "pageNumber": 18 }
   ],
-  "overallOpinion": "그린에너지 주식회사는 전력·탄소·폐기물 항목에서 심각한 수치 불일치가 감지되어 등급 제한이 적용되었습니다. 입력값과 증빙 문서 간 40~55% 오차가 확인되어 환경 데이터 재검토 및 원본 증빙 자료 업데이트가 시급히 필요합니다.",
-  "fullReport": "### ESG 종합 총평\n\n그린에너지 주식회사는 환경 데이터 불일치로 인해 등급 제한이 적용되었습니다.\n\n### 위험 요소\n\n- 전력·탄소·폐기물 항목에서 심각한 수치 불일치 감지\n- 증빙 문서와 입력값 간 40~55% 오차 발생\n\n### 개선 권고\n\n- 환경 데이터 재검토 및 증빙 문서 업데이트 필요\n- S/G 카테고리 evidence 보완 권장",
+  "overallOpinion": "K-ESG 감사 결과, 환경(E) 부문은 38점(D등급), 사회(S) 부문은 65점(B등급), 지배구조(G) 부문은 55점(C등급)을 기록하였습니다. 종합 점수는 52점으로 최종 C등급을 부여받았습니다. 환경 부문 수치 불일치로 등급 제한이 적용되었으며, 원본 데이터 재검토가 필요합니다.",
+  "fullReport": "### ESG 종합 감사 결과\n\n그린에너지 주식회사는 52점(C등급)을 기록하였습니다.\n\n### 주요 확인 사항\n\n- 환경(E): 38점 — 핵심 지표 수치 불일치로 등급 제한 적용\n- 사회(S): 65점 — 안전 교육 근거 부분 확인\n- 지배구조(G): 55점 — 윤리경영 세부 내용 불충분\n\n### 개선 권고사항\n\n- 환경 부문 원본 증빙 자료 재제출 및 수치 재검토 필요",
   "benchmarkComparison": {
     "industry": "에너지",
     "regionName": "충청남도",
