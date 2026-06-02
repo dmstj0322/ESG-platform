@@ -83,7 +83,7 @@ jobs:
           script: |
             cd /home/ubuntu/esg-deploy
             docker compose pull
-            docker compose up -d
+            docker compose up -d --force-recreate
 
   deploy-server2:
     needs: deploy-server1
@@ -99,4 +99,4 @@ jobs:
           script: |
             cd /home/ubuntu/esg-deploy
             docker compose pull
-            docker compose up -d
+            docker compose up -d --force-recreate
