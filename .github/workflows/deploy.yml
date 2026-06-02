@@ -23,6 +23,7 @@ jobs:
           - notification-service
           - point-service
 
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -44,8 +45,32 @@ jobs:
           push: true
           tags: esgplatform/${{ matrix.service }}:latest
 
+  frontend-build-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./esg-platform-ui
+          file: ./esg-platform-ui/Dockerfile
+          push: true
+          tags: esgplatform/esg-frontend:latest
+
   deploy-server1:
-    needs: docker-build-push
+    needs: [docker-build-push, frontend-build-push]
     runs-on: ubuntu-latest
 
     steps:
