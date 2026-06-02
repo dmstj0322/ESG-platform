@@ -5,7 +5,6 @@ on:
     branches:
       - main
 
-
 jobs:
   docker-build-push:
     runs-on: ubuntu-latest
@@ -24,19 +23,19 @@ jobs:
           - notification-service
           - point-service
 
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
+      # 🌟 수정 1: Docker Hub 로그인을 Buildx 셋업보다 위로 올렸습니다.
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Build and Push
         uses: docker/build-push-action@v5
@@ -53,14 +52,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
+      # 🌟 수정 1: 프론트엔드도 로그인을 먼저 수행합니다.
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Build and Push Frontend
         uses: docker/build-push-action@v5
@@ -70,24 +70,9 @@ jobs:
           push: true
           tags: esgplatform/esg-frontend:latest
 
-  deploy-server1:
-    needs: [docker-build-push, frontend-build-push]
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Deploy to Server 1
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER1_HOST }}
-          username: ${{ secrets.SERVER1_USER }}
-          password: ${{ secrets.SERVER_PASSWORD }}
-          script: |
-            cd /home/ubuntu/esg-deploy
-            docker compose pull
-            docker compose up -d --force-recreate
-
+  # 🌟 수정 2: 서버 2(핵심 인프라 및 MSA 코어) 배포를 먼저 수행합니다.
   deploy-server2:
-    needs: deploy-server1
+    needs: [docker-build-push, frontend-build-push]
     runs-on: ubuntu-latest
 
     steps:
@@ -96,6 +81,23 @@ jobs:
         with:
           host: ${{ secrets.SERVER2_HOST }}
           username: ${{ secrets.SERVER2_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          script: |
+            cd /home/ubuntu/esg-deploy
+            docker compose pull
+            docker compose up -d --force-recreate
+
+  # 🌟 수정 2: 서버 2 배포가 완전히 끝난 뒤에 서버 1(AI 분석)을 배포합니다.
+  deploy-server1:
+    needs: deploy-server2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to Server 1
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER1_HOST }}
+          username: ${{ secrets.SERVER1_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
           script: |
             cd /home/ubuntu/esg-deploy
