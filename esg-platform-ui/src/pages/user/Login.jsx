@@ -173,7 +173,7 @@ function mapLoginError(err) {
   return '이메일 또는 비밀번호가 올바르지 않습니다.';
 }
 
-const ADMIN_FEATURES = ['ESG 분석 및 자동 등급 산출', 'ESG 리포트 및 대시보드', '업종 벤치마크 비교'];
+const ADMIN_FEATURES = ['ESG 분석 및 자동 등급 산출', 'ESG 리포트 및 대시보드', '동종 업계 ESG 수준 비교'];
 const USER_FEATURES = ['친환경 활동 참여 및 공유', 'EcoPoint 즉시 적립', '포인트 리워드 사용'];
 
 const Login = () => {

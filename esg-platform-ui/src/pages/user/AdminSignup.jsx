@@ -255,9 +255,9 @@ function mapAdminError(msg) {
 }
 
 const FEATURES = [
-  { ico: '📊', t: '기업 ESG 분석 자동화', d: 'K-ESG 기준 문서 분석 및 자동 등급 산출' },
-  { ico: '🏭', t: '업종 벤치마크 비교', d: '업종 평균 ESG 성과 비교 분석' },
-  { ico: '📄', t: 'ESG 리포트 즉시 생성', d: '검증 근거 포함 리포트를 즉시 다운로드' },
+  { ico: '📊', t: '기업 ESG 분석 자동화', d: 'K-ESG 기준에 따른 자동 분석 및 등급 산출' },
+  { ico: '🏭', t: '업계 평균 성과 분석', d: '동종 업계 ESG 수준을 비교 분석' },
+  { ico: '📄', t: 'ESG 리포트 즉시 생성', d: '검증 근거를 포함한 ESG 리포트 자동 생성' },
 ];
 
 const AdminSignup = () => {
@@ -359,8 +359,8 @@ const AdminSignup = () => {
               관리하세요
             </h2>
             <p className="auth-l-desc">
-              업종·지역 정보를 등록하면 동종업계<br />
-              벤치마크 비교 기준이 자동으로 설정됩니다.
+              업종·지역 정보를 등록하면<br />
+              동종 업계 비교 기준이 자동으로 설정됩니다.
             </p>
 
             <div className="auth-feats">

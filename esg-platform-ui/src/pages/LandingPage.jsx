@@ -544,6 +544,107 @@ const LANDING_STYLE = `
     .eco-footer { flex-direction: column; gap: 1.25rem; text-align: center; padding: 2.5rem 1.25rem; }
     .eco-cta-sec h2 { font-size: 28px; line-height: 1.25; word-break: keep-all; }
   }
+
+  /* ── MOBILE (≤768px) ── */
+  @media (max-width: 768px) {
+    /* 가로 스크롤 차단 */
+    .eco-landing { overflow-x: hidden; }
+
+    /* Nav – 좌우 여유 확보 */
+    .eco-nav { padding: 0 1.5rem; }
+    .eco-nav-cta { padding: 8px 14px; font-size: 12px; min-height: 44px; }
+
+    /* Hero – 좌우 1.5rem(24px), 요소 간 세로 간격 확대 */
+    .eco-hero-wrap { padding: 80px 1.5rem 52px; gap: 2.25rem; }
+    .eco-hero-eyebrow {
+      font-size: 10px; letter-spacing: .03em; padding: 5px 13px;
+      margin-bottom: 1.75rem;
+    }
+    .eco-hero-title { font-size: 26px; line-height: 1.2; margin-bottom: 1.5rem; }
+    .eco-hero-desc {
+      font-size: 14.5px; line-height: 1.8;
+      max-width: 100%; word-break: keep-all; margin-bottom: 2.25rem;
+    }
+
+    /* Hero – 플로우 스텝: 2×2 그리드 + STEP 01~04 번호 표시 */
+    .eco-hero-flow {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px; margin-bottom: 2.25rem;
+      counter-reset: flow-step;
+    }
+    .eco-flow-arr { display: none; }
+    .eco-flow-step {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+      font-size: 12px; font-weight: 600;
+      padding: 10px 12px; text-align: left; white-space: normal;
+      counter-increment: flow-step;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-left: 2.5px solid var(--green);
+      border-radius: 6px;
+    }
+    .eco-flow-step::before {
+      content: "STEP 0" counter(flow-step);
+      font-size: 9px; font-weight: 800;
+      color: var(--green); letter-spacing: .1em;
+      font-family: monospace; line-height: 1;
+    }
+
+    /* Hero – CTA 버튼: 콘텐츠 기반 너비, 소형 */
+    .eco-hero-btns { flex-direction: row; gap: 12px; margin-bottom: 2.75rem; }
+    .eco-btn-primary {
+      width: auto; max-width: none;
+      padding: 11px 24px; font-size: 14px; min-height: 44px;
+    }
+    .eco-btn-secondary {
+      width: auto;
+      padding: 10px 22px; min-height: 44px;
+    }
+
+    /* Hero – KPI 필 */
+    .eco-hero-kpis { gap: 10px; padding-top: 1.5rem; }
+    .eco-kpi-pill { padding: 8px 13px; }
+    .eco-kpi-text { font-size: 11.5px; }
+
+    /* 섹션 공통 – 좌우 1.5rem, 상하 56px */
+    .eco-section { padding: 56px 1.5rem; }
+    .eco-cta-sec { padding: 64px 1.5rem; }
+    .eco-cta-sec p { font-size: 14px; word-break: keep-all; }
+    .eco-btn-green { padding: 15px 30px; font-size: 15px; min-height: 52px; }
+
+    /* 섹션 타이포 */
+    .eco-sec-title { font-size: 22px; }
+    .eco-sec-desc { font-size: 14.5px; word-break: keep-all; }
+
+    /* Feature 카드 – 간격·내부 패딩·요소 간격 확대 */
+    .eco-fgrid { gap: 18px; margin-top: 2.75rem; }
+    .eco-fcard { padding: 24px; }
+    .eco-ftitle { font-size: 15.5px; margin-bottom: .6rem; }
+    .eco-fdesc { font-size: 13px; line-height: 1.8; margin-bottom: 1.25rem; }
+    .eco-fbullets { gap: 8px; }
+    .eco-fbullets li { font-size: 12px; line-height: 1.7; }
+
+    /* Step 카드 */
+    .eco-sgrid { gap: 18px; margin-top: 2.75rem; }
+    .eco-scard { padding: 24px; }
+    .eco-step-num { margin-bottom: 1rem; }
+    .eco-sicon { margin-bottom: 1rem; }
+    .eco-stitle { font-size: 14px; margin-bottom: .65rem; }
+    .eco-sdesc { font-size: 12px; line-height: 1.75; }
+
+    /* Review 카드 */
+    .eco-rgrid { gap: 18px; }
+    .eco-rcard { padding: 24px; }
+    .eco-stars { margin-bottom: 1rem; }
+    .eco-rquote { font-size: 13.5px; line-height: 1.8; word-break: keep-all; margin-bottom: 1.5rem; }
+
+    /* 인터랙티브 데모 */
+    .eco-demo-body { height: 380px; }
+    .eco-demo-chrome { padding: 8px 12px; }
+
+    /* Footer */
+    .eco-footer { padding: 2.5rem 1.5rem; }
+  }
 `;
 
 /* ─── 커서 엔진 ─── */
@@ -738,10 +839,10 @@ export default function LandingPage() {
   const [s3Toggles, setS3Toggles] = useState([false, false, false, false, false]);
   const [s3LogItems, setS3LogItems] = useState([
     { status: '대기', color: 'rgba(255,255,255,.35)', text: '문서 업로드를 기다리는 중...', show: false },
-    { status: '입력', color: '#fbbf24', text: '환경 증빙 파일: "esg_env_normal.csv"', show: false },
-    { status: '시작', color: '#60a5fa', text: '환경(E) 지표 감사 시작', show: false },
-    { status: '진행', color: '#a78bfa', text: '환경 보고서 문서 처리 중...', show: false },
-    { status: '완료', color: '#34d399', text: '환경(E) 지표 감사 완료', show: false },
+    { status: '입력', color: '#fbbf24', text: '사회 증빙 파일: "social_report_2025.pdf"', show: false },
+    { status: '시작', color: '#60a5fa', text: '사회(S) 지표 분석 시작', show: false },
+    { status: '진행', color: '#a78bfa', text: '사회 보고서 문서 처리 중...', show: false },
+    { status: '완료', color: '#34d399', text: '사회(S) 지표 분석 완료', show: false },
   ]);
   const [s3FileUploaded, setS3FileUploaded] = useState(false);
   const [s3BtnText, setS3BtnText] = useState('👤 Social(S) 분석 시작');
@@ -782,8 +883,9 @@ export default function LandingPage() {
     // 체크리스트 토글 (커서 없이 자동 체크)
     setTimeout(() => setS3Toggles([true, false, false, false, false]), 600);
     setTimeout(() => setS3Toggles([true, true, false, false, false]), 1100);
-    setTimeout(() => setS3Toggles([true, true, false, true, false]), 1600);
-    setTimeout(() => setS3Toggles([true, true, false, true, true]), 2100);
+    setTimeout(() => setS3Toggles([true, true, true, false, false]), 1500);
+    setTimeout(() => setS3Toggles([true, true, true, true, false]), 1900);
+    setTimeout(() => setS3Toggles([true, true, true, true, true]), 2300);
 
     // 파일 자동 업로드
     setTimeout(() => setS3FileUploaded(true), 2700);
@@ -900,7 +1002,7 @@ export default function LandingPage() {
           <div className="eco-nav-links">
             <a href="#eco-features">기능 소개</a>
             <a href="#eco-how">분석 흐름</a>
-            <a href="#eco-reviews">도입 사례</a>
+            <a href="#eco-reviews">기대 효과</a>
           </div>
           <button className="eco-nav-cta" onClick={() => navigate('/login')}>무료로 시작하기 →</button>
         </nav>
@@ -1189,7 +1291,7 @@ export default function LandingPage() {
               </div>{/* /demo-body */}
 
               <div className="eco-demo-tabs">
-                {['ESG 감사 결과', '감사 진단', 'ESG 참여', '에코 마켓'].map((label, i) => (
+                {['ESG 분석 결과', '분석 진단', 'ESG 참여', '에코 마켓'].map((label, i) => (
                   <button key={i} className={`eco-dtab${activeTab === i ? ' on' : ''}`} onClick={() => jumpTo(i)}>{label}</button>
                 ))}
               </div>
@@ -1210,10 +1312,10 @@ export default function LandingPage() {
             </div>
             <div className="eco-fgrid">
               {[
-                { ico: '🔎', title: 'ESG 분석 엔진', desc: 'PDF·CSV 기반 ESG 데이터를 자동 검증하고, K-ESG 기준 등급과 신뢰도를 산출합니다.', bullets: ['PDF/CSV 업로드 + OCR 자동 파싱', 'K-ESG 핵심 지표 자동 평가', '검증 근거 자동 추적', '신뢰도 (Confidence) 제공', 'Benchmark 비교 + 등급 시각화'] },
-                { ico: '📊', title: 'ESG 분석 대시보드', desc: '기업 ESG 성과를 실시간으로 시각화하고, 업종 Benchmark와 비교해 개선 방향을 제시합니다.', bullets: ['E/S/G 카테고리별 추적', '업종 Benchmark 비교 시각화', '분석 이력 및 등급 변화 추이', '즉시조치 권고 및 개선 알림'] },
-                { ico: '🤝', title: 'ESG 참여 커뮤니티', desc: '임직원이 친환경 활동을 공유하면 자동 인식하고 에코포인트를 지급해 ESG 문화를 내재화합니다.', bullets: ['임직원 친환경 활동 사진 공유', '자동 인식 · 포인트 즉시 적립', 'S 지표 개선 데이터로 자동 연동'] },
-                { ico: '🎁', title: 'ESG 리워드 마켓', desc: '에코포인트를 다양한 리워드로 교환해 임직원의 ESG 참여를 지속적으로 장려하는 인센티브 시스템입니다.', bullets: ['에코포인트 기반 리워드 교환', '친환경 상품 · 문화생활 교환권', '즉시 발송 · 실시간 재고 관리'] },
+                { ico: '🔎', title: 'ESG 분석 엔진', desc: 'PDF·CSV 파일만 업로드하면 ESG 데이터를 자동 분석하고 K-ESG 기준에 따른 점수와 등급을 제공합니다.', bullets: ['ESG 데이터 자동 분석', 'ESG 핵심 지표 평가', '평가 근거 자동 제공', '분석 신뢰도 확인', 'ESG 등급 리포트 생성'] },
+                { ico: '📊', title: 'ESG 분석 대시보드', desc: '기업 ESG 현황을 한눈에 확인하고 개선이 필요한 영역을 빠르게 파악할 수 있습니다.', bullets: ['E / S / G 영역별 성과 분석', '업계 평균과 비교 분석', 'ESG 점수 변화 추적', 'ESG 등급 시각화', '개선 과제 자동 안내'] },
+                { ico: '🤝', title: 'ESG 참여 커뮤니티', desc: '임직원의 ESG 활동을 공유하고 참여를 유도하여 조직 내 ESG 문화를 확산합니다.', bullets: ['ESG 활동 인증 및 공유', '참여 실적 자동 적립', '사회(S) 지표와 자동 연계', '임직원 참여 현황 관리', 'ESG 문화 확산 지원'] },
+                { ico: '🎁', title: 'ESG 리워드 마켓', desc: 'ESG 활동으로 획득한 포인트를 다양한 리워드로 교환하여 지속적인 참여를 유도합니다.', bullets: ['ESG 포인트 자동 적립', '친환경 리워드 교환', '문화·복지 상품 제공', '실시간 재고 관리', '참여 동기 부여 강화'] },
               ].map((f, i) => (
                 <div key={i} className={`eco-fcard eco-reveal${f.primary ? ' primary' : ''}${i % 2 === 1 ? ' eco-d1' : ''}`}>
                   <div className="eco-ficon">{f.ico}</div>
@@ -1230,17 +1332,18 @@ export default function LandingPage() {
         <section id="eco-how" className="eco-section eco-how-bg">
           <div className="eco-inner">
             <div className="eco-eyebrow">분석 흐름</div>
-            <h2 className="eco-sec-title eco-reveal">데이터 업로드부터 ESG 리포트까지</h2>
+            <h2 className="eco-sec-title eco-reveal">4단계로 완성하는 ESG 자동 분석</h2>
             <p className="eco-sec-desc eco-reveal eco-d1">
-              4단계 자동화 파이프라인으로 기업 ESG 관리를 완성하세요.<br />
-              커뮤니티·리워드는 임직원 참여 지표(S)를 실질적으로 개선하는 부가 서비스입니다.
+              복잡한 ESG 분석 과정을 자동화하여<br />
+              데이터 업로드부터 결과 확인까지 한 번에 진행할 수 있습니다.<br /><br />
+              ESG 활동 참여와 리워드 기능으로 임직원의 ESG 실천도 함께 관리할 수 있습니다.
             </p>
             <div className="eco-sgrid">
               {[
-                { step: 'STEP 01', ico: '📂', title: 'ESG 데이터 업로드', desc: 'PDF 지속가능경영 보고서, CSV 수치 데이터를 업로드하세요. OCR 기반 자동 파싱이 즉시 시작됩니다.' },
-                { step: 'STEP 02', ico: '🤖', title: 'AI 자동 분석', desc: 'K-ESG 핵심 지표 기반 RAG 분석, 수치 교차 검증, AI 심층 분석이 자동으로 수행됩니다.' },
-                { step: 'STEP 03', ico: '🔍', title: 'ESG 결과 검증', desc: '검증 근거(Evidence) 목록, 분석 신뢰도, Benchmark 비교 결과를 확인하고 등급을 검토합니다.' },
-                { step: 'STEP 04', ico: '📋', title: 'ESG 리포트 다운로드', desc: 'K-ESG 등급, 검증 근거, 개선 권고가 포함된 ESG 리포트를 PDF로 즉시 다운로드합니다.' },
+                { step: 'STEP 01', ico: '📂', title: 'ESG 자료 업로드', desc: 'PDF·CSV 파일만 업로드하면 ESG 데이터를 자동으로 분석합니다.' },
+                { step: 'STEP 02', ico: '🤖', title: 'AI ESG 분석', desc: 'AI가 ESG 데이터를 분석하여 점수와 등급을 자동으로 산출합니다.' },
+                { step: 'STEP 03', ico: '🔍', title: '분석 결과 확인', desc: '평가 근거와 ESG 점수를 확인하고 개선이 필요한 영역을 파악할 수 있습니다.' },
+                { step: 'STEP 04', ico: '📋', title: 'ESG 리포트 생성', desc: '분석 결과를 리포트로 저장하고 보고서 형태로 다운로드할 수 있습니다.' },
               ].map((s, i) => (
                 <div key={i} className={`eco-scard eco-reveal${i === 1 ? ' eco-d1' : i === 2 ? ' eco-d2' : i === 3 ? ' eco-d3' : ''}`}>
                   <div className="eco-step-num">{s.step}</div>
@@ -1253,10 +1356,9 @@ export default function LandingPage() {
             <div style={{ marginTop: 40, padding: '20px 28px', background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 'var(--r-lg)', display: 'flex', alignItems: 'center', gap: 16 }}>
               <div style={{ fontSize: 22 }}>🤝</div>
               <div>
-                <div style={{ fontSize: 13.5, fontWeight: 700, color: 'rgba(255,255,255,.8)', marginBottom: 4 }}>추가 서비스 — ESG 참여 커뮤니티 · 에코 마켓</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.42)', lineHeight: 1.7 }}>임직원의 친환경 활동을 공유하고 에코포인트로 리워드를 받는 구조로, S(사회) 지표를 실질적으로 개선합니다. ESG 분석 결과와 자동 연동됩니다.</div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: 'rgba(255,255,255,.8)', marginBottom: 4 }}>추가 서비스 — ESG 참여 플랫폼</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.42)', lineHeight: 1.7 }}>임직원의 ESG 활동을 공유하고 포인트를 적립하여 지속적인 ESG 참여 문화를 만들어갑니다.</div>
               </div>
-              <span className="eco-supp-badge">추가 서비스</span>
             </div>
           </div>
         </section>
@@ -1265,21 +1367,20 @@ export default function LandingPage() {
         <section id="eco-reviews" className="eco-section">
           <div className="eco-inner">
             <div style={{ marginBottom: '3.5rem' }}>
-              <div className="eco-eyebrow">도입 사례 예시</div>
-              <h2 className="eco-sec-title eco-reveal">기업 ESG 담당자들의<br />실제 사용 후기</h2>
+              <div className="eco-eyebrow">기대 효과</div>
+              <h2 className="eco-sec-title eco-reveal">AI 기반 ESG 관리의<br />기대 효과</h2>
             </div>
             <div className="eco-rgrid">
               {[
-                { init: '김', name: '김지현', role: 'A기업 ESG 담당 팀장', quote: '"분기마다 보고서 작업에 일주일씩 소모했는데, K-ESG 기준 분석과 검증 근거를 자동으로 생성해 실질적인 ESG 개선 업무에 집중할 수 있게 됐습니다."' },
-                { init: '박', name: '박세영', role: 'B그룹 지속가능경영팀 매니저', quote: '"검증 근거 자동 추적 덕분에 이사회에 분석 결과를 근거 중심으로 설명할 수 있었습니다. 단순 숫자보다 근거 중심 ESG 리포트가 훨씬 설득력 있었어요."' },
-                { init: '이', name: '이민준', role: 'C사 ESG 담당 이사', quote: '"K-ESG 등급 산출 근거까지 함께 제공해 ESG 보고 자료 준비가 간소화됐습니다. Benchmark 비교 결과를 바로 확인할 수 있어 개선 방향 설정에 도움이 됐어요."' },
+                { ico: '📊', title: 'ESG 업무 시간 단축', role: 'ESG 데이터 관리 효율화', quote: '보고서 작성 및 데이터 검증 업무를 자동화하여 ESG 담당자의 반복 업무를 줄일 수 있습니다.' },
+                { ico: '🔍', title: '평가 근거 제공', role: '의사결정 지원', quote: '분석 결과와 평가 근거를 함께 제공하여 경영진 보고 및 내부 검토의 신뢰성을 높일 수 있습니다.' },
+                { ico: '📈', title: 'ESG 개선 방향 제시', role: '지속가능경영 지원', quote: '업계 평균 비교와 개선 과제 안내를 통해 실질적인 ESG 개선 활동을 지원합니다.' },
               ].map((r, i) => (
                 <div key={i} className={`eco-rcard eco-reveal${i === 1 ? ' eco-d1' : i === 2 ? ' eco-d2' : ''}`}>
-                  <div className="eco-stars">★★★★★</div>
+                  <div style={{ fontSize: 26, marginBottom: '.75rem' }}>{r.ico}</div>
                   <div className="eco-rquote">{r.quote}</div>
                   <div className="eco-rauthor">
-                    <div className="eco-rav">{r.init}</div>
-                    <div><div className="eco-rname">{r.name}</div><div className="eco-rrole">{r.role}</div></div>
+                    <div><div className="eco-rname">{r.title}</div><div className="eco-rrole">{r.role}</div></div>
                   </div>
                 </div>
               ))}
@@ -1289,9 +1390,9 @@ export default function LandingPage() {
 
         {/* ── CTA ── */}
         <div className="eco-cta-sec">
-          <h2>AI ESG 분석,<br />지금 바로 시작하세요</h2>
-          <p>PDF·CSV 업로드만으로<br />ESG 리포트를 자동 생성합니다.</p>
-          <button className="eco-btn-green" onClick={() => navigate('/login')}>무료 ESG 진단 시작</button>
+          <h2>ESG 분석부터 리포트 생성까지,<br />한 번에 자동화하세요</h2>
+          <p>PDF·CSV 파일만 업로드하면<br />ESG 점수 산출부터 리포트 생성까지 자동으로 진행됩니다.</p>
+          <button className="eco-btn-green" onClick={() => navigate('/login')}>무료 ESG 분석 시작</button>
         </div>
 
         {/* ── FOOTER ── */}
@@ -1308,7 +1409,7 @@ export default function LandingPage() {
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', marginTop: 4 }}>ESG 분석 플랫폼 | K-ESG Verification</div>
           </div>
 
-          <div className="eco-fcopy">© 2025 GreenTrace. All rights reserved.</div>
+          <div className="eco-fcopy">© 2026 GreenTrace. All rights reserved.</div>
         </footer>
 
       </div>
