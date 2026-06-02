@@ -16,6 +16,8 @@ const NotificationPanel = ({ memberId, onClose, onRead }) => {
   }, []);
 
   const isMobile = windowWidth < 500;
+   // 🌟 반응형 폰트 도우미 함수
+  const fSize = (mobile, desktop) => isMobile ? mobile : desktop;
 
   const fetchData = useCallback(async () => {
     if (!memberId) return;
@@ -34,9 +36,6 @@ const NotificationPanel = ({ memberId, onClose, onRead }) => {
   }, [memberId, filter]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-
-  // 🌟 반응형 폰트 도우미 함수
-  const fSize = (mobile, desktop) => isMobile ? mobile : desktop;
 
   const getRelativeTime = (dateStr) => {
     const diff = new Date() - new Date(dateStr);
@@ -85,13 +84,22 @@ const NotificationPanel = ({ memberId, onClose, onRead }) => {
 
   const groupedNotifications = useMemo(() => {
     if (!Array.isArray(notifications)) return {};
-    return notifications.reduce((acc, n) => {
+
+    const filteredList = notifications.filter(n => {
+      if (filter === 'ALL') return true;
+      if (filter === 'POINT') return n.type?.includes('POINT');
+      if (filter === 'ACTIVITY') return n.type?.includes('ACTIVITY');
+      if (filter === 'COMMENT') return n.type === 'COMMENT_RECEIVED' || n.type === 'REPLY_RECEIVED';
+      return true;
+    });
+
+    return filteredList.reduce((acc, n) => {
       const date = new Date(n.createdDate).toLocaleDateString();
       if (!acc[date]) acc[date] = [];
       acc[date].push(n);
       return acc;
     }, {});
-  }, [notifications]);
+  }, [notifications, filter]);
 
   return (
     <div style={panelContainerStyle}>
