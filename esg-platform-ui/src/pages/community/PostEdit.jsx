@@ -126,25 +126,24 @@ const PostEdit = () => {
 };
 
 // --- 스타일 정의 ---
-const containerStyle = { maxWidth: '600px', margin: '40px auto', padding: '0 20px', textAlign: 'left' };
-const cardStyle = { backgroundColor: '#fff', padding: '30px', borderRadius: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 0 1px rgba(0,0,0,0.04)' };
-const headerStyle = { fontSize: '24px', fontWeight: '800', marginBottom: '25px', color: '#333' };
+const containerStyle = { maxWidth: '37.5rem', margin: '2.5rem auto', padding: '0 1.25rem', textAlign: 'left' };
+const cardStyle = { backgroundColor: '#fff', padding: '1.875rem', borderRadius: '0.75rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 0 1px rgba(0,0,0,0.04)' };
+const headerStyle = { fontSize: '1.5rem', fontWeight: '800', marginBottom: '1.5625rem', color: '#333' };
 
-const infoBoxStyle = { marginBottom: '25px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '10px' };
-const labelStyle = { display: 'block', fontSize: '14px', fontWeight: 'bold', color: '#666', marginBottom: '8px' };
-const activityBadgeStyle = { backgroundColor: '#ebfbee', color: '#2b8a3e', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', display: 'inline-block', border: '1px solid #d3f9d8' };
-const helperTextStyle = { fontSize: '12px', color: '#adb5bd', marginTop: '10px' };
+const infoBoxStyle = { marginBottom: '1.5625rem', padding: '0.9375rem', backgroundColor: '#f8f9fa', borderRadius: '0.625rem' };
+const labelStyle = { display: 'block', fontSize: '0.875rem', fontWeight: 'bold', color: '#666', marginBottom: '0.5rem' };
+const activityBadgeStyle = { backgroundColor: '#e7f5ff', color: '#0062b3', padding: '0.25rem 0.75rem', borderRadius: '1.25rem', fontSize: '0.75rem', fontWeight: 'bold', display: 'inline-block', border: '1px solid #74c0fc' };
+const helperTextStyle = { fontSize: '0.75rem', color: '#adb5bd', marginTop: '0.625rem' };
 
-const inputGroupStyle = { marginBottom: '20px' };
-const titleInputStyle = { width: '100%', padding: '12px', border: '1px solid #eee', borderRadius: '8px', outline: 'none', fontSize: '16px', boxSizing: 'border-box' };
-const textAreaStyle = { width: '100%', padding: '12px', border: '1px solid #eee', borderRadius: '8px', outline: 'none', fontSize: '15px', minHeight: '150px', resize: 'vertical', boxSizing: 'border-box' };
+const inputGroupStyle = { marginBottom: '1.25rem' };
+const titleInputStyle = { width: '100%', padding: '0.75rem', border: '1px solid #eee', borderRadius: '0.5rem', outline: 'none', fontSize: '1rem', boxSizing: 'border-box' };
+const textAreaStyle = { width: '100%', padding: '0.75rem', border: '1px solid #eee', borderRadius: '0.5rem', outline: 'none', fontSize: '0.9375rem', minHeight: '9.375rem', resize: 'vertical', boxSizing: 'border-box' };
 
-const imageSectionStyle = { marginBottom: '30px' };
-const imageGridStyle = { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' };
-const imgStyle = { width: '100%', height: '100px', objectFit: 'cover', borderRadius: '8px', opacity: 0.7 }; // 수정 불가하므로 약간 흐리게 처리
+const imageSectionStyle = { marginBottom: '1.875rem' };
+const imageGridStyle = { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.625rem' };
+const imgStyle = { width: '100%', height: '6.25rem', objectFit: 'cover', borderRadius: '0.5rem', opacity: 0.7 };
 
-const buttonGroupStyle = { display: 'flex', gap: '10px' };
-const submitBtnStyle = { flex: 1, padding: '15px', backgroundColor: '#16A87A', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' };
-const cancelBtnStyle = { flex: 1, padding: '15px', backgroundColor: '#f1f3f5', color: '#495057', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' };
-
+const buttonGroupStyle = { display: 'flex', gap: '0.625rem' };
+const submitBtnStyle = { flex: 1, padding: '0.9375rem', backgroundColor: '#339af0', color: '#fff', border: 'none', borderRadius: '0.625rem', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' };
+const cancelBtnStyle = { flex: 1, padding: '0.9375rem', backgroundColor: '#f1f3f5', color: '#495057', border: 'none', borderRadius: '0.5rem', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' };
 export default PostEdit;

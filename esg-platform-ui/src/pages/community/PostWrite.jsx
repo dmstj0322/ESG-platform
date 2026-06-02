@@ -202,26 +202,25 @@ const PostWrite = () => {
 };
 
 // --- 스타일 정의 ---
-const containerStyle = { maxWidth: '500px', margin: '20px auto', padding: '0 20px', textAlign: 'left' };
-const formStyle = { backgroundColor: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 0 1px rgba(0,0,0,0.04)' };
-const headerStyle = { fontSize: '24px', fontWeight: '800', marginBottom: '25px', color: '#2b8a3e' };
+const containerStyle = { maxWidth: '31.25rem', margin: '1.25rem auto', padding: '0 1.25rem', textAlign: 'left' };
+const formStyle = { backgroundColor: '#fff', padding: '1.25rem', borderRadius: '0.75rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 0 1px rgba(0,0,0,0.04)' };
+const headerStyle = { fontSize: '1.5rem', fontWeight: '800', marginBottom: '1.5625rem', color: '#339af0' };
 
-const uploadBoxStyle = { marginBottom: '20px' };
-const emptyUploadStyle = { display: 'flex', height: '200px', border: '2px dashed #ddd', borderRadius: '10px', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#888' };
-const previewGridStyle = { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' };
-const previewItemStyle = { position: 'relative', height: '100px', borderRadius: '8px', overflow: 'hidden' };
+const uploadBoxStyle = { marginBottom: '1.25rem' };
+const emptyUploadStyle = { display: 'flex', height: '12.5rem', border: '2px dashed #ddd', borderRadius: '0.625rem', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#888' };
+const previewGridStyle = { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.625rem' };
+const previewItemStyle = { position: 'relative', height: '6.25rem', borderRadius: '0.5rem', overflow: 'hidden' };
 const imgStyle = { width: '100%', height: '100%', objectFit: 'cover' };
-const removeBtnStyle = { position: 'absolute', top: '5px', right: '5px', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', fontSize: '10px' };
-const addMoreStyle = { display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100px', border: '2px dashed #ddd', borderRadius: '8px', fontSize: '24px', color: '#888', cursor: 'pointer' };
+const removeBtnStyle = { position: 'absolute', top: '0.3125rem', right: '0.3125rem', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: '1.25rem', height: '1.25rem', cursor: 'pointer', fontSize: '0.625rem' };
+const addMoreStyle = { display: 'flex', alignItems: 'center', justifyContent: 'center', height: '6.25rem', border: '2px dashed #ddd', borderRadius: '0.5rem', fontSize: '1.5rem', color: '#888', cursor: 'pointer' };
 
-const inputGroupStyle = { display: 'flex', flexDirection: 'column', gap: '15px' };
-const titleInputStyle = { padding: '12px', fontSize: '16px', border: '1px solid #eee', borderRadius: '8px', outline: 'none', fontWeight: 'bold' };
-const textAreaStyle = { padding: '12px', fontSize: '15px', border: '1px solid #eee', borderRadius: '8px', outline: 'none', minHeight: '150px', resize: 'none' };
+const inputGroupStyle = { display: 'flex', flexDirection: 'column', gap: '0.9375rem' };
+const titleInputStyle = { padding: '0.75rem', fontSize: '1rem', border: '1px solid #eee', borderRadius: '0.5rem', outline: 'none', fontWeight: 'bold' };
+const textAreaStyle = { padding: '0.75rem', fontSize: '0.9375rem', border: '1px solid #eee', borderRadius: '0.5rem', outline: 'none', minHeight: '9.375rem', resize: 'none' };
 
 const submitBtnStyle = (disabled) => ({
-  width: '100%', padding: '15px', marginTop: '20px', backgroundColor: disabled ? '#adb5bd' : '#16A87A', color: '#fff',
-  border: 'none', borderRadius: '10px', fontSize: '16px', fontWeight: 'bold', cursor: disabled ? 'not-allowed' : 'pointer'
+  width: '100%', padding: '0.9375rem', marginTop: '1.25rem', backgroundColor: disabled ? '#adb5bd' : '#339af0', color: '#fff',
+  border: 'none', borderRadius: '0.625rem', fontSize: '1rem', fontWeight: 'bold', cursor: disabled ? 'not-allowed' : 'pointer'
 });
-const cancelBtnStyle = { width: '100%', padding: '10px', marginTop: '10px', background: 'none', border: 'none', color: '#888', cursor: 'pointer' };
-
+const cancelBtnStyle = { width: '100%', padding: '0.625rem', marginTop: '0.625rem', background: 'none', border: 'none', color: '#888', cursor: 'pointer' };
 export default PostWrite;

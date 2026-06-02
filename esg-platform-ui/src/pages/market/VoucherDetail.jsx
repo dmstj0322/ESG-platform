@@ -151,7 +151,12 @@ const VoucherDetail = () => {
 
             <div style={barcodeAreaStyle}>
               <div style={{ display: 'inline-block', width: '100%', maxWidth: '280px' }}>
-                <Barcode value={data.serialNumber} width={1.2} height={60} fontSize={14} margin={0} displayValue={false} />
+                {/* <Barcode value={data.serialNumber} width={1.2} height={60} fontSize={14} margin={0} displayValue={false} /> */}
+                <div style={barcodeWrapperStyle}>
+                  <div style={barcodeInnerStyle}>
+                    <Barcode value={data.serialNumber} width={1.2} height={60} fontSize={14} margin={0} displayValue={false} />
+                  </div>
+                </div>
               </div>
               <div style={serialNumberText}>{data.serialNumber}</div>
             </div>
@@ -207,6 +212,23 @@ const guideBoxStyle = { backgroundColor: '#f8f9fa', padding: '15px', borderRadiu
 const buttonGroupStyle = { display: 'flex', gap: '10px', width: '100%', maxWidth: '400px', marginTop: '25px' };
 const primaryBtnStyle = { flex: 1, padding: '14px', backgroundColor: '#16A87A', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', fontSize: '15px', cursor: 'pointer' };
 const secondaryBtnStyle = { ...primaryBtnStyle, backgroundColor: '#495057' };
+
+const barcodeWrapperStyle = {
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  width: '100%',
+  margin: '1.875rem auto',
+  padding: '0 1.25rem',
+  boxSizing: 'border-box',
+  overflow: 'hidden' // 화면 밖으로 튀어나가는 현상 방지
+};
+
+const barcodeInnerStyle = {
+  maxWidth: '100%', // 🌟 모바일에서 부모 너비를 넘지 않게 강제 축소
+  display: 'flex',
+  justifyContent: 'center'
+};
 
 // const printStyles = `
 //   @media print {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
+// import { textAlign } from 'html2canvas/dist/types/css/property-descriptors/text-align';
 
 const PointHistory = () => {
   const { user } = useAuth();
@@ -31,58 +32,61 @@ const PointHistory = () => {
       </div>
 
       <div style={cardStyle}>
-        <table style={tableStyle}>
-          <thead>
-            <tr>
-              <th style={thStyle}>거래 일자</th>
-              <th style={thStyle}>유형</th>
-              <th style={thStyle}>상세 내용</th>
-              <th style={{ ...thStyle, textAlign: 'right' }}>포인트 변화</th>
-              <th style={{ ...thStyle, textAlign: 'right' }}>현재 잔액</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pointPage.content && pointPage.content.length > 0 ? (
-              pointPage.content.map((history) => (
-                <tr key={history.id} style={trStyle}>
-                  <td style={tdStyle}>{new Date(history.createdDate).toLocaleString()}</td>
-                  <td style={tdStyle}>
-                    <span style={badgeStyle(history.type)}>
-                      {typeMap[history.type] || history.type}
-                    </span>
-                  </td>
-                  <td style={{ ...tdStyle, fontWeight: '500' }}>{history.description}</td>
-                  <td style={{ 
-                    ...tdStyle, 
-                    textAlign: 'right', 
-                    fontWeight: 'bold',
-                    // 유형별 텍스트 색상 차별화 (적립: 블루, 사용: 레드, 환불: 퍼플)
-                    color: history.type === 'USE' ? '#ff6b6b' : (history.type === 'REFUND' ? '#7048e8' : '#16A87A')
-                  }}>
-                    {history.amount > 0 ? `+${history.amount.toLocaleString()}` : history.amount.toLocaleString()} P
-                  </td>
-                  <td style={{ ...tdStyle, textAlign: 'right', color: '#868e96' }}>
-                    {history.balance?.toLocaleString()} P
+        {/* <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}> */}
+        <div style={tableScrollContainer}>
+          <table style={tableStyle}>
+            <thead>
+              <tr>
+                <th style={thStyle}>거래 일자</th>
+                <th style={thStyle}>유형</th>
+                <th style={thStyle}>상세 내용</th>
+                <th style={{ ...thStyle, textAlign: 'right' }}>포인트 변화</th>
+                <th style={{ ...thStyle, textAlign: 'right' }}>현재 잔액</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pointPage.content && pointPage.content.length > 0 ? (
+                pointPage.content.map((history) => (
+                  <tr key={history.id} style={trStyle}>
+                    <td style={tdStyle}>{new Date(history.createdDate).toLocaleString()}</td>
+                    <td style={tdStyle}>
+                      <span style={badgeStyle(history.type)}>
+                        {typeMap[history.type] || history.type}
+                      </span>
+                    </td>
+                    <td style={{ ...tdStyle, fontWeight: '500' }}>{history.description}</td>
+                    <td style={{
+                      ...tdStyle,
+                      textAlign: 'right',
+                      fontWeight: 'bold',
+                      // 유형별 텍스트 색상 차별화 (적립: 블루, 사용: 레드, 환불: 퍼플)
+                      color: history.type === 'USE' ? '#ff6b6b' : (history.type === 'REFUND' ? '#7048e8' : '#16A87A')
+                    }}>
+                      {history.amount > 0 ? `+${history.amount.toLocaleString()}` : history.amount.toLocaleString()} P
+                    </td>
+                    <td style={{ ...tdStyle, textAlign: 'right', color: '#868e96' }}>
+                      {history.balance?.toLocaleString()} P
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" style={emptyStyle}>
+                    포인트 이용 내역이 존재하지 않습니다.
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="5" style={emptyStyle}>
-                  포인트 이용 내역이 존재하지 않습니다.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* 페이지네이션 인터페이스 */}
       {pointPage.totalPages > 1 && (
         <div style={paginationContainerStyle}>
-          <button 
-            disabled={currentPage === 0} 
-            style={pageBtnStyle} 
+          <button
+            disabled={currentPage === 0}
+            style={pageBtnStyle}
             onClick={() => setCurrentPage(prev => prev - 1)}
           >
             이전
@@ -90,9 +94,9 @@ const PointHistory = () => {
           <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#495057' }}>
             {currentPage + 1} / {pointPage.totalPages}
           </span>
-          <button 
-            disabled={currentPage === pointPage.totalPages - 1} 
-            style={pageBtnStyle} 
+          <button
+            disabled={currentPage === pointPage.totalPages - 1}
+            style={pageBtnStyle}
             onClick={() => setCurrentPage(prev => prev + 1)}
           >
             다음
@@ -104,59 +108,47 @@ const PointHistory = () => {
 };
 
 // UI 스타일 컴포넌트 구조 정의
-const containerStyle = { maxWidth: '1000px', margin: '20px auto', padding: '0 20px', textAlign: 'left' };
-const headerWrapperStyle = { marginBottom: '25px' };
-const titleStyle = { fontSize: '24px', fontWeight: '800', color: '#212529', margin: '0 0 8px 0' };
-const subtitleStyle = { fontSize: '14px', color: '#868e96', margin: 0 };
+const containerStyle = { maxWidth: '62.5rem', margin: '1.25rem auto', padding: '0 1.25rem', textAlign: 'left' };
+const headerWrapperStyle = { marginBottom: '1.5625rem' };
+const titleStyle = { fontSize: '1.5rem', fontWeight: '800', color: '#212529', margin: '0 0 0.5rem 0' };
+const subtitleStyle = { fontSize: '0.875rem', color: '#868e96', margin: 0 };
 
-const cardStyle = { backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e9ecef', boxShadow: '0 4px 12px rgba(0,0,0,0.02)', overflowX: 'auto' };
-const tableStyle = { width: '100%', minWidth: '620px', borderCollapse: 'collapse', textAlign: 'left' };
-
-const thStyle = { 
-  padding: '16px 20px', 
-  backgroundColor: '#f8f9fa', 
-  color: '#868e96', 
-  fontWeight: '600', 
-  fontSize: '14px',
-  borderBottom: '1px solid #f1f3f5',
-  whiteSpace: 'nowrap'
-};
-
+const cardStyle = { backgroundColor: '#fff', borderRadius: '0.75rem', border: '1px solid #e9ecef', boxShadow: '0 0.25rem 0.75rem rgba(0,0,0,0.02)', width: '100%', overflow: 'hidden' };
+const tableScrollContainer = { width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch'};
+const tableStyle = { width: '100%', minWidth: '37.5rem', borderCollapse: 'collapse', textAlign: 'left'};
+const thStyle = { padding: '1rem 1.5rem', backgroundColor: '#f8f9fa', color: '#868e96', fontWeight: '600', fontSize: '0.875rem', borderBottom: '1px solid #f1f3f5', whiteSpace: 'nowrap'};
 const trStyle = { borderBottom: '1px solid #f1f3f5', transition: 'background-color 0.2s' };
-const tdStyle = { padding: '18px 20px', fontSize: '15px', color: '#343a40', verticalAlign: 'middle', whiteSpace: 'nowrap' };
+const tdStyle = { padding: '1rem 1.5rem', fontSize: '0.875rem', color: '#343a40', verticalAlign: 'middle', whiteSpace: 'nowrap' };
 
-// 🌟 적립/사용/환불 상태값 뱃지 디자인 스타일링 함수
 const badgeStyle = (type) => {
   const isEarn = type === 'EARN' || type === '적립';
   const isRefund = type === 'REFUND' || type === '환불';
-  
-  let backgroundColor = '#fff5f5'; // 기본값: USE (연빨강)
+
+  let backgroundColor = '#fff5f5'; 
   let color = '#ff6b6b';
   
   if (isEarn) {
-    backgroundColor = '#E6F7F1';   // EARN: 포인트 컬러 팔레트 연동 (연초록)
+    backgroundColor = '#E6F7F1';   
     color = '#16A87A';
   } else if (isRefund) {
-    backgroundColor = '#f3f0ff';   // REFUND: 신규 아키텍처 디자인 반영 (연보라)
-    color = '#7048e8';             
+    backgroundColor = '#f3f0ff';   
+    color = '#7048e8';
   }
 
   return {
-    padding: '6px 12px',
-    borderRadius: '20px',
-    fontSize: '13px',
+    padding: '0.375rem 0.75rem', 
+    borderRadius: '1.25rem',     
     fontWeight: '600',
+    fontSize: '0.8125rem',         
     backgroundColor,
     color,
     display: 'inline-block',
-    minWidth: '50px',
-    textAlign: 'center'
+    whiteSpace: 'nowrap'
   };
 };
 
-const emptyStyle = { padding: '60px', textAlign: 'center', color: '#adb5bd', fontSize: '15px' };
-
-const paginationContainerStyle = { display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginTop: '25px' };
-const pageBtnStyle = { padding: '6px 12px', border: '1px solid #ced4da', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' };
+const emptyStyle = { padding: '3.75rem', textAlign: 'center', color: '#adb5bd', fontSize: '0.9375rem' };
+const paginationContainerStyle = { display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.9375rem', marginTop: '1.5625rem' };
+const pageBtnStyle = { padding: '0.375rem 0.75rem', border: '1px solid #ced4da', backgroundColor: '#fff', borderRadius: '0.25rem', cursor: 'pointer', fontSize: '0.8125rem', fontWeight: '500' };
 
 export default PointHistory;

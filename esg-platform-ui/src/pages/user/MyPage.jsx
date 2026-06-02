@@ -356,26 +356,29 @@ const MyPage = () => {
                   const { canCancel, reason } = checkIsCancelable(o);
                   return (
                     <div key={o.orderId || o.id} style={listCardStyle}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, opacity: o.status === 'CANCELED' ? 0.5 : 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flex: '1 1 12.5rem', minWidth: 0, opacity: o.status === 'CANCELED' ? 0.5 : 1 }}>
                         {o.category === 'GIFTICON' ? (
                           <div style={iconCircleStyle('#E6F7F1', '#16A87A')}>🎁</div>
                         ) : (
                           <div style={iconCircleStyle('#f3f0ff', '#7048e8')}>🤝</div>
                         )}
                         <span style={statusBadgeStyle(o.status)}>{o.status}</span>
-                        <div>
-                          <div style={{ textAlign: 'left', fontWeight: 'bold', fontSize: '17px', color: '#212529', marginBottom: '6px' }}>
+
+                        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                          {/* 🌟 핵심: 말줄임표(...) 없애고, 글자가 길면 자연스럽게 다음 줄로 다 보이게 설정! */}
+                          <div style={{ fontWeight: '700', fontSize: '0.9375rem', color: '#212529', wordBreak: 'keep-all', lineHeight: '1.4' }}>
                             {o.status === 'CANCELED' ? <del>{o.productName}</del> : o.productName}
                           </div>
-                          <div style={{ fontSize: '13px', color: '#868e96', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ color: '#16A87A', fontWeight: '800', whiteSpace: 'nowrap' }}>{o.totalPrice?.toLocaleString()} P</span>
+                          <div style={{ fontSize: '0.75rem', color: '#868e96', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.375rem', flexWrap: 'wrap' }}>
+                            <span style={{ color: '#16A87A', fontWeight: '800' }}>{o.totalPrice?.toLocaleString()} P</span>
                             <span>|</span>
-                            <span style={{ whiteSpace: 'nowrap' }}>{new Date(o.orderDate || o.createdDate).toLocaleDateString()}</span>
+                            <span>{new Date(o.orderDate || o.createdDate).toLocaleDateString()}</span>
                           </div>
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                      {/* 오른쪽 버튼 영역 */}
+                      <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0, marginLeft: 'auto' }}>
                         {o.status !== 'CANCELED' && (
                           <button onClick={() => navigate(`/my-page/${o.orderId}`)} style={viewVoucherBtnStyle}>
                             {o.category === 'DONATION' ? '인증서 확인' : '바우처 확인'}
@@ -389,7 +392,7 @@ const MyPage = () => {
                           )
                         )}
                         {o.status === 'CANCELED' && (
-                          <span style={{ fontSize: '13px', color: '#adb5bd', paddingRight: '5px' }}>취소 완료</span>
+                          <span style={{ fontSize: '0.75rem', color: '#adb5bd', paddingRight: '0.3125rem' }}>취소 완료</span>
                         )}
                       </div>
                     </div>
@@ -475,18 +478,25 @@ const MyPage = () => {
               {myComments.length === 0 ? <div style={emptyTextStyle}>작성한 댓글이 없습니다.</div> :
                 myComments.slice(0, 5).map(comment => (
                   <div key={comment.id} style={listCardStyle} onClick={() => navigate(`/posts/${comment.postId}`)}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, cursor: 'pointer', overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, minWidth: 0, cursor: 'pointer' }}>
                       <div style={iconCircleStyle('#f3f0ff', '#845ef7')}>💬</div>
-                      <div style={{ flex: 1, overflow: 'hidden', textAlign: 'left' }}>
+
+                      {/* 🌟 2단계: 실제 텍스트 컨테이너 (여기에 minWidth 0이 없으면 뚫고 나감!) */}
+                      <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
                         <div style={mainTitleStyle}>"{comment.content}"</div>
                         <div style={postTitleInCommentStyle}>
-                          <span style={{ color: '#adb5bd', fontSize: '14px' }}>→</span> {comment.postTitle || '원문 게시글'}
+                          <span style={{ color: '#adb5bd', fontSize: '14px', flexShrink: 0 }}>→</span>
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {comment.postTitle || '원문 게시글'}
+                          </span>
                         </div>
                       </div>
                     </div>
-                    <div style={rightMetaStyle}>
-                      <span>{new Date(comment.createdDate || comment.createdAt).toLocaleDateString()}</span>
-                      <span style={arrowStyle}>〉</span>
+
+                    {/* 🌟 날짜와 화살표 고정 영역 */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#adb5bd', fontSize: '13px', flexShrink: 0 }}>
+                      <span style={{ whiteSpace: 'nowrap' }}>{new Date(comment.createdDate || comment.createdAt).toLocaleDateString()}</span>
+                      <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#ced4da' }}>〉</span>
                     </div>
                   </div>
                 ))}
@@ -523,59 +533,58 @@ const MyPage = () => {
 };
 
 // 스타일 가이드
-const pageContainer = { padding: '20px 16px', maxWidth: '900px', margin: '0 auto', fontFamily: "'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", backgroundColor: '#fdfdfd', minHeight: '100vh' };
-const dashboardCardStyle = { display: 'flex', flexWrap: 'wrap', alignItems: 'center', padding: '30px', marginBottom: '20px', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e9ecef', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
-const profileSectionStyle = { display: 'flex', alignItems: 'center', gap: '18px', flex: 1, minWidth: '200px' };
-const avatarStyle = { width: '54px', height: '54px', borderRadius: '50%', backgroundColor: '#f1f3f5', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '24px' };
-const nicknameStyle = { fontSize: '20px', fontWeight: '800', color: '#212529', marginBottom: '6px' };
-const roleBadgeStyle = { display: 'inline-block', backgroundColor: '#E6F7F1', color: '#0D7A58', padding: '3px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold' };
+const pageContainer = { padding: '1.25rem 1rem', maxWidth: '56.25rem', margin: '0 auto', fontFamily: "'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", backgroundColor: '#fdfdfd', minHeight: '100vh' };
+const dashboardCardStyle = { display: 'flex', flexWrap: 'wrap', alignItems: 'center', padding: '1.875rem', marginBottom: '1.25rem', backgroundColor: '#fff', borderRadius: '0.75rem', border: '1px solid #e9ecef', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', gap: '1.25rem' };
+const profileSectionStyle = { display: 'flex', alignItems: 'center', gap: '1.125rem', flex: 1, minWidth: '12.5rem' };
+const avatarStyle = { width: '3.375rem', height: '3.375rem', borderRadius: '50%', backgroundColor: '#f1f3f5', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.5rem' };
+const nicknameStyle = { fontSize: '1.25rem', fontWeight: '800', color: '#212529', marginBottom: '0.375rem' };
+const roleBadgeStyle = { display: 'inline-block', backgroundColor: '#e7f5ff', color: '#0D7A5', padding: '0.1875rem 0.625rem', borderRadius: '0.375rem', fontSize: '0.6875rem', fontWeight: 'bold' };
 
 const verticalDividerStyle = { display: 'none' };
 
-const pointSectionStyle = { flex: 1, minWidth: '200px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' };
-const pointLabelStyle = { fontSize: '13px', color: '#868e96', fontWeight: '600' };
-const pointHistoryLinkStyle = { fontSize: '12px', color: '#adb5bd', textDecoration: 'none', fontWeight: '600', transition: 'color 0.2s' };
-const pointValueStyle = { fontSize: '30px', fontWeight: '800', color: '#16A87A', letterSpacing: '-0.5px' };
+const pointSectionStyle = { flex: 1, minWidth: '12.5rem', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' };
+const pointLabelStyle = { fontSize: '0.8125rem', color: '#868e96', fontWeight: '600' };
+const pointValueStyle = { fontSize: '1.875rem', fontWeight: '800', color: '#16A87A', letterSpacing: '-0.5px' };
+const pointHistoryLinkStyle = { fontSize: '0.75rem', color: '#adb5bd', textDecoration: 'none', fontWeight: '600', transition: 'color 0.2s' };
 
-const tabContainerStyle = { display: 'flex', overflowX: 'auto', borderBottom: '1px solid #dee2e6', backgroundColor: '#fff', borderRadius: '16px 16px 0 0', border: '1px solid #e9ecef' };
-const tabStyle = { padding: '16px 20px', backgroundColor: 'transparent', color: '#868e96', border: 'none', borderBottom: '3px solid transparent', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' };
+const tabContainerStyle = { display: 'flex', overflowX: 'auto', borderBottom: '1px solid #dee2e6', backgroundColor: '#fff', borderRadius: '1rem 1rem 0 0', border: '1px solid #e9ecef' };
+const tabStyle = { padding: '1rem 1.25rem', backgroundColor: 'transparent', color: '#868e96', border: 'none', borderBottom: '3px solid transparent', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' };
 const activeTabStyle = { ...tabStyle, color: '#0D7A58', borderBottom: '3px solid #16A87A' };
-const contentContainerStyle = { padding: '24px 0' };
+const contentContainerStyle = { padding: '1.5rem 0' };
 
-const sectionHeaderStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '15px', marginBottom: '15px', borderBottom: '2px solid #f1f3f5' };
-const sectionTitleStyle = { margin: 0, fontSize: '18px', fontWeight: 'bold', color: '#343a40' };
-const viewAllBtnStyle = { background: 'none', border: 'none', color: '#868e96', fontSize: '14px', fontWeight: '600', cursor: 'pointer', padding: '0' };
+const sectionHeaderStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '0.9375rem', marginBottom: '0.9375rem', borderBottom: '2px solid #f1f3f5' };
+const sectionTitleStyle = { margin: 0, fontSize: '1.125rem', fontWeight: 'bold', color: '#343a40' };
+const viewAllBtnStyle = { background: 'none', border: 'none', color: '#868e96', fontSize: '0.875rem', fontWeight: '600', cursor: 'pointer', padding: '0' };
 
-const listWrapper = { display: 'flex', flexDirection: 'column', gap: '12px' };
-const listCardStyle = { display: 'flex', flexWrap: 'wrap', rowGap: '10px', justifyContent: 'space-between', alignItems: 'center', padding: '18px 24px', backgroundColor: '#fff', border: '1px solid #e9ecef', borderRadius: '12px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' };
+const listWrapper = { display: 'flex', flexDirection: 'column', gap: '0.75rem' };
+const listCardStyle = { display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', backgroundColor: '#fff', border: '1px solid #e9ecef', borderRadius: '0.75rem', width: '100%', boxSizing: 'border-box'};
 
-const mainTitleStyle = { fontWeight: '700', color: '#212529', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
-const subContentStyle = { fontSize: '14px', color: '#868e96', marginTop: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
-const postTitleInCommentStyle = { fontSize: '13px', color: '#868e96', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+const mainTitleStyle = { fontWeight: '700', color: '#212529', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', width: '100%'};
+const subContentStyle = { fontSize: '14px', color: '#868e96', marginTop: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', width: '100%'};
+const postTitleInCommentStyle = { fontSize: '13px', color: '#868e96', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%'};
 
-const rightMetaStyle = { display: 'flex', alignItems: 'center', gap: '16px', color: '#adb5bd', fontSize: '13px', flexShrink: 0 };
-const arrowStyle = { fontWeight: 'bold', fontSize: '14px', color: '#ced4da' };
+const rightMetaStyle = { display: 'flex', alignItems: 'center', gap: '0.625rem', color: '#adb5bd', fontSize: '0.8125rem', flexShrink: 0, marginLeft: 'auto'};
+const arrowStyle = { fontWeight: 'bold', fontSize: '0.875rem', color: '#ced4da' };
 
-const thumbnailImgStyle = { width: '50px', height: '50px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 };
-const verifyBadgeStyle = (bg, color) => ({ padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', backgroundColor: bg, color: color, display: 'inline-block' });
-const iconCircleStyle = (bg, color) => ({ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: bg, color: color, display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0 });
+const thumbnailImgStyle = { width: '3.125rem', height: '3.125rem', borderRadius: '0.5rem', objectFit: 'cover', flexShrink: 0 };
+const verifyBadgeStyle = (bg, color) => ({ padding: '0.25rem 0.625rem', borderRadius: '0.375rem', fontSize: '0.6875rem', fontWeight: 'bold', backgroundColor: bg, color: color, display: 'inline-block' });
+const iconCircleStyle = (bg, color) => ({ width: '2.5rem', height: '2.5rem', borderRadius: '50%', backgroundColor: bg, color: color, display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0 });
 
-const statusBadgeStyle = (status) => ({ padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', backgroundColor: status === 'CANCELED' ? '#fff5f5' : '#E6F7F1', color: status === 'CANCELED' ? '#fa5252' : '#0D7A58' });
-const viewVoucherBtnStyle = { padding: '6px 12px', backgroundColor: '#16A87A', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' };
-const cancelBtnStyle = { padding: '6px 12px', backgroundColor: '#fff', color: '#fa5252', border: '1px solid #fa5252', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' };
-const disabledCancelBtnStyle = { padding: '6px 12px', backgroundColor: '#f8f9fa', color: '#adb5bd', border: '1px solid #dee2e6', borderRadius: '6px', cursor: 'not-allowed', fontSize: '12px', fontWeight: 'bold' };
+const statusBadgeStyle = (status) => ({ padding: '0.25rem 0.625rem', borderRadius: '1.25rem', fontSize: '0.6875rem', fontWeight: 'bold', backgroundColor: status === 'CANCELED' ? '#fff5f5' : '#E6F7F1', color: status === 'CANCELED' ? '#fa5252' : '#0D7A58' });
+const viewVoucherBtnStyle = { padding: '0.375rem 0.75rem', backgroundColor: '#16A87A', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8125rem' };
+const cancelBtnStyle = { padding: '0.375rem 0.75rem', backgroundColor: '#fff', color: '#fa5252', border: '1px solid #fa5252', borderRadius: '0.375rem', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8125rem' };
+const disabledCancelBtnStyle = { padding: '0.375rem 0.75rem', backgroundColor: '#f8f9fa', color: '#adb5bd', border: '1px solid #dee2e6', borderRadius: '0.375rem', cursor: 'not-allowed', fontSize: '0.75rem', fontWeight: 'bold' };
 
-const emptyTextStyle = { textAlign: 'center', padding: '60px 0', color: '#adb5bd', fontSize: '15px', fontWeight: '500' };
+const emptyTextStyle = { textAlign: 'center', padding: '3.75rem 0', color: '#adb5bd', fontSize: '0.9375rem', fontWeight: '500' };
 
-const esgDashboardWrapperStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px', marginBottom: '35px' };
-const co2CardStyle = { backgroundColor: '#ffffff', borderRadius: '12px', padding: '24px', border: '1px solid #e9ecef', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
-const badgeCardStyle = { backgroundColor: '#ffffff', borderRadius: '12px', padding: '24px', border: '1px solid #e9ecef', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
-const treeVisualStyle = { display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: '#E6F7F1', padding: '12px 18px', borderRadius: '12px', border: '1px solid #A8DFD0' };
-const badgeIconCircleStyle = (unlocked) => ({ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: unlocked ? '#E6F7F1' : '#e9ecef', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '6px' });
+const esgDashboardWrapperStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(17.5rem, 1fr))', gap: '1.25rem', marginBottom: '2.1875rem' };
+const co2CardStyle = { backgroundColor: '#ffffff', borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid #e9ecef', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
+const badgeCardStyle = { backgroundColor: '#ffffff', borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid #e9ecef', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
+const treeVisualStyle = { display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: '#e7f5ff', padding: '0.75rem 1.125rem', borderRadius: '0.75rem', border: '1px solid #A8DFD0' };
+const badgeIconCircleStyle = (unlocked) => ({ width: '2.75rem', height: '2.75rem', borderRadius: '50%', backgroundColor: unlocked ? '#e7f5ff' : '#e9ecef', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '0.375rem' });
 
 const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 };
-const modalContentStyle = { backgroundColor: '#fff', padding: '24px', borderRadius: '16px', width: '400px', maxWidth: '90%' };
-const historyItemStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #f1f3f5' };
-const closeBtnStyle = { marginTop: '20px', width: '100%', padding: '12px', border: 'none', borderRadius: '8px', backgroundColor: '#16A87A', color: '#fff', cursor: 'pointer', fontWeight: 'bold' };
-
+const modalContentStyle = { backgroundColor: '#fff', padding: '1.5rem', borderRadius: '1rem', width: '25rem', maxWidth: '90%' };
+const historyItemStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 0', borderBottom: '1px solid #f1f3f5' };
+const closeBtnStyle = { marginTop: '1.25rem', width: '100%', padding: '0.75rem', border: 'none', borderRadius: '0.5rem', backgroundColor: '#339af0', color: '#fff', cursor: 'pointer', fontWeight: 'bold' };
 export default MyPage;
