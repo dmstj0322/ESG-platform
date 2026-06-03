@@ -49,7 +49,7 @@ const PDF_FILENAME = PDF_PATH.replace(/\\/g, '/').split('/').pop();
 
 // ── 폴링 설정 ─────────────────────────────────────────────────────────────────
 const POLL_INTERVAL_SEC = 5;   // 5초마다 폴링
-const POLL_TIMEOUT_SEC  = 300; // 최대 5분 대기
+const POLL_TIMEOUT_SEC  = 600; // 최대 5분 대기
 
 // ── 커스텀 메트릭 ─────────────────────────────────────────────────────────────
 const uploadDuration       = new Trend('upload_duration_ms',   true);
