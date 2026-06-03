@@ -12,6 +12,8 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Mono;
 import java.io.IOException;
 
 @Slf4j
@@ -48,6 +50,33 @@ public class UpstageService {
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(BodyInserters.fromMultipartData(builder.build()))
                     .retrieve()
+                    .onStatus(
+                        status -> status.value() == 429,
+                        clientResponse -> clientResponse.bodyToMono(String.class)
+                            .defaultIfEmpty("(empty body)")
+                            .flatMap(body -> {
+                                String retryAfter = clientResponse.headers().asHttpHeaders()
+                                        .getFirst("Retry-After");
+                                log.error(">>>> [Upstage] 429 Too Many Requests" +
+                                        " filename={} Retry-After={} body={}",
+                                        filename, retryAfter, body);
+                                return Mono.error(new RuntimeException(
+                                        "Upstage 429: Retry-After=" + retryAfter + " body=" + body));
+                            })
+                    )
+                    .onStatus(
+                        status -> status.is4xxClientError() || status.is5xxServerError(),
+                        clientResponse -> clientResponse.bodyToMono(String.class)
+                            .defaultIfEmpty("(empty body)")
+                            .flatMap(body -> {
+                                log.error(">>>> [Upstage] API 오류 status={} filename={} body={}",
+                                        clientResponse.statusCode().value(), filename, body);
+                                return Mono.error(new WebClientResponseException(
+                                        clientResponse.statusCode().value(),
+                                        clientResponse.statusCode().toString(),
+                                        null, body.getBytes(), null));
+                            })
+                    )
                     .bodyToMono(String.class)
                     .block();
 
