@@ -263,7 +263,7 @@ public class FinalReportService {
      * confidence 숫자는 sgConfLabel 내부에서 레이블로 변환 후 소비 → 출력에 미포함.
      */
     private String buildSTemplateSentence(int score, String gradeStr, String sgLabel) {
-        String base = "사회 부문은 " + score + "점(" + gradeStr + "등급)으로 평가되었으며, ";
+        String base = "사회(S) 부문은 " + score + "점(" + gradeStr + "등급)으로 평가되었으며, ";
         if (sgLabel.contains("확보 필요")) return base + "일부 지표에 대한 추가 증빙 자료 확보가 필요합니다.";
         if (sgLabel.contains("충분히"))   return base + "운영 근거가 전반적으로 충분히 확인되었습니다.";
         return base + "운영 근거가 전반적으로 확인되었습니다.";
@@ -275,7 +275,7 @@ public class FinalReportService {
      */
     private String buildGTemplateSentence(int score, String gradeStr, String sgLabel) {
         log.info("[G-TEMPLATE-CALLED] score={} grade='{}' sgLabel='{}'", score, gradeStr, sgLabel);
-        String base = "지배구조 부문은 " + score + "점(" + gradeStr + "등급)으로 평가되었으며, ";
+        String base = "지배구조(G) 부문은 " + score + "점(" + gradeStr + "등급)으로 평가되었으며, ";
         String result;
         if (sgLabel.contains("개선 필요")) result = base + "일부 운영·공시 근거의 보완이 권장됩니다.";
         else if (sgLabel.contains("충분히")) result = base + "운영·공시 근거가 전반적으로 충분히 확인되었습니다.";
@@ -384,14 +384,17 @@ public class FinalReportService {
         try {
             String raw = openAiClient.callWithRetry(prompt);
             JsonNode node = objectMapper.readTree(raw);
-            String opinion = node.path("overallOpinion").asText(null);
-            String risk    = node.path("riskOpportunity").asText(null);
-            if (opinion == null || opinion.isBlank()) {
-                return fallbackOpinion(e, s, g, total, grade);
+            String eSentence  = node.path("eSentence").asText(null);
+            String risk       = node.path("riskOpportunity").asText(null);
+            if (eSentence == null || eSentence.isBlank()) {
+                return fallbackOpinion(e, s, g, total, grade, sSentence, gSentence);
             }
-            log.info("[GPT-OPINION] '{}'", opinion);
-            // 최종 overallOpinion = S 확정문 + G 확정문 + GPT 생성(E+종합)
-            String fullOpinion = sSentence + " " + gSentence + " " + opinion;
+            // 종합 결론은 항상 규칙 기반 템플릿 사용 (GPT 환각 방지)
+            String conclusion = buildConclusionTemplate(total, grade, req.getSocialResult(), req.getGovernanceResult());
+            log.info("[GPT-E-SENTENCE]  '{}'", eSentence);
+            log.info("[TMPL-CONCLUSION] '{}'", conclusion);
+            // 최종 overallOpinion = E(GPT) + S(템플릿) + G(템플릿) + 종합(템플릿)
+            String fullOpinion = eSentence + " " + sSentence + " " + gSentence + " " + conclusion;
             log.info("[FINAL-OPINION] '{}'", fullOpinion);
             return new GptOpinion(
                     fullOpinion,
@@ -399,7 +402,7 @@ public class FinalReportService {
             );
         } catch (Exception ex) {
             log.warn("[FinalReport] GPT 실패 — 기본 총평 사용: {}", ex.getMessage());
-            return fallbackOpinion(e, s, g, total, grade);
+            return fallbackOpinion(e, s, g, total, grade, sSentence, gSentence);
         }
     }
 
@@ -489,7 +492,7 @@ public class FinalReportService {
                 + auditFindings
                 + "\n## 반환 형식 (JSON)\n"
                 + "{\n"
-                + "  \"overallOpinion\": \"150자 내외. 환경(E) 검증 결과와 종합 의견만 서술. 사회(S)·지배구조(G) 부문 서술 절대 금지 — 별도 처리됨.\",\n"
+                + "  \"eSentence\": \"환경(E) 부문 1문장. HIGH/MEDIUM/LOW 검증 건수와 데이터 신뢰성 수준만 서술. confidence%, 오차율, 데이터 일치성 표현 금지. 사회(S)·지배구조(G) 서술 금지.\",\n"
                 + "  \"riskOpportunity\": \"[리스크] 실제 감사 결과 기반 구체적 리스크(에너지 효율·Scope 배출·공시 의무 등). [기회] 개선 가능 항목.\"\n"
                 + "}\n\n"
                 + "절대 금지: 마케팅 과장 표현, 추상적 조언, GPT 일반 답변 패턴.";
@@ -551,12 +554,38 @@ public class FinalReportService {
         return String.valueOf((long) val);
     }
 
-    private GptOpinion fallbackOpinion(int e, int s, int g, int total, String grade) {
-        String opinion = String.format(
-                "K-ESG 종합 점수 %d점(%s등급)으로 평가되었습니다. "
-                + "환경(E) %d점, 사회(S) %d점, 지배구조(G) %d점입니다. "
-                + "균형 있는 ESG 경영 체계 구축과 지속적인 지표 관리가 권고됩니다.",
-                total, grade, e, s, g);
+    /**
+     * 종합 결론 규칙 기반 템플릿 — GPT 미사용, 항상 일관된 결과 보장.
+     * grade 구간별 고정 문구 + S/G 취약 영역 힌트 포함.
+     */
+    private String buildConclusionTemplate(int total, String grade,
+                                            FinalReportRequest.CategoryResult sResult,
+                                            FinalReportRequest.CategoryResult gResult) {
+        String base = String.format("종합 점수는 %d점(%s등급)이며, ", total, grade);
+        switch (grade) {
+            case "S": return base + "전 영역에서 우수한 ESG 관리 수준이 확인되었습니다.";
+            case "A": return base + "전반적으로 우수한 ESG 관리 수준을 유지하고 있습니다.";
+            case "B": return base + "일부 영역의 관리 체계 보완을 통해 ESG 성과를 더욱 향상시킬 수 있습니다.";
+            case "C": {
+                boolean sWeak = conf(sResult) < 60;
+                boolean gWeak = conf(gResult) < 60;
+                if (sWeak && gWeak)
+                    return base + "사회·지배구조 영역의 증빙 자료 및 운영 근거 보완이 권장됩니다.";
+                if (sWeak)
+                    return base + "사회(S) 영역의 운영 증빙 자료 보완이 우선적으로 권장됩니다.";
+                if (gWeak)
+                    return base + "지배구조(G) 영역의 공시 근거 보완이 우선적으로 권장됩니다.";
+                return base + "지속적인 ESG 지표 관리 및 운영 수준 향상을 통해 등급 개선이 가능합니다.";
+            }
+            default: return base + "ESG 관리 체계 전반에 대한 체계적인 개선이 필요합니다.";
+        }
+    }
+
+    private GptOpinion fallbackOpinion(int e, int s, int g, int total, String grade,
+                                       String sSentence, String gSentence) {
+        String eSentence  = String.format("환경(E) 부문은 %d점으로 평가되었습니다.", e);
+        String conclusion = buildConclusionTemplate(total, grade, null, null);
+        String opinion    = eSentence + " " + sSentence + " " + gSentence + " " + conclusion;
         return new GptOpinion(opinion, buildRisk(grade, e, s, g));
     }
 
