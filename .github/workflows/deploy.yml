@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - experiment/ocr-limit
 
 jobs:
   docker-build-push:
