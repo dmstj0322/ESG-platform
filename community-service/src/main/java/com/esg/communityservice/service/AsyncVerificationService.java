@@ -21,6 +21,7 @@ public class AsyncVerificationService {
   private final KafkaTemplate<String, Object> kafkaTemplate;
   private final NotificationProducer notificationProducer;
   private final BadgeService badgeService;
+  private final SlackNotificationService slackNotificationService;
 
   private static final double AUTO_APPROVE_THRESHOLD = 0.8;
 
@@ -35,7 +36,10 @@ public class AsyncVerificationService {
     postRepository.save(post);
 
     try {
-      double score = aiVisionService.getMaxConfidenceScore(event.activityType(), event.imageUrls());
+      AIVisionService.AiResult aiResult = aiVisionService.getMaxConfidenceScore(event.activityType(), event.imageUrls());
+      double score = aiResult.score();
+      String labelsDetail = aiResult.labelsDetail();
+      String targetImageUrl = aiResult.bestImageUrl();
 
       if (score >= AUTO_APPROVE_THRESHOLD) {
         post.updateAiAnalysis(score, event.activityType().name(), AIStatus.SUCCESS);
@@ -50,18 +54,20 @@ public class AsyncVerificationService {
           String.format("🤖 AI 분석으로 [%s] 활동이 인증되었습니다!", event.activityType().getDescription()),
           "ACTIVITY_APPROVED", event.postId()
         );
-//        notificationProducer.send(
-//          post.getMemberId(),
-//          String.format("💰 [%s] 활동으로 포인트가 지급되었습니다!", event.activityType().getDescription()),
-//          "POINT_EARNED",
-//          event.postId()
-//        );
-
         log.info("AI 자동 승인 완료 이벤트 발행: Post ID {}", event.postId());
 
       } else {
         post.updateAiAnalysis(score, "FAIL", AIStatus.REVIEW_NEEDED);
 //        post.autoReject("이미지에서 활동을 인식할 수 없습니다.");
+
+        // 🌟 슬랙 전송 (사진과 라벨 정보를 함께 보냄)
+        slackNotificationService.sendAiRejectReport(
+          event.postId(),
+          event.activityType().name(),
+          score,
+          labelsDetail,
+          targetImageUrl
+        );
 
 //        sendNotification(post, "⚠️ AI 분석 결과 인증이 반려되었습니다. 사유: 이미지에서 활동을 인식할 수 없습니다.", "ACTIVITY_REJECTED");
         notificationProducer.send(
