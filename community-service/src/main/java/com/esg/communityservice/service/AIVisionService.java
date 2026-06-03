@@ -34,6 +34,8 @@ public class AIVisionService {
 
   private record LabelInfo(String description, float score) {}
 
+  public record AiResult(double score, String labelsDetail, String bestImageUrl) {}
+
   private List<LabelInfo> detectLabels(ByteString imgBytes) {
     Image img = Image.newBuilder().setContent(imgBytes).build();
     Feature feat = Feature.newBuilder().setType(Feature.Type.LABEL_DETECTION).build();
@@ -122,10 +124,12 @@ public class AIVisionService {
     return bestType;
   }
 
-  public double getMaxConfidenceScore(ActivityType type, List<String> imageUrls) {
-    if (type == ActivityType.FAIL) return 0.0;
+  public AiResult getMaxConfidenceScore(ActivityType type, List<String> imageUrls) {
+    if (type == ActivityType.FAIL) return new AiResult(0.0, "FAIL 타입", null);
 
     double maxScore = 0.0;
+    String bestLabels = "감지된 라벨 없음";
+    String bestImageUrl = (imageUrls != null && !imageUrls.isEmpty()) ? imageUrls.get(0) : null;
 
     for (String urlString : imageUrls) {
       try {
@@ -139,6 +143,11 @@ public class AIVisionService {
 
         List<LabelInfo> labels = detectLabels(imgBytes);
 
+        String currentLabelsStr = labels.stream()
+          .map(l -> String.format("%s(%.2f)", l.description(), l.score()))
+          .toList()
+          .toString();
+
         // 1. 부정 키워드 체크 (발견 시 즉각 -1.0 반환)
         boolean isRejected = labels.stream()
           .anyMatch(label -> type.getRejectKeywords().stream()
@@ -147,7 +156,7 @@ public class AIVisionService {
 
         if (isRejected) {
           aiLogger.warn("🚨 부정 키워드 감지됨! AI 자동 탈락 처리. 활동: {}, 이미지: {}", type, urlString);
-          return -1.0;
+          return new AiResult(-1.0, "🚨 부정 키워드 감지됨!\n감지된 라벨: " + currentLabelsStr, urlString);
         }
 
 //        // 2. 긍정 키워드 합산
@@ -181,14 +190,19 @@ public class AIVisionService {
           aiLogger.info("이미지에서 긍정 키워드를 찾을 수 없습니다. (0점 처리)");
         }
 
-        maxScore = Math.max(maxScore, currentScore);
+        if (currentScore >= maxScore) {
+          maxScore = currentScore;
+          bestLabels = currentLabelsStr;
+          bestImageUrl = urlString;
+        }
+
         aiLogger.info("이미지 분석 결과 - 현재 합산 점수: {}, 누적 최고 점수: {}", currentScore, maxScore);
 
       } catch (Exception e) {
         aiLogger.error("S3 이미지 분석 중 오류 발생: {}", urlString, e);
       }
     }
-    return maxScore;
+    return new AiResult(maxScore, bestLabels, bestImageUrl);
   }
 
   @PreDestroy
