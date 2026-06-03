@@ -69,6 +69,7 @@ jobs:
           file: ./esg-platform-ui/Dockerfile
           push: true
           tags: esgplatform/esg-frontend:latest
+          provenance: false
 
   # 🌟 수정 2: 서버 2(핵심 인프라 및 MSA 코어) 배포를 먼저 수행합니다.
   deploy-server2:
