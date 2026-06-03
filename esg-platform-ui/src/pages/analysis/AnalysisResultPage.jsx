@@ -5285,11 +5285,15 @@ export default function AnalysisResultPage() {
     return (analysisSummary?.e?.failed ?? 0) >= (analysisSummary?.e?.total ?? 5);
   }, [data, analysisSummary]);
 
-  // 신뢰도-점수 불일치 감지 (점수 높은데 confidence 낮은 경우)
+  // 신뢰도-점수 불일치 감지 — LOW mismatch vs 증빙 부족 원인 구분
   const confidenceMismatch = useMemo(() => {
-    const score = data?.totalScore ?? 0;
-    const conf  = data?.overallConfidence ?? 100;
-    if (score >= 80 && conf < 50) return { score, conf };
+    const score    = data?.totalScore ?? 0;
+    const conf     = data?.overallConfidence ?? 100;
+    const lowCount = data?.lowMismatchCount ?? 0;
+    if (score >= 80 && conf < 50) {
+      const reason = lowCount > 0 ? 'LOW_MISMATCH' : 'EVIDENCE_SHORTAGE';
+      return { score, conf, reason };
+    }
     return null;
   }, [data]);
 
@@ -5299,12 +5303,10 @@ export default function AnalysisResultPage() {
     return (data?.evidenceMatches ?? []).filter(e => e.indicatorCode?.startsWith('E')).length === 0;
   }, [data, isBenchmarkFallback]);
 
-  // 신뢰도: floor(VERIFIED 충분) + ceiling(WEAK 과다 시 최대 75) 적용
+  // 신뢰도: 서버값(overallConfidence)을 SoT로 사용 — floor 보정 제거
+  // ceiling(WEAK 과다 시 최대 75)만 유지
   const adjustedConfidence = useMemo(() => {
     let base = data?.overallConfidence ?? 100;
-    // floor: VERIFIED 충분하고 불일치 적으면 최소 65
-    if (auditCounts.verified >= 6 && auditCounts.contra <= 1 && base < 65) base = 65;
-    // ceiling: 진짜 WEAK(제한검증) 비율 > 40% — 증빙 품질 불충분으로 최대 75% 제한
     const activeTotal = auditCounts.total > 0 ? auditCounts.total : 1;
     const weakRatio = (auditCounts.weak ?? 0) / activeTotal;
     if (weakRatio > 0.40 && base > 75) base = 75;
@@ -5744,9 +5746,6 @@ export default function AnalysisResultPage() {
                     } ${adjustedConfidence < 50 ? 'opacity-70' : ''}`}>
                       <Shield size={10} className="shrink-0" />
                       분석 신뢰도 {adjustedConfidence}%
-                      {adjustedConfidence < d.overallConfidence && (
-                        <span className="text-gray-400 text-[8px] ml-0.5">(보정 전 {d.overallConfidence}%)</span>
-                      )}
                       <ConfidenceTooltip />
                     </span>
                     {adjustedConfidence < 50 && (
@@ -5784,8 +5783,39 @@ export default function AnalysisResultPage() {
                   )}
                 </div>
               )}
-              {/* ── AI 검증 제한 상태 카드 (신뢰도 < 50%) ── */}
-              {!isAutoSimulation && adjustedConfidence < 50 && (
+              {/* ── 수치 불일치 경고 — 환경(E) 검증 결과 직후, 핵심 이슈 직전 ── */}
+              {!isAutoSimulation && (d.lowMismatchCount ?? 0) > 0 && (
+                <div className="mt-3 flex items-start gap-3 rounded-xl border px-4 py-3 bg-red-50 border-red-200">
+                  <AlertTriangle size={14} className="text-red-500 shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-[11px] font-bold text-red-700">
+                        {(d.lowMismatchCount ?? 0) >= 4 ? '심각한 수치 불일치 감지' : '수치 불일치 감지'}
+                      </p>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 border border-red-300 text-red-700">
+                        검증 실패 {d.lowMismatchCount}건
+                      </span>
+                      {d.gradeCeilingApplied && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-700">
+                          등급 제한 적용
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-red-600 mt-1">
+                      {(d.lowMismatchCount ?? 0) >= 4
+                        ? `입력한 ESG 환경 데이터 ${d.lowMismatchCount}개 항목이 증빙 문서 수치와 심각하게 불일치합니다.`
+                        : `입력한 ESG 환경 데이터가 증빙 문서 수치와 일치하지 않는 항목이 있습니다.`}
+                      {d.gradeCeilingApplied && (
+                        <span className="ml-2 font-semibold text-amber-700">
+                          수치 검증 실패로 등급 제한이 적용되었습니다.
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              )}
+              {/* ── AI 검증 제한 상태 카드 (신뢰도 < 50%, 증빙 부족 케이스만) ── */}
+              {!isAutoSimulation && adjustedConfidence < 50 && (data?.lowMismatchCount ?? 0) === 0 && (
                 <div className="mt-3 flex items-start gap-3 px-4 py-3 rounded-xl border bg-amber-50 border-amber-200">
                   <AlertTriangle size={14} className="text-amber-500 shrink-0 mt-0.5" />
                   <div className="min-w-0">
@@ -5889,13 +5919,13 @@ export default function AnalysisResultPage() {
                   </details>
                 );
               })()}
-              {/* 신뢰도-점수 불일치 경고 (MANUAL only) */}
-              {!isAutoSimulation && confidenceMismatch && (
+              {/* 신뢰도-점수 불일치 경고 — EVIDENCE_SHORTAGE 케이스만 표시 */}
+              {/* LOW_MISMATCH는 상단 빨간 경고 박스에서 이미 처리 */}
+              {!isAutoSimulation && confidenceMismatch?.reason === 'EVIDENCE_SHORTAGE' && (
                 <div className="mt-2 flex items-start gap-2.5 px-4 py-2.5 rounded-xl border bg-amber-50 border-amber-200">
                   <AlertTriangle size={12} className="text-amber-500 shrink-0 mt-0.5" />
                   <p className="text-xs text-amber-700 leading-relaxed">
-                    증빙 부족 상태에서 체크리스트 기반 점수가 반영되었습니다.
-                    분석 신뢰도({confidenceMismatch.conf}%)과 종합 점수({confidenceMismatch.score}) 간 불일치가 존재합니다.
+                    증빙 부족 상태에서 체크리스트 기반 점수가 반영되었습니다. 분석 신뢰도({confidenceMismatch.conf}%)가 낮아 결과를 참고용으로만 활용하십시오.
                   </p>
                 </div>
               )}
@@ -5903,7 +5933,7 @@ export default function AnalysisResultPage() {
             <div className="flex flex-col items-end gap-2 shrink-0">
               <GradeBadge grade={d.finalGrade} size="lg" />
               {d.gradeCeilingApplied && !isAutoSimulation && (
-                <span className="text-[9px] font-bold text-red-400 whitespace-nowrap">⚠ 검증 실패 등급 제한</span>
+                <span className="text-[9px] font-bold text-amber-600 whitespace-nowrap">검증 결과로 인한 등급 제한 적용</span>
               )}
               {d.analyzedAt && (
                 <div className="flex items-center gap-1 text-[10px] text-gray-400 mt-1">
@@ -6287,37 +6317,6 @@ export default function AnalysisResultPage() {
           </div>
         )}
 
-        {/* ── 수치 검증 실패 경고 배너 ─────────────────────── */}
-        {(d.lowMismatchCount > 0) && activeTab === 'summary' && (
-          <div className="flex items-start gap-3 rounded-2xl border px-5 py-4 bg-red-50 border-red-200">
-            <AlertTriangle size={15} className="text-red-500 shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="text-sm font-bold text-red-700">
-                  {d.lowMismatchCount >= 4 ? '심각한 수치 불일치 감지' : '수치 불일치 감지'}
-                </p>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 border border-red-300 text-red-700">
-                  검증 실패 {d.lowMismatchCount}건
-                </span>
-                {d.gradeCeilingApplied && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-700">
-                    등급 제한 적용
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-red-600 mt-1">
-                {d.lowMismatchCount >= 4
-                  ? `입력한 ESG 환경 데이터 ${d.lowMismatchCount}개 항목이 증빙 문서 수치와 심각하게 불일치합니다.`
-                  : `입력한 ESG 환경 데이터가 증빙 문서 수치와 일치하지 않는 항목이 있습니다.`}
-                {d.gradeCeilingApplied && (
-                  <span className="ml-2 font-semibold text-amber-700">
-                    수치 검증 실패로 등급 제한이 적용되었습니다.
-                  </span>
-                )}
-              </p>
-            </div>
-          </div>
-        )}
 
         {/* ── E vs S/G 검증 방식 설명 ─────────────────────── */}
         {activeTab === 'summary' && (
