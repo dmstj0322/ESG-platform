@@ -1088,20 +1088,9 @@ export default function AnalysisPage() {
   const StepIcon   = stepDef.Icon;
   const allDone    = eCompleted && sCompleted && gCompleted;
 
-  const computedEcoBonus = (() => {
-    if (!ecoLinked) return 0;
-    // 포인트 잔액 기반 산출 (백엔드 공식과 동일: 1000 EP = +1점, cap 5점)
-    if (userPoints > 0) return Math.min(5, Math.floor(userPoints / 1000));
-    const carbonInput = Number(manualEnv.carbon) || 0;
-    let pts = 0;
-    if (carbonInput > 0) {
-      const rate = eResult ? Math.max(0.05, Math.min(0.22, eResult.score / 450)) : 0.10;
-      pts = Math.round(Math.round(carbonInput * rate * 1000) / 3.5);
-    } else if (eResult) {
-      pts = Math.round(Math.round(eResult.score * 115) / 3.5);
-    }
-    return Math.min(5, Math.floor(pts / 1000));
-  })();
+  // handleFinalReport ecoBonus 공식과 동일: 1000 EP = +1점, cap 5점
+  const poolBonus = ecoLinked ? Math.min(5, Math.floor(userPoints / 1000)) : 0;
+  const poolUsed  = poolBonus * 1000;
 
 
 
@@ -1113,7 +1102,7 @@ export default function AnalysisPage() {
           <p className="text-[11px] font-semibold text-emerald-600 uppercase tracking-[0.1em] mb-1.5">GreenTrace ESG 분석</p>
           <h1 className="text-[22px] font-bold text-gray-900 tracking-tight leading-none">ESG 분석 진단</h1>
           <p className="text-[13px] text-gray-500 mt-2">
-            환경(E) · 사회(S) · 지배구조(G) 핵심 ESG 지표를 기반으로 증빙 문서 분석을분析 완료 · 2026-06-02 18:51 수행합니다
+            환경(E) · 사회(S) · 지배구조(G) 핵심 ESG 지표를 기반으로 증빙 문서 분석을 수행합니다.
           </p>
         </div>
 
@@ -1152,7 +1141,7 @@ export default function AnalysisPage() {
                 {wizardStep === 0 && (
                   <div className="space-y-4">
                     <p className="text-[12px] text-gray-500 leading-relaxed">
-                      회원가입 시 등록된 기업 정보입니다. 수정이 필요하면 마이페이지를 이용해주세요.
+                      회원가입 시 등록된 기업 정보입니다.
                     </p>
                     <div className="grid grid-cols-2 gap-3">
                       {[
@@ -1358,87 +1347,98 @@ export default function AnalysisPage() {
 
                 {/* ── Step 4: EcoPoint ─────────────────────────────── */}
                 {wizardStep === 4 && (
-                  <div className="space-y-5">
+                  <div className="space-y-4">
                     <p className="text-xs text-gray-500 leading-relaxed">
                       친환경 활동으로 적립한 에코 포인트를 ESG 점수에 반영합니다.
                       연동 시 <span className="text-emerald-600 font-semibold">Social(S) 점수 가산</span>이 적용되고, 반영된 포인트는 차감됩니다.
                     </p>
-                    {userPoints > 0 && (
-                      <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-100 text-[11px]">
-                        <span className="text-emerald-700 font-semibold">회사 전체 보유 에코 포인트</span>
-                        <span className="text-emerald-600 tabular-nums font-bold">{userPoints.toLocaleString()} EP</span>
-                      </div>
-                    )}
-                    {userPoints > 0 && computedEcoBonus > 0 && (
-                      <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 border border-gray-100 text-[11px]">
-                        <span className="text-gray-500">분석 반영 시 차감 (관리자 계정)</span>
-                        <span className="text-gray-700 tabular-nums">
-                          {(computedEcoBonus * 1000).toLocaleString()} EP 차감 예정
-                        </span>
-                      </div>
-                    )}
-                    {!eResult && (
-                      <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-amber-50 border border-amber-100">
-                        <AlertTriangle size={12} className="text-amber-500 shrink-0" />
-                        <p className="text-[11px] text-amber-600">Environment(E) 분석을 완료하면 실제 데이터 기반으로 산출됩니다.</p>
-                      </div>
-                    )}
-                    <div className="grid grid-cols-3 gap-3">
-                      {(() => {
-                        const poolBonus = Math.min(5, Math.floor(userPoints / 1000));
-                        const poolUsed  = poolBonus * 1000;
-                        return [
-                          { label: '회사 보유 에코포인트', value: userPoints.toLocaleString(),  unit: 'EP',   color: '#059669' },
-                          { label: 'S 가산점',       value: `+${poolBonus}`,              unit: '점',   color: '#3b82f6' },
-                          { label: '차감 예정 EP',   value: poolUsed.toLocaleString(),    unit: 'EP',   color: '#f59e0b' },
-                        ];
-                      })().map(card => (
-                        <div
-                          key={card.label}
-                          className="rounded-xl border p-3 text-center bg-white"
-                          style={{ borderColor: `${card.color}25` }}
-                        >
-                          <p className="text-[9px] font-bold uppercase tracking-wider mb-1.5" style={{ color: card.color }}>
-                            {card.label}
-                          </p>
-                          <p className="text-xl font-black leading-none" style={{ color: card.color }}>{card.value}</p>
-                          <p className="text-[10px] text-gray-400 mt-1">{card.unit}</p>
+
+                    {poolBonus > 0 ? (
+                      /* ── 포인트 보유: 3-card + 연동 UI ── */
+                      <>
+                        <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-emerald-50 border border-emerald-100 text-[11px]">
+                          <span className="text-emerald-700 font-semibold">회사 전체 보유 에코 포인트</span>
+                          <span className="text-emerald-600 tabular-nums font-bold">{userPoints.toLocaleString()} EP</span>
                         </div>
-                      ))}
-                    </div>
-                    {!ecoLinked ? (
-                      <div className="space-y-2">
-                        <button
-                          type="button"
-                          onClick={() => setEcoLinked(true)}
-                          className="w-full py-2.5 rounded-xl border border-emerald-200 bg-emerald-50
-                            text-emerald-700 text-sm font-semibold hover:bg-emerald-100 hover:border-emerald-300
-                            transition-all duration-150 flex items-center justify-center gap-2"
-                        >
-                          <Zap size={14} /> EcoPoint 연동하기
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setWizardStep(v => v + 1)}
-                          className="w-full py-2 rounded-xl text-gray-400 hover:text-gray-600 text-xs font-medium
-                            transition-colors duration-150"
-                        >
-                          연동 건너뛰기 →
-                        </button>
-                      </div>
+
+                        <div className="grid grid-cols-3 gap-3">
+                          {[
+                            { label: '회사 보유 에코포인트', value: userPoints.toLocaleString(), unit: 'EP',   color: '#059669' },
+                            { label: 'S 가산점',             value: `+${poolBonus}`,             unit: '점',   color: '#3b82f6' },
+                            { label: '차감 예정 EP',         value: poolUsed.toLocaleString(),   unit: 'EP',   color: '#f59e0b' },
+                          ].map(card => (
+                            <div
+                              key={card.label}
+                              className="rounded-xl border p-3 text-center bg-white"
+                              style={{ borderColor: `${card.color}25` }}
+                            >
+                              <p className="text-[9px] font-bold uppercase tracking-wider mb-1.5" style={{ color: card.color }}>
+                                {card.label}
+                              </p>
+                              <p className="text-xl font-black leading-none" style={{ color: card.color }}>{card.value}</p>
+                              <p className="text-[10px] text-gray-400 mt-1">{card.unit}</p>
+                            </div>
+                          ))}
+                        </div>
+
+                        {!ecoLinked ? (
+                          <div className="space-y-2">
+                            <button
+                              type="button"
+                              onClick={() => setEcoLinked(true)}
+                              className="w-full py-2.5 rounded-xl border border-emerald-200 bg-emerald-50
+                                text-emerald-700 text-sm font-semibold hover:bg-emerald-100 hover:border-emerald-300
+                                transition-all duration-150 flex items-center justify-center gap-2"
+                            >
+                              <Zap size={14} /> EcoPoint 연동하기
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setWizardStep(v => v + 1)}
+                              className="w-full py-2 rounded-xl text-gray-400 hover:text-gray-600 text-xs font-medium
+                                transition-colors duration-150"
+                            >
+                              연동 건너뛰기 →
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-100">
+                              <CheckCircle2 size={15} className="text-emerald-500 shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-emerald-700">EcoPoint 연동 완료</p>
+                                <p className="text-[10px] text-emerald-500 mt-0.5">
+                                  {sResult
+                                    ? `사회(S) ${sResult.score}점 → ${Math.min(100, sResult.score + poolBonus)}점 보정 (+${poolBonus})`
+                                    : `Social(S) +${poolBonus}점 반영 예정`}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setWizardStep(v => v + 1)}
+                              className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white
+                                font-semibold text-sm transition-colors duration-150 flex items-center justify-center gap-2 shadow-sm"
+                            >
+                              다음 단계로 <ArrowRight size={14} />
+                            </button>
+                          </div>
+                        )}
+                      </>
                     ) : (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-100">
-                          <CheckCircle2 size={15} className="text-emerald-500 shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-emerald-700">EcoPoint 연동 완료</p>
-                            <p className="text-[10px] text-emerald-500 mt-0.5">
-                              {computedEcoBonus > 0 && sResult
-                                ? `사회(S) ${sResult.score}점 → ${Math.min(100, sResult.score + computedEcoBonus)}점 보정 (+${computedEcoBonus})`
-                                : computedEcoBonus > 0
-                                ? `Social(S) +${computedEcoBonus}점 반영 예정`
-                                : '탄소 배출량 입력 시 S 점수 가산 적용'}
-                            </p>
+                      /* ── 포인트 없음: 미적용 안내 ── */
+                      <>
+                        <div className="px-4 py-4 rounded-xl bg-gray-50 border border-gray-200">
+                          <div className="flex items-start gap-2.5">
+                            <AlertCircle size={15} className="text-gray-400 shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-sm font-semibold text-gray-600">EcoPoint 미적용</p>
+                              <p className="text-[11px] text-gray-400 mt-1.5 leading-relaxed">
+                                현재 사용 가능한 에코포인트가 없습니다.<br />
+                                친환경 활동을 통해 포인트를 적립하면<br />
+                                사회(S) 점수 가산 혜택을 받을 수 있습니다.
+                              </p>
+                            </div>
                           </div>
                         </div>
                         <button
@@ -1449,7 +1449,7 @@ export default function AnalysisPage() {
                         >
                           다음 단계로 <ArrowRight size={14} />
                         </button>
-                      </div>
+                      </>
                     )}
                   </div>
                 )}
@@ -1464,7 +1464,7 @@ export default function AnalysisPage() {
                         { label: 'Environment (E)', done: eCompleted, score: eResult ? `${eResult.score}점 · ${eResult.grade}등급` : null },
                         { label: 'Social (S)',       done: sCompleted, score: sResult ? `${sResult.score}점 · ${sResult.grade}등급` : null },
                         { label: 'Governance (G)',   done: gCompleted, score: gResult ? `${gResult.score}점 · ${gResult.grade}등급` : null },
-                        { label: 'EcoPoint',         done: ecoLinked,  score: ecoLinked && computedEcoBonus > 0 && sResult ? `사회(S) ${sResult.score}→${Math.min(100, sResult.score + computedEcoBonus)}점` : ecoLinked ? '연동됨 (가산 없음)' : '미연동' },
+                        { label: 'EcoPoint',         done: ecoLinked,  score: ecoLinked && poolBonus > 0 && sResult ? `사회(S) ${sResult.score}→${Math.min(100, sResult.score + poolBonus)}점` : ecoLinked ? '연동됨 (가산 없음)' : '미연동' },
                       ].map(row => (
                         <div
                           key={row.label}

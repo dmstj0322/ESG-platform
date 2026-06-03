@@ -401,8 +401,8 @@ export const exportAnalysisResult = async (data, analysisId, esgPoolCurrent = nu
 
   const W              = 210;
   const now            = new Date();
-  const dateStr        = now.toLocaleDateString('ko-KR');
-  const generatedAt    = now.toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const dateStr        = now.toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' });
+  const generatedAt    = now.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
   const companyName    = data.companyName ?? '기업 ESG 분석';
   const gradeC         = gradeRgb(data.finalGrade);
   const analyzedAt     = (data.analyzedAt ?? dateStr).slice(0, 10);

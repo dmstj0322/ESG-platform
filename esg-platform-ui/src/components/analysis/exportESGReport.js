@@ -404,7 +404,7 @@ export const exportESGReport = async (
 
   const W       = 210;
   const today   = new Date();
-  const dateStr = today.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+  const dateStr = today.toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric' });
   const quarter = `${today.getFullYear()}년 ${Math.ceil((today.getMonth() + 1) / 3)}분기`;
 
   const companyName = companyInfo.name
@@ -1295,6 +1295,6 @@ export const exportESGReport = async (
     doc.text(`${p} / ${totalPages}`, 192, 293.5, { align: 'right' });
   }
 
-  const safeDate = today.toLocaleDateString('ko-KR').replace(/\. /g, '-').replace('.', '');
+  const safeDate = today.toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' }).replace(/\. /g, '-').replace('.', '');
   doc.save(`${companyName}_ESG성과분석리포트_${safeDate}.pdf`);
 };

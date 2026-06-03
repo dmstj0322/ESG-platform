@@ -18,7 +18,7 @@ const mkLog = (level, text) => ({
   id: ++_uid,
   level,
   text,
-  time: new Date().toTimeString().slice(0, 8),
+  time: new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' }).slice(11, 19),
 });
 
 // ── 감사 단계별 로그 시퀀스 ──────────────────────────────────────────────────
@@ -96,7 +96,7 @@ export default function RealtimeAuditPanel({
   governanceAnswers,
 }) {
   const [logs, setLogs] = useState(() => {
-    const now = new Date().toTimeString().slice(0, 8);
+    const now = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' }).slice(11, 19);
     return [
       { id: ++_uid, level: 'READY', text: '기업 프로파일 확인 완료',          time: now },
       { id: ++_uid, level: 'READY', text: 'GreenTrace ESG 분석 시스템 준비 완료', time: now },

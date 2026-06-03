@@ -15,7 +15,7 @@ export const exportToPdf = async (data) => {
   exportContainer.innerHTML = `
     <div style="text-align: center; margin-bottom: 40px;">
         <h1 style="color: #1a237e; font-size: 32px; margin-bottom: 10px;">K-ESG 심층 분석 결과 보고서</h1>
-        <p style="font-size: 16px; color: #666;">리포트 일련번호: ${data.analysisId} | 생성일시: ${new Date().toLocaleDateString()}</p>
+        <p style="font-size: 16px; color: #666;">리포트 일련번호: ${data.analysisId} | 생성일시: ${new Date().toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' })}</p>
         <div style="margin: 20px auto; width: 100px; height: 4px; background-color: #1a237e;"></div>
     </div>
 

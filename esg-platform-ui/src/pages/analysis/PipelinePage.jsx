@@ -108,7 +108,7 @@ const WS_STAGE_MAP = {
 
 const STAGE_ORDER = STAGES.map(s => s.key);
 
-const fmtTime  = () => new Date().toTimeString().slice(0, 8);
+const fmtTime  = () => new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' }).slice(11, 19);
 const fmtMs    = (ms) => ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
 const fmtElapsed = (ms) => {
   const s = Math.floor(ms / 1000);
