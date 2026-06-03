@@ -815,28 +815,50 @@ const buildRecommendations = (indicators) => {
   }
 
   if (gNoEvidence.length >= 1) {
+    const G_DOC_MAP = {
+      'G-301': '윤리경영 강령 원문',
+      'G-302': '내부 신고 채널 운영 현황',
+      'G-303': 'ESG 담당 조직도',
+      'G-304': '외부 감사 계약서',
+      'G-305': '이사회 운영 규정',
+    };
+    const gDocs = [...new Set(
+      gNoEvidence.flatMap(ev => (G_DOC_MAP[ev.indicatorCode] ?? '').split(' / ').filter(Boolean))
+    )].slice(0, 4);
+    const gCodeList = gNoEvidence.map(e => e.indicatorCode).join(', ');
     recs.push({
       priority: calcPriority(gNoEvidence.length), _cnt: gNoEvidence.length,
       code: 'G-NOEV', category: 'G',
-      title: '지배구조 공시 문서 — 분석 근거 부재',
-      desc: `지배구조(G) 영역 ${gNoEvidence.length}개 지표에서 분석 근거가 확인되지 않았습니다. 이사회 독립성 정책, 감사위원회 구성 및 운영 현황, 내부 신고 시스템, 윤리경영 강령 등 지배구조 공시 사항을 ESG 보고서에 명시적으로 기재하시길 권장합니다.`,
+      title: '지배구조(G) 검증 근거 부족',
+      desc: `지배구조(G) 영역 ${gNoEvidence.length}개 지표(${gCodeList})에서 검증 근거가 충분히 확보되지 않았습니다. 해당 지표의 운영 현황·정책 문서 등 관련 공시 자료를 추가 제출하시길 권장합니다.`,
       scoreImpact: gNoEvidence.length >= 3 ? '+5~8점' : '+2~4점',
       urgency: gNoEvidence.length >= 3 ? '1개월' : '분기 내',
       impact: 'G 카테고리 점수 향상',
-      docs: ['지배구조 정책 문서', 'ESG 보고서 지배구조 섹션', '내부 신고 시스템 운영 현황'],
+      docs: gDocs.length > 0 ? gDocs : ['지배구조 정책 문서', '지배구조 공시 자료'],
     });
   }
 
   if (sNoEvidence.length >= 1) {
+    const S_DOC_MAP = {
+      'S-201': '산업안전보건 교육 이수 기록',
+      'S-202': '산업재해 발생 현황 보고서',
+      'S-203': 'ESG 교육 프로그램 운영 현황',
+      'S-204': '임직원 참여 프로그램 운영 기록',
+      'S-205': '지역사회 봉사활동 실적 보고서',
+    };
+    const sDocs = [...new Set(
+      sNoEvidence.flatMap(ev => (S_DOC_MAP[ev.indicatorCode] ?? '').split(' / ').filter(Boolean))
+    )].slice(0, 4);
+    const sCodeList = sNoEvidence.map(e => e.indicatorCode).join(', ');
     recs.push({
       priority: calcPriority(sNoEvidence.length), _cnt: sNoEvidence.length,
       code: 'S-NOEV', category: 'S',
-      title: '사회 지표 증빙 — 문서 기재 미흡',
-      desc: `사회(S) 영역 ${sNoEvidence.length}개 지표에서 분석 근거가 확인되지 않았습니다. 산업안전 교육 실적, 임직원 참여 프로그램, 지역사회 기여 활동 내역 등을 정량 데이터와 함께 기재하시면 분석 평가에 반영됩니다.`,
+      title: '사회(S) 검증 근거 부족',
+      desc: `사회(S) 영역 ${sNoEvidence.length}개 지표(${sCodeList})에서 검증 근거가 충분히 확보되지 않았습니다. 해당 지표 관련 실적 자료 또는 운영 증빙 문서를 추가 제출하면 검증 정확도를 높일 수 있습니다.`,
       scoreImpact: sNoEvidence.length >= 3 ? '+3~6점' : '+1~3점',
       urgency: sNoEvidence.length >= 3 ? '분기 내' : '다음 보고 주기',
       impact: 'S 카테고리 점수 향상',
-      docs: ['사회공헌 활동 보고서', '산업안전 교육 이수 기록', '임직원 프로그램 운영 현황'],
+      docs: sDocs.length > 0 ? sDocs : ['사회공헌 활동 보고서', '산업안전 교육 이수 기록'],
     });
   }
 
@@ -1300,6 +1322,18 @@ const fmtDiff = (d) => {
   return `${capped.toFixed(2)}%${d > 999 ? '+' : ''}`;
 };
 
+// UTC ISO 문자열 → KST(Asia/Seoul) 포맷 변환 (서버가 UTC로 반환하므로 +9h 적용 필요)
+const fmtKST = (isoStr, len = 16) => {
+  if (!isoStr) return '';
+  try {
+    // LocalDateTime.now() returns UTC without 'Z' -> append 'Z' to force UTC parsing
+    const utc = /Z$|[+-]\d{2}:?\d{2}$/.test(isoStr) ? isoStr : isoStr + 'Z';
+    return new Date(utc)
+      .toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' })
+      .slice(0, len);
+  } catch { return isoStr.replace('T', ' ').slice(0, len); }
+};
+
 // ── 마크다운 렌더러 ───────────────────────────────────────────────────
 const renderMd = (text) => {
   if (!text) return '';
@@ -1401,7 +1435,7 @@ function HighlightedText({ text, keywords = [] }) {
 // ── Audit Console ────────────────────────────────────────────────────────
 function AuditConsole({ data, analysisSummary, blockedIndicators, isBenchmarkFallback }) {
   const [panelOpen, setPanelOpen] = React.useState(false);
-  const [openGroups, setOpenGroups] = React.useState({ E: true, S: true, G: false, FINAL: true });
+  const [openGroups, setOpenGroups] = React.useState({ E: true, S: true, G: true, FINAL: true });
   const toggle = (k) => setOpenGroups(p => ({ ...p, [k]: !p[k] }));
   const scrollRef = React.useRef(null);
 
@@ -1488,14 +1522,14 @@ function AuditConsole({ data, analysisSummary, blockedIndicators, isBenchmarkFal
     S.push({ sev: 'SUCCESS', msg: '문서 근거 적합도 분석 준비 완료', latency: ragMs ? fmtMs(Math.round(ragMs * 0.35)) : null });
     S.push({ sev: 'SUCCESS', msg: `사회(S) 지표 근거 수집 완료 — 확인 근거 ${sValid}건 (명시 확인 ${sVerified}건)`, latency: ragMs ? fmtMs(Math.round(ragMs * 0.65)) : null });
     if (sBlockedN > 0)
-      S.push({ sev: 'WARN', msg: `사회(S) 지표 ${sBlockedN}개에서 증빙 근거를 확인하지 못했습니다. 관련 문서 보완을 권장합니다.` });
+      S.push({ sev: 'WARN', msg: `사회(S) 지표 ${sBlockedN}개에서 검증 근거가 충분히 확보되지 않았습니다. 관련 문서 추가 보완을 권장합니다.` });
     else
       S.push({ sev: 'SUCCESS', msg: `사회(S) 지표 ${sTotal}개 전체 근거 검증 완료` });
 
     const G = [];
     G.push({ sev: 'SUCCESS', msg: `지배구조(G) 지표 근거 수집 완료 — 확인 근거 ${gValid}건 (명시 확인 ${gVerified}건)` });
     if (gBlockedN > 0)
-      G.push({ sev: 'WARN', msg: `지배구조(G) 지표 ${gBlockedN}개에서 증빙 근거를 확인하지 못했습니다. 이사회·윤리·감사 관련 문서 보완을 권장합니다.` });
+      G.push({ sev: 'WARN', msg: `지배구조(G) 지표 ${gBlockedN}개에서 검증 근거가 충분히 확보되지 않았습니다. 이사회·윤리·감사 관련 문서 추가 보완을 권장합니다.` });
     else
       G.push({ sev: 'SUCCESS', msg: `지배구조(G) 지표 ${gTotal}개 전체 근거 검증 완료` });
 
@@ -2191,7 +2225,7 @@ function AdvancedAnalysisPanel({ data, allIndicators, isAutoSimulation }) {
               { label: '분석 신뢰도', value: conf != null ? `${conf}%` : '—', color: conf != null && conf >= 65 ? '#16a34a' : conf != null && conf >= 50 ? '#d97706' : '#dc2626', sub: '신뢰도 점수' },
               { label: '검증 완료', value: `${verified}건`, color: '#16a34a', sub: `전체 ${total}개 지표 중` },
               { label: '지표 커버리지', value: `${covPct}%`, color: covPct >= 70 ? '#16a34a' : covPct >= 50 ? '#d97706' : '#dc2626', sub: `${total}개 지표 기준` },
-              { label: '추가 보완 권장', value: `${noEv}건`, color: noEv === 0 ? '#16a34a' : noEv <= 2 ? '#d97706' : '#6b7280', sub: '추가 정보 보완 권장' },
+              { label: '추가 보완 권장', value: `${noEv}건`, color: noEv === 0 ? '#16a34a' : noEv <= 2 ? '#d97706' : '#6b7280', sub: '문서 보완 권장 지표' },
             ].map(item => (
               <div key={item.label} className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
                 <p className="text-xs text-gray-500 mb-1.5">{item.label}</p>
@@ -2803,11 +2837,11 @@ function AuditCompletionSummary({ indicators, data, isAutoSimulation }) {
   const contraIndicators  = indicators.filter(ev => getVerificationStatus(ev) === 'CONTRADICTION');
 
   const INDICATOR_RECS = {
-    'G-302': '내부 신고 시스템 운영 절차를 ESG 보고서에 명시하면 G-302 검증이 가능합니다.',
+    'G-302': '내부 신고 시스템 운영 절차를 공시 문서에 명시하면 G-302 검증이 가능합니다.',
     'G-304': '외부 감사 수행 여부와 감사인 정보를 포함하면 G-304 검증이 향상됩니다.',
-    'G-301': '이사회 구성(사외이사 비율 등) 현황을 수치로 명시해주세요.',
+    'G-301': '윤리경영 강령 및 윤리경영 실천 현황을 정책 문서에 명시하면 G-301 검증이 가능합니다.',
     'S-202': '산업재해 발생 건수·재해율을 연간 기준 수치로 명시하면 S-202 통과가 가능합니다.',
-    'S-205': '협력사 ESG 평가 기준과 실적을 문서화하면 S-205 검증이 가능합니다.',
+    'S-205': '지역사회 봉사활동 실적과 기여 내용을 운영 증빙 문서에 명시하면 S-205 검증이 가능합니다.',
     'E-103': '탄소배출량 산정 근거(배출계수, 활동량)를 수치로 명시하면 E-103 신뢰도가 향상됩니다.',
     'E-104': '폐기물 발생·처리 실적 수치를 연간 단위로 기재해주세요.',
   };
@@ -2834,7 +2868,7 @@ function AuditCompletionSummary({ indicators, data, isAutoSimulation }) {
       const suffix = sgMissing.length > 3 ? ` 등 총 ${sgMissing.length}개` : '';
       sents.push(
         `사회(S)·지배구조(G) 영역의 일부 지표는 정책 또는 실적 근거가 부족하여 체크리스트 기반 평가가 적용되었습니다. ` +
-        `특히 ${codeList}${suffix} 항목은 관련 운영 절차 또는 공시 문서가 확인되지 않았습니다.`
+        `특히 ${codeList}${suffix} 항목은 관련 운영 절차 또는 공시 문서의 추가 보완이 필요합니다.`
       );
     }
 
@@ -3004,7 +3038,7 @@ function generateExecutiveSummaryItems(data, indicators) {
     items.push({
       title: '분석 신뢰도',
       type: 'positive',
-      body: `탐지된 감사 근거 기준으로 전체 분석 신뢰도는 높은 수준(HIGH, ${Math.round(conf)}pts)으로 확인됩니다. 제출된 ESG 보고서의 문서 근거 적합도가 전반적으로 양호하며, 추가 증빙 제출 시 검증 정확도가 더욱 향상될 수 있습니다.`,
+      body: `탐지된 감사 근거 기준으로 전체 분석 신뢰도는 높은 수준(HIGH, ${Math.round(conf)}pts)으로 확인됩니다. 제출된 문서의 근거 적합도가 전반적으로 양호하며, 추가 증빙 제출 시 검증 정확도가 더욱 향상될 수 있습니다.`,
     });
   } else if (confLabel === 'MEDIUM') {
     items.push({
@@ -3016,7 +3050,7 @@ function generateExecutiveSummaryItems(data, indicators) {
     items.push({
       title: '분석 신뢰도',
       type: 'warning',
-      body: `전체 분석 신뢰도는 낮은 수준(LOW, ${Math.round(conf)}pts)으로, 증빙 문서의 전반적인 보강이 필요합니다. 주요 K-ESG 지표에 대한 정책 수립 현황, 실행 실적, 정량 데이터를 보고서에 명시적으로 기재하시면 신뢰도가 크게 향상됩니다.`,
+      body: `전체 분석 신뢰도는 낮은 수준(LOW, ${Math.round(conf)}pts)으로, 증빙 문서의 전반적인 보강이 필요합니다. 주요 K-ESG 지표에 대한 정책 수립 현황, 실행 실적, 관련 증빙 자료를 추가 제출하시면 신뢰도가 크게 향상됩니다.`,
     });
   }
 
@@ -3046,7 +3080,7 @@ function generateExecutiveSummaryItems(data, indicators) {
     items.push({
       title: '문서 증빙 현황',
       type: 'warning',
-      body: `총 ${indTotal}개 K-ESG 지표 중 ${evidencedCount}개(${coveragePct}%)에서만 문서 근거가 확인되어 증빙 커버리지가 낮은 수준입니다. ESG 보고서의 기재 완성도 향상 또는 추가 증빙 자료 제출 시 감사 점수와 등급이 크게 개선될 수 있습니다.`,
+      body: `총 ${indTotal}개 K-ESG 지표 중 ${evidencedCount}개(${coveragePct}%)에서만 문서 근거가 확인되어 증빙 커버리지가 낮은 수준입니다. 공시 문서의 기재 완성도 향상 또는 추가 증빙 자료 제출 시 감사 점수와 등급이 크게 개선될 수 있습니다.`,
     });
   }
 
@@ -3667,7 +3701,7 @@ function AiAuditRecommendations({ indicators, isAutoSimulation }) {
                 <p className="text-[12.5px] text-gray-500 leading-[1.72] mb-2 max-w-2xl">{rec.desc}</p>
                 {rec.docs?.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
-                    <span className="text-[9px] font-bold text-gray-400 self-center">필요 서류</span>
+                    <span className="text-[9px] font-bold text-gray-400 self-center">추천 서류 (예시)</span>
                     {rec.docs.map((doc, j) => (
                       <span key={j} className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 font-medium">
                         {doc}
@@ -3885,6 +3919,15 @@ const calcMedianDiff = (items) => {
   return vals.length % 2 === 0 ? (vals[m - 1] + vals[m]) / 2 : vals[m];
 };
 
+// 전체 항목 기준 산술평균 오차율 (극단값 500% 초과 제외)
+const calcMeanDiff = (items) => {
+  const vals = items
+    .map(e => e.numericDiffPercent ?? 0)
+    .filter(v => v < 500);
+  if (!vals.length) return null;
+  return vals.reduce((sum, v) => sum + v, 0) / vals.length;
+};
+
 // ── 점수 산정 해설 빌더 ───────────────────────────────────────────────
 function buildAnalysisSummary(data) {
   if (!data) return null;
@@ -3908,9 +3951,11 @@ function buildAnalysisSummary(data) {
   const eLow    = eEvs.filter(e => e.numericMatchLevel === 'LOW').length;
   const eTotal  = 5;
   const eFailed = eTotal - eByCode.size;  // numericMatchLevel 없는 지표 포함 전체 미확인 수
-  // 오차율은 MEDIUM+LOW만 반영 (HIGH는 정상 일치 — 오차율 산정 대상 아님)
-  const eMismatchEvs = eEvs.filter(e => e.numericMatchLevel === 'MEDIUM' || e.numericMatchLevel === 'LOW');
-  const eAvgDiff = calcMedianDiff(eMismatchEvs);
+  // 전체 E 지표 기준 산술평균 오차율 (HIGH 포함, 500% 초과 극단값 제외)
+  const eAvgDiff = calcMeanDiff(eEvs);
+  // 모든 E 지표 중 최대 오차율 (HIGH 포함) — avgDiff null 일 때 대표값으로 사용
+  const eMaxDiff = eEvs.length === 0 ? null
+    : eEvs.reduce((max, ev) => Math.max(max, ev.numericDiffPercent ?? 0), 0);
   const isAllEFailed = eEvs.length === 0 && eTotal > 0;
   const eSummary = isAllEFailed
     ? '기업 실측 데이터 추출에 실패하여 업종 평균 벤치마크 기반 추정 평가가 적용되었습니다.'
@@ -3919,45 +3964,49 @@ function buildAnalysisSummary(data) {
     : eLow >= 3
     ? `${eLow}개 항목의 증빙 수치 불일치가 감지되어 보수적 평가가 적용되었습니다.`
     : eLow >= 1
-    ? `일부 항목에서 수치 차이가 감지되어 신뢰도에 영향이 있습니다. 해당 항목의 재검토를 권장합니다.`
-    : eMed >= 2
-    ? `${eMed}개 항목에서 경미한 수치 차이(≤20%)가 감지되었습니다. 재검증을 권장하며 신뢰도에 소폭 영향이 있습니다.`
+    ? `일부 지표에서 수치 불일치가 확인되어 추가 검토가 필요합니다.`
     : eMed >= 1
-    ? '1개 항목에서 경미한 수치 차이가 감지되었습니다. 해당 항목의 데이터 재확인을 권장합니다.'
-    : eHigh === eEvs.length && eEvs.length > 0
-    ? '모든 증빙 수치가 입력값과 일치합니다. 신뢰도 높은 평가입니다.'
-    : '대부분의 증빙 수치가 입력값과 일치합니다.';
+    ? (eAvgDiff != null && eAvgDiff >= 0.01
+        ? `대부분의 환경 지표가 검증되었으며, 평균 오차율은 ${fmtDiff(eAvgDiff)}로 확인되었습니다.`
+        : `대부분의 환경 지표가 검증되었으며 경미한 차이가 확인되었습니다.`)
+    : eHigh > 0
+    ? (eMaxDiff != null && eMaxDiff >= 0.01
+        ? `환경 지표 ${eHigh}건 전항목이 HIGH 수준으로 검증되었으며, 최대 오차율은 ${fmtDiff(eMaxDiff)}로 확인되었습니다.`
+        : `환경 지표 ${eHigh}건 전항목이 HIGH 수준으로 검증되어 높은 데이터 신뢰도를 확보하였습니다.`)
+    : '증빙 수치 검증이 완료되었습니다.';
   const eTone = isAllEFailed ? 'amber' : eLow >= 2 ? 'red' : eLow === 1 ? 'amber' : eMed >= 1 ? 'amber' : eFailed >= 3 ? 'amber' : 'emerald';
 
+  // getVerificationStatus 기준 미검출 계산 — blockedIndicators · buildRecommendations 와 동일 기준
+  const _completeList = buildCompleteIndicatorList(evs);
+  const _codeStatus   = new Map(_completeList.map(e => [e.indicatorCode, getVerificationStatus(e)]));
+
   // ── S 카테고리 (사용자 선택 기준 5개 지표) ────────────────────────────
-  const sEvs        = evs.filter(e => e.indicatorCode?.startsWith('S'));
-  const sUniq       = new Set(sEvs.map(e => e.indicatorCode)).size;
-  const sTotal      = S_SELECTED_TOTAL; // 사용자 선택 지표 수 기준 (5개)
-  const sAttempted  = sUniq;            // evidenceMatches 에 등장한 S 코드 수
-  const sMissing    = Math.max(0, sTotal - sUniq);
+  const sEvs      = evs.filter(e => e.indicatorCode?.startsWith('S'));
+  const sTotal    = S_SELECTED_TOTAL;
+  const sMissing  = Object.keys(SG_INDICATORS).filter(c => c.startsWith('S') && _codeStatus.get(c) === 'NO_EVIDENCE').length;
+  const sUniq     = sTotal - sMissing;
+  const sAttempted = sUniq;
   const sLowConf    = sEvs.filter(e => e.confidenceLevel === 'LOW').length;
   const sHasUnsupported = sAttempted < sTotal; // 일부 지표 AI 미지원 가능성
   // S 검증 수준 (VERIFIED/WEAK 분류)
   const sVerifiedEvs = sEvs.filter(e => getVerificationStatus(e) === 'VERIFIED');
   const sWeakEvs     = sEvs.filter(e => ['PARTIAL','WEAK'].includes(getVerificationStatus(e)));
   const sVerifiedCodes = new Set(sVerifiedEvs.map(e => e.indicatorCode)).size;
-  const sSummary = sMissing >= 2
-    ? `${sMissing}개 사회 지표에서 정책·실적 근거가 탐지되지 않았습니다. 노동환경·안전·다양성 분야의 공식 문서 보완이 권장됩니다.`
-    : sMissing === 1
-    ? `${sVerifiedCodes}개 지표에서 운영 근거가 식별되었으며, 1개 지표의 실적 데이터 보완 시 검증 신뢰도가 향상될 수 있습니다.`
+  const sSummary = sUniq === 0
+    ? '검증 근거가 충분히 확보되지 않았습니다. 관련 실적 자료 및 운영 증빙 문서 보완이 필요합니다.'
+    : sMissing >= 1
+    ? '정책·실적 관련 증빙 자료를 보완하면 사회 부문 평가 신뢰도를 높일 수 있습니다.'
     : sLowConf > 0
-    ? `${sVerifiedCodes}개 지표에서 운영 및 정책 근거가 식별되었습니다. 일부 항목은 추가 절차 문서 확보 시 검증 신뢰도가 향상될 수 있습니다.`
-    : sVerifiedCodes >= 3
-    ? `사회 지표 ${sVerifiedCodes}개에서 정책·실적 근거가 관찰되었습니다. 지속적인 근거 공시 강화를 권장합니다.`
-    : '사회 지표에 대한 운영 근거가 탐지되었습니다. 지속적인 정책 공시 강화를 권장합니다.';
+    ? '일부 항목의 신뢰도 향상을 위해 관련 운영 증빙 문서 보완이 권장됩니다.'
+    : '사회 지표 전반에 대해 검증 근거가 확인되었습니다.';
   const sTone = sMissing >= 2 ? 'red' : sMissing === 1 ? 'amber' : 'emerald';
 
   // ── G 카테고리 (사용자 선택 기준 5개 지표) ────────────────────────────
-  const gEvs        = evs.filter(e => e.indicatorCode?.startsWith('G'));
-  const gUniq       = new Set(gEvs.map(e => e.indicatorCode)).size;
-  const gTotal      = G_SELECTED_TOTAL; // 사용자 선택 지표 수 기준 (5개)
-  const gAttempted  = gUniq;            // evidenceMatches 에 등장한 G 코드 수
-  const gMissing    = Math.max(0, gTotal - gUniq);
+  const gEvs      = evs.filter(e => e.indicatorCode?.startsWith('G'));
+  const gTotal    = G_SELECTED_TOTAL;
+  const gMissing  = Object.keys(SG_INDICATORS).filter(c => c.startsWith('G') && _codeStatus.get(c) === 'NO_EVIDENCE').length;
+  const gUniq     = gTotal - gMissing;
+  const gAttempted = gUniq;
   const gLowConf    = gEvs.filter(e => e.confidenceLevel === 'LOW').length;
   const gHasUnsupported = gAttempted < gTotal; // 일부 지표 AI 미지원 가능성
   // G 검증 수준
@@ -3965,20 +4014,18 @@ function buildAnalysisSummary(data) {
   const gWeakEvs     = gEvs.filter(e => ['PARTIAL','WEAK'].includes(getVerificationStatus(e)));
   const gVerifiedCodes = new Set(gVerifiedEvs.map(e => e.indicatorCode)).size;
   const gPartialCodes  = new Set(gWeakEvs.map(e => e.indicatorCode)).size;
-  const gSummary = gMissing >= 2
-    ? `${gMissing}개 거버넌스 지표에서 문서 근거가 탐지되지 않았습니다. 이사회 구성·윤리 규범·내부통제 관련 공시 보완이 권장됩니다.`
-    : gMissing === 1
-    ? `${gVerifiedCodes}개 지표에서 거버넌스 근거가 식별되었으며, 1개 지표의 정책 문서 보완 시 검증 신뢰도가 향상될 수 있습니다.`
+  const gSummary = gUniq === 0
+    ? '검증 근거가 충분히 확보되지 않았습니다. 관련 정책 문서 및 공시 자료 보완이 필요합니다.'
+    : gMissing >= 1
+    ? '공시·내부통제 관련 문서를 보완하면 지배구조 부문 평가 신뢰도를 높일 수 있습니다.'
     : gLowConf > 0
-    ? `${gVerifiedCodes}개 지표에서 거버넌스 운영 근거가 식별되었습니다. 일부 항목은 이사회 결의·내부통제 절차 문서화 시 검증 수준이 향상될 수 있습니다.`
-    : gVerifiedCodes >= 2
-    ? `거버넌스 지표 ${gVerifiedCodes}개에서 이사회·윤리·내부통제 관련 근거가 관찰되었습니다. 지속적인 투명성 강화를 권장합니다.`
-    : '거버넌스 지표에 대한 운영 근거가 탐지되었습니다. 의사결정 투명성 관련 공시 강화를 권장합니다.';
+    ? '일부 항목의 신뢰도 향상을 위해 이사회·감사 관련 공시 자료 보완이 권장됩니다.'
+    : '지배구조 지표 전반에 대해 검증 근거가 확인되었습니다.';
   const gTone = gMissing >= 2 ? 'red' : gMissing === 1 ? 'amber' : 'emerald';
 
   return {
     e: { high: eHigh, medium: eMed, low: eLow, total: eTotal, failed: eFailed,
-         avgDiff: eAvgDiff, summary: eSummary, tone: eTone },
+         avgDiff: eAvgDiff, maxDiff: eMaxDiff, summary: eSummary, tone: eTone },
     s: { withEvidence: sUniq, total: sTotal, missing: sMissing, lowConf: sLowConf,
          attempted: sAttempted, hasUnsupported: sHasUnsupported, summary: sSummary, tone: sTone },
     g: { withEvidence: gUniq, total: gTotal, missing: gMissing, lowConf: gLowConf,
@@ -3987,11 +4034,10 @@ function buildAnalysisSummary(data) {
 }
 
 // ── 최종 평가 요약 빌더 ────────────────────────────────────────────────
-function buildFinalSummary({ finalGrade, confidence, lowCount, avgDiff, evidenceCount, isBenchmarkFallback, isFullBenchmark }) {
-  const low   = lowCount ?? 0;
-  const conf  = confidence ?? 0;
-  const diff  = avgDiff   ?? 0;
-  const grade = finalGrade ?? '';
+function buildFinalSummary({ finalGrade, confidence, lowCount, mediumCount, avgDiff, evidenceCount, isBenchmarkFallback, isFullBenchmark }) {
+  const low    = lowCount    ?? 0;
+  const medium = mediumCount ?? 0;
+  const grade  = finalGrade  ?? '';
 
   if (isFullBenchmark) {
     return { text: '환경(E) 수치 데이터가 제출되지 않아 체크리스트 기반으로만 평가가 진행되었습니다. PDF 또는 CSV 파일 제출 시 정확도가 향상됩니다.', tone: 'amber' };
@@ -4008,13 +4054,21 @@ function buildFinalSummary({ finalGrade, confidence, lowCount, avgDiff, evidence
   if (grade === 'B') {
     if (low >= 1)
       return { text: `일부 항목에서 증빙 수치 차이(${low}건)가 발견되어 등급이 제한되었으나 전반적으로 양호한 수준입니다.`, tone: 'amber' };
+    if (medium >= 1)
+      return { text: `경미한 수치 차이(${medium}건)가 확인되었으나 전반적으로 양호한 수준입니다.`, tone: 'amber' };
     return { text: '일부 항목에서 경미한 차이가 발견되었으나 전반적으로 양호한 수준입니다.', tone: 'amber' };
   }
   if (grade === 'C') {
-    return { text: `여러 항목(${low}건)에서 입력값과 증빙 데이터 간 차이가 발견되어 신뢰도가 제한되었습니다.`, tone: 'red' };
+    if (low >= 1)
+      return { text: `여러 항목(${low}건)에서 입력값과 증빙 데이터 간 차이가 발견되어 신뢰도가 제한되었습니다.`, tone: 'red' };
+    if (medium >= 1)
+      return { text: `경미한 수치 차이(${medium}건)가 감지되어 등급이 조정되었습니다.`, tone: 'amber' };
+    return { text: '데이터 검증 결과 C등급 수준의 ESG 성과가 산출되었습니다.', tone: 'amber' };
   }
   if (grade === 'D') {
-    return { text: `다수 항목(${low}건)에서 수치 불일치가 감지되었습니다. 증빙 문서의 보완 및 추가 공시가 권장됩니다.`, tone: 'red' };
+    if (low >= 1)
+      return { text: `다수 항목(${low}건)에서 수치 불일치가 감지되었습니다. 증빙 문서의 보완 및 추가 공시가 권장됩니다.`, tone: 'red' };
+    return { text: '환경(E) 지표의 포괄적인 데이터 보강 및 공시가 권장됩니다.', tone: 'red' };
   }
   // fallback
   if (low >= 3)
@@ -5013,9 +5067,8 @@ export default function AnalysisResultPage() {
     const mediumCount = numEvs.filter(e => e.numericMatchLevel === 'MEDIUM').length;
     const lowCount    = numEvs.filter(e => e.numericMatchLevel === 'LOW').length;
     const total       = numEvs.length;
-    // 오차율은 불일치 항목(MEDIUM+LOW)만 반영 — HIGH는 정상 일치
-    const mismatchEvs = numEvs.filter(e => e.numericMatchLevel === 'MEDIUM' || e.numericMatchLevel === 'LOW');
-    const avgDiff     = calcMedianDiff(mismatchEvs);
+    // 전체 수치 검증 항목 기준 산술평균 오차율
+    const avgDiff = calcMeanDiff(numEvs);
     const highRatio   = total > 0 ? highCount / total : 0;
 
     // 신뢰도 레벨 + 요약 문구
@@ -5170,18 +5223,18 @@ export default function AnalysisResultPage() {
     const eFailed   = analysisSummary?.e?.failed ?? 0;
     const eTotal    = analysisSummary?.e?.total  ?? 5;
     if (eFailed >= eTotal)
-      return { tone: 'amber', title: '환경 데이터 자동 추출 오류', msg: `환경(E) 데이터 ${eFailed}건 수치를 자동 추출하지 못해 업종 평균 기반 추정 평가가 적용되었습니다. 실측 데이터를 제출하면 정확도가 향상됩니다.` };
+      return { tone: 'amber', title: '환경(E) 데이터 추출 오류', msg: `환경(E) 데이터 ${eFailed}건 수치를 자동 추출하지 못해 업종 평균 기반 추정 평가가 적용되었습니다. 실측 데이터를 제출하면 정확도가 향상됩니다.` };
     if (eFailed >= 3)
-      return { tone: 'amber', title: '환경 데이터 일부 추출 오류', msg: `환경(E) ${eFailed}개 항목 수치 자동 추출에 제한이 있어 업종 평균 기반 추정치가 부분 적용되었습니다.` };
+      return { tone: 'amber', title: '환경(E) 데이터 일부 오류', msg: `환경(E) ${eFailed}개 항목 수치 자동 추출에 제한이 있어 업종 평균 기반 추정치가 부분 적용되었습니다.` };
     if (lowCount >= 3)
-      return { tone: 'red',     title: '환경 수치 불일치',       msg: `환경(E) 수치 불일치 ${lowCount}건이 감지되었습니다. 입력값과 증빙 문서 간 오차가 허용 범위를 초과하여 신뢰도가 낮게 평가되었습니다.` };
+      return { tone: 'red',     title: '환경(E) 수치 불일치',          msg: `환경(E) 수치 불일치 ${lowCount}건이 감지되었습니다. 입력값과 증빙 문서 간 오차가 허용 범위를 초과하여 신뢰도가 낮게 평가되었습니다.` };
     if (lowCount >= 1)
-      return { tone: 'amber',   title: '수치 불일치 감지',       msg: `환경(E) ${lowCount}개 항목에서 수치 차이가 감지되었습니다. 해당 항목의 증빙 문서를 재검토하세요.` };
+      return { tone: 'amber',   title: '환경(E) 불일치 감지',           msg: `환경(E) ${lowCount}개 항목에서 수치 차이가 감지되었습니다. 해당 항목의 증빙 문서를 재검토하세요.` };
     if (sgMissing >= 3)
-      return { tone: 'amber',   title: '검증 근거 부족',         msg: `S/G 카테고리 ${sgMissing}개 지표에서 검증 근거를 찾지 못했습니다. 관련 정책 문서 및 보고서 추가를 권장합니다.` };
+      return { tone: 'amber',   title: '사회·지배구조(S·G) 추가 자료 권장', msg: `사회(S)·지배구조(G) 총 ${S_SELECTED_TOTAL + G_SELECTED_TOTAL}개 지표 중 ${sgMissing}개 지표에 대해 추가 검증 자료 확보가 권장됩니다. 관련 정책 문서 및 운영 증빙 자료를 제출하시면 검증 신뢰도를 높일 수 있습니다.` };
     if (sgMissing >= 1)
-      return { tone: 'zinc',    title: '검증 근거 일부 미흡',    msg: `${sgMissing}개 S/G 지표에서 검증 근거 검출이 미흡합니다. 관련 문서를 보완하면 점수가 향상될 수 있습니다.` };
-    return   { tone: 'emerald', title: '안정',                   msg: '수치 불일치 및 검증 근거 부족 항목이 없습니다. ESG 데이터 신뢰도가 안정적입니다.' };
+      return { tone: 'zinc',    title: '사회·지배구조(S·G) 추가 자료 권장', msg: `사회(S)·지배구조(G) 총 ${S_SELECTED_TOTAL + G_SELECTED_TOTAL}개 지표 중 ${sgMissing}개 지표에 대해 추가 검증 자료 확보가 권장됩니다. 관련 문서를 추가 제출하면 점수가 향상될 수 있습니다.` };
+    return   { tone: 'emerald', title: '안정',                          msg: '수치 불일치 및 검증 근거 부족 항목이 없습니다. ESG 데이터 신뢰도가 안정적입니다.' };
   }, [verificationStats.lowCount, blockedIndicators.length, analysisSummary]);
 
   // AUTO 사전 진단 여부 — API 응답 우선, localStorage 폴백
@@ -5260,16 +5313,16 @@ export default function AnalysisResultPage() {
     // [우선순위 3] severity를 calcSev로 동적 계산
     if (gBlocked.length >= 1)
       recs.push({ sev: calcSev(gBlocked.length), code: 'G-EVIDENCE', _cnt: gBlocked.length,
-        title: '지배구조 정보 보완 권장',
-        desc: `지배구조(G) 영역 ${gBlocked.length}개 지표의 근거가 부족합니다. 관련 정책 문서를 보완하시면 더 정교한 ESG 분석이 가능합니다.`,
+        title: '지배구조(G) 검증 근거 부족',
+        desc: `지배구조(G) 영역 ${gBlocked.length}개 지표의 검증 근거가 부족합니다. 관련 정책 문서 및 운영 증빙 자료를 보완하시면 보다 정확한 ESG 분석이 가능합니다.`,
         scoreImpact: gBlocked.length >= 3 ? '+6~10점' : '+2~4점',
         urgency: gBlocked.length >= 3 ? '1개월' : '분기 내',
-        docs: ['지배구조 정책 문서', '이사회 운영 기록', 'ESG 보고서 지배구조 섹션'] });
+        docs: ['지배구조 정책 문서', '이사회 운영 기록', '지배구조 공시 자료'] });
 
     if (sBlocked.length >= 1)
       recs.push({ sev: calcSev(sBlocked.length), code: 'S-EVIDENCE', _cnt: sBlocked.length,
-        title: '사회 지표 정보 보완 권장',
-        desc: `사회(S) 영역 ${sBlocked.length}개 지표의 근거가 부족합니다. 관련 보고서 내용을 보완하시면 더 정밀한 분석이 가능합니다.`,
+        title: '사회(S) 검증 근거 부족',
+        desc: `사회(S) 영역 ${sBlocked.length}개 지표의 검증 근거가 부족합니다. 관련 실적 자료 및 운영 증빙 문서를 보완하시면 보다 정확한 ESG 분석이 가능합니다.`,
         scoreImpact: sBlocked.length >= 3 ? '+3~6점' : '+1~3점',
         urgency: sBlocked.length >= 3 ? '분기 내' : '다음 보고 주기',
         docs: ['사회공헌 활동 보고서', '산업안전 교육 이수 기록'] });
@@ -5348,6 +5401,7 @@ export default function AnalysisResultPage() {
     finalGrade:          d.finalGrade,
     confidence:          d.overallConfidence,
     lowCount:            d.lowMismatchCount ?? verificationStats.lowCount,
+    mediumCount:         verificationStats.mediumCount,
     avgDiff:             verificationStats.avgDiff,
     evidenceCount:       d.evidenceCount,
     isBenchmarkFallback,
@@ -5492,7 +5546,7 @@ export default function AnalysisResultPage() {
                 <Shield size={14} style={{ color: gradeAccentColor }} />
               </span>
               <div>
-                <p className="text-xs font-semibold text-gray-400">ESG 감사 분석 결과</p>
+                <p className="text-xs font-semibold text-gray-400">ESG 분석 결과</p>
                 <p className="text-sm font-bold text-gray-900 mt-0.5 truncate max-w-[300px]">
                   {d.companyName ?? 'ESG 감사 결과'}
                   {d.industry && <span className="text-gray-400 font-normal ml-2 text-xs">· {d.industry}</span>}
@@ -5544,6 +5598,11 @@ export default function AnalysisResultPage() {
                 <span className="kpi-number" style={{ color: gradeAccentColor, fontSize: '2.5rem' }}>
                   {d.finalGrade ?? '—'}
                 </span>
+                {d.totalScore != null && (
+                  <span className="text-[14px] font-semibold" style={{ color: gradeAccentColor }}>
+                    ({d.totalScore}점)
+                  </span>
+                )}
                 {d.gradeCeilingApplied && !isAutoSimulation && (
                   <span className="badge badge-high" style={{ fontSize: '10px' }}>제한</span>
                 )}
@@ -5666,21 +5725,14 @@ export default function AnalysisResultPage() {
                 {d.analyzedAt && (
                   <span className="flex items-center gap-1 text-gray-400">
                     <Clock size={10} className="shrink-0" />
-                    {d.analyzedAt.replace('T', ' ').slice(0, 19)}
+                    {fmtKST(d.analyzedAt, 19)}
                     {d.processingTimeMs != null && (
                       <span className="ml-1 text-gray-400">· {(d.processingTimeMs / 1000).toFixed(1)}s</span>
                     )}
                   </span>
                 )}
               </div>
-              {/* 등급 해석 텍스트 */}
-              {d.finalGrade && GRADE_DESCRIPTION[d.finalGrade] && (
-                <p className="mt-2.5 flex items-center gap-1.5 text-xs text-gray-500">
-                  <Info size={11} className="text-gray-400 shrink-0" />
-                  {GRADE_DESCRIPTION[d.finalGrade]}
-                </p>
-              )}
-              {/* 최종 평가 요약 */}
+              {/* 최종 평가 요약 — 환경(E) 데이터 검증 결과 */}
               {finalSummary && (
                 <div className={`mt-3 px-4 py-2.5 rounded-xl border text-sm leading-relaxed ${
                   finalSummary.tone === 'emerald' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
@@ -5688,6 +5740,7 @@ export default function AnalysisResultPage() {
                   finalSummary.tone === 'red'     ? 'bg-red-50    border-red-200    text-red-700'      :
                                                     'bg-gray-50   border-gray-200   text-gray-700'
                 }`}>
+                  <p className="text-[10px] font-semibold text-gray-400 mb-1">환경(E) 데이터 검증 결과</p>
                   {finalSummary.text}
                   {finalSummary.gradeAdjusted && (
                     <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded border bg-amber-100 border-amber-300 text-amber-700 align-middle">
@@ -5708,43 +5761,6 @@ export default function AnalysisResultPage() {
                   </div>
                 </div>
               )}
-              {/* ── 점수 산정 근거 (MANUAL only) ── */}
-              {!isAutoSimulation && d.eScore && d.sScore && d.gScore && (() => {
-                const ksic = localStorage.getItem('esg_ksicCode') ?? '';
-                const iw   = getIndustryWeights(ksic);
-                const eC   = Math.round(d.eScore * iw.E);
-                const sC   = Math.round(d.sScore * iw.S);
-                const gC   = Math.round(d.gScore * iw.G);
-                const rawW = eC + sC + gC;
-                const penalty = rawW - (d.totalScore ?? rawW);
-                return (
-                  <details className="mt-3 group">
-                    <summary className="flex items-center gap-1.5 text-[10px] text-gray-400 hover:text-gray-600 cursor-pointer select-none list-none">
-                      <Info size={10} className="shrink-0" />
-                      <span>점수 산정 근거 보기</span>
-                      <span className="ml-1 text-gray-300 group-open:rotate-90 inline-block transition-transform">▶</span>
-                    </summary>
-                    <div className="mt-2 px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-[10px] space-y-1.5">
-                      <p className="font-semibold text-gray-600 mb-2">최종 점수 = E×{Math.round(iw.E*100)}% + S×{Math.round(iw.S*100)}% + G×{Math.round(iw.G*100)}%{penalty > 0 ? ' − 신뢰도 보정' : ''}</p>
-                      <div className="grid grid-cols-3 gap-2 text-center">
-                        {[['E','환경',d.eScore,iw.E,'#059669'],['S','사회',d.sScore,iw.S,'#3b82f6'],['G','지배구조',d.gScore,iw.G,'#f59e0b']].map(([cat,lbl,sc,w,col]) => (
-                          <div key={cat} className="bg-white rounded-lg border border-gray-200 px-2 py-2">
-                            <p className="text-gray-400 mb-0.5">{lbl}</p>
-                            <p className="font-black tabular-nums" style={{color:col}}>{sc}점</p>
-                            <p className="text-gray-400">×{Math.round(w*100)}% = <span className="font-semibold text-gray-600">{Math.round(sc*w)}점</span></p>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="flex items-center justify-between pt-1.5 border-t border-gray-200 mt-1">
-                        <span className="text-gray-500">가중 합산: <span className="font-semibold text-gray-700">{rawW}점</span></span>
-                        {penalty > 0 && <span className="text-amber-600">신뢰도·증빙 보정: <span className="font-semibold">−{penalty}점</span></span>}
-                        <span className="font-black text-gray-900">최종: <span className="text-blue-600">{d.totalScore}점</span></span>
-                      </div>
-                      <p className="text-gray-400 pt-0.5">업종 가중치: {iw.label} (KSIC {ksic || 'N/A'}) · 신뢰도 보정, 등급 상한 등 반영 후 최종 확정</p>
-                    </div>
-                  </details>
-                );
-              })()}
               {/* AUTO SIMULATION disclaimer */}
               {isAutoSimulation && (
                 <div className="mt-3 flex items-start gap-3 px-4 py-3 rounded-r-xl border border-l-0 bg-amber-50 border-amber-200"
@@ -5801,6 +5817,43 @@ export default function AnalysisResultPage() {
                   </div>
                 </div>
               )}
+              {/* ── 점수 산정 근거 (MANUAL only) ── */}
+              {!isAutoSimulation && d.eScore && d.sScore && d.gScore && (() => {
+                const ksic = localStorage.getItem('esg_ksicCode') ?? '';
+                const iw   = getIndustryWeights(ksic);
+                const eC   = Math.round(d.eScore * iw.E);
+                const sC   = Math.round(d.sScore * iw.S);
+                const gC   = Math.round(d.gScore * iw.G);
+                const rawW = eC + sC + gC;
+                const penalty = rawW - (d.totalScore ?? rawW);
+                return (
+                  <details className="mt-3 group">
+                    <summary className="flex items-center gap-1.5 text-[10px] text-gray-400 hover:text-gray-600 cursor-pointer select-none list-none">
+                      <Info size={10} className="shrink-0" />
+                      <span>점수 산정 근거 보기</span>
+                      <span className="ml-1 text-gray-300 group-open:rotate-90 inline-block transition-transform">▶</span>
+                    </summary>
+                    <div className="mt-2 px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-[10px] space-y-1.5">
+                      <p className="font-semibold text-gray-600 mb-2">최종 점수 = E×{Math.round(iw.E*100)}% + S×{Math.round(iw.S*100)}% + G×{Math.round(iw.G*100)}%{penalty > 0 ? ' − 신뢰도 보정' : ''}</p>
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        {[['E','환경',d.eScore,iw.E,'#059669'],['S','사회',d.sScore,iw.S,'#3b82f6'],['G','지배구조',d.gScore,iw.G,'#f59e0b']].map(([cat,lbl,sc,w,col]) => (
+                          <div key={cat} className="bg-white rounded-lg border border-gray-200 px-2 py-2">
+                            <p className="text-gray-400 mb-0.5">{lbl}</p>
+                            <p className="font-black tabular-nums" style={{color:col}}>{sc}점</p>
+                            <p className="text-gray-400">×{Math.round(w*100)}% = <span className="font-semibold text-gray-600">{Math.round(sc*w)}점</span></p>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex items-center justify-between pt-1.5 border-t border-gray-200 mt-1">
+                        <span className="text-gray-500">가중 합산: <span className="font-semibold text-gray-700">{rawW}점</span></span>
+                        {penalty > 0 && <span className="text-amber-600">신뢰도·증빙 보정: <span className="font-semibold">−{penalty}점</span></span>}
+                        <span className="font-black text-gray-900">최종: <span className="text-blue-600">{d.totalScore}점</span></span>
+                      </div>
+                      <p className="text-gray-400 pt-0.5">업종 가중치: {iw.label} (KSIC {ksic || 'N/A'}) · 신뢰도 보정, 등급 상한 등 반영 후 최종 확정</p>
+                    </div>
+                  </details>
+                );
+              })()}
               {/* 신뢰도-점수 불일치 경고 (MANUAL only) */}
               {!isAutoSimulation && confidenceMismatch && (
                 <div className="mt-2 flex items-start gap-2.5 px-4 py-2.5 rounded-xl border bg-amber-50 border-amber-200">
@@ -5820,7 +5873,7 @@ export default function AnalysisResultPage() {
               {d.analyzedAt && (
                 <div className="flex items-center gap-1 text-[10px] text-gray-400 mt-1">
                   <Clock size={9} />
-                  {d.analyzedAt.replace('T', ' ').slice(0, 16)}
+                  {fmtKST(d.analyzedAt)}
                 </div>
               )}
             </div>
@@ -5831,7 +5884,7 @@ export default function AnalysisResultPage() {
               <Clock size={9} className="shrink-0" />
               {d.processingTimeMs != null
                 ? `분석 소요 시간 ${(d.processingTimeMs / 1000).toFixed(1)}초`
-                : `분석 완료 · ${(d.analyzedAt ?? '').replace('T', ' ').slice(0, 16)}`}
+                : `분석 완료 · ${fmtKST(d.analyzedAt)}`}
             </span>
             {d.ocrFallback === true && (
               <span className="flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] font-bold bg-amber-50 border-amber-200 text-amber-600">
@@ -5876,7 +5929,7 @@ export default function AnalysisResultPage() {
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-gray-700">분석 검증 완료</p>
               <p className="text-xs text-gray-400 mt-0.5">
-                환경(E) 수치 검증 · 사회(S)/지배구조(G) 근거 추적 · K-ESG 기준 적용
+                환경(E) 수치 검증 · 사회(S)·지배구조(G) 근거 추적 · K-ESG 기준 적용
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -5999,11 +6052,19 @@ export default function AnalysisResultPage() {
         {/* ── 보완 권장 사항 ───────────────── */}
         {auditRecommendations.length > 0 && (
           <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-            <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-gray-100">
-              <span className="w-6 h-6 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                <Info size={13} className="text-blue-500" />
-              </span>
-              <span className="text-sm font-semibold text-gray-800">보완 권장 사항</span>
+            <div className="flex items-center justify-between gap-2.5 px-5 py-3.5 border-b border-gray-100">
+              <div className="flex items-center gap-2.5">
+                <span className="w-6 h-6 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                  <Info size={13} className="text-blue-500" />
+                </span>
+                <span className="text-sm font-semibold text-gray-800">보완 권장 사항</span>
+              </div>
+              <button
+                onClick={() => { setActiveTab('action'); setSearchParams({ tab: 'action' }, { replace: true }); }}
+                className="text-[11px] text-blue-500 hover:text-blue-700 font-medium transition-colors shrink-0"
+              >
+                상세 내용 확인 →
+              </button>
             </div>
             <div className="divide-y divide-gray-100">
               {auditRecommendations.slice(0, 3).map((rec, i) => {
@@ -6342,32 +6403,6 @@ export default function AnalysisResultPage() {
           />
         )}
 
-        {/* ── 분석 제한 사항 안내 → Action Center 탭으로 이동 ── */}
-        {limitationNotices.length > 0 && activeTab === 'action' && (
-          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-            <div className="flex items-center gap-2.5 px-6 py-3.5 border-b border-gray-100">
-              <AlertCircle size={14} className="text-amber-500 shrink-0" />
-              <span className="text-sm font-semibold text-gray-700">분석 제한 사항</span>
-              <span className="ml-auto text-[10px] text-gray-400 font-medium">분석 알림</span>
-            </div>
-            <div className="px-6 py-4 space-y-2.5">
-              {limitationNotices.map((n, i) => (
-                <div key={i} className={`flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl border ${
-                  n.tone === 'amber'
-                    ? 'bg-amber-50 border-amber-200'
-                    : 'bg-gray-50 border-gray-200'
-                }`}>
-                  <AlertCircle size={12} className={`shrink-0 mt-0.5 ${n.tone === 'amber' ? 'text-amber-500' : 'text-gray-400'}`} />
-                  <p className={`text-xs leading-relaxed ${n.tone === 'amber' ? 'text-amber-700' : 'text-gray-500'}`}>{n.text}</p>
-                </div>
-              ))}
-              <p className="text-[10px] text-gray-400 pt-1">
-                본 분석 결과는 제출된 증빙 문서 및 입력값의 품질에 따라 정확도가 달라질 수 있습니다.
-              </p>
-            </div>
-          </div>
-        )}
-
         {/* ── 점수 산정 해설 ────────────────────────────────── */}
         {analysisSummary && activeTab === 'summary' && (
           <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
@@ -6393,15 +6428,16 @@ export default function AnalysisResultPage() {
                   const toneColor = e.tone === 'red' ? '#ef4444' : e.tone === 'amber' ? '#f59e0b' : '#059669';
                   const toneBorder = e.tone === 'red' ? 'border-red-200' : e.tone === 'amber' ? 'border-amber-200' : 'border-emerald-200';
                   const summaryColor = e.tone === 'red' ? 'text-red-600' : e.tone === 'amber' ? 'text-amber-700' : 'text-gray-600';
-                  const diffStr = fmtDiff(e.avgDiff);
-                  const diffColor = e.avgDiff == null ? '#71717a'
-                    : e.avgDiff <= 5 ? '#059669' : e.avgDiff <= 20 ? '#f59e0b' : '#ef4444';
+                  const repDiff = e.avgDiff ?? e.maxDiff;
+                  const diffStr = fmtDiff(repDiff);
+                  const diffColor = repDiff == null ? '#71717a'
+                    : repDiff <= 5 ? '#059669' : repDiff <= 20 ? '#f59e0b' : '#ef4444';
                   const bullets = [
                     { label: 'HIGH 검증', value: `${e.high}건`, color: '#059669' },
                     { label: 'MEDIUM 검증', value: `${e.medium}건`, color: '#f59e0b' },
                     { label: 'LOW 불일치', value: `${e.low}건`, color: e.low > 0 ? '#ef4444' : '#52525b' },
                     ...(e.failed > 0 ? [{ label: '증빙 미확인', value: `${e.failed}건`, color: '#71717a' }] : []),
-                    { label: '대표 오차율', value: diffStr, color: diffColor },
+                    { label: '평균 오차율', value: diffStr, color: diffColor },
                   ];
                   return (
                     <div className={`rounded-xl border bg-gray-50 p-4 space-y-3 ${toneBorder}`}>
@@ -6477,11 +6513,6 @@ export default function AnalysisResultPage() {
                       <p className={`text-xs leading-relaxed border-t border-gray-200 pt-2.5 ${summaryColor}`}>
                         {s.summary}
                       </p>
-                      {s.hasUnsupported && (
-                        <p className="text-[10px] text-gray-400 mt-1">
-                          일부 지표는 현재 감사 검증 지원 범위에 포함되지 않습니다.
-                        </p>
-                      )}
                     </div>
                   );
                 })()}
@@ -6519,11 +6550,6 @@ export default function AnalysisResultPage() {
                       <p className={`text-xs leading-relaxed border-t border-gray-200 pt-2.5 ${summaryColor}`}>
                         {g.summary}
                       </p>
-                      {g.hasUnsupported && (
-                        <p className="text-[10px] text-gray-400 mt-1">
-                          일부 지표는 현재 감사 검증 지원 범위에 포함되지 않습니다.
-                        </p>
-                      )}
                     </div>
                   );
                 })()}
@@ -7165,7 +7191,7 @@ export default function AnalysisResultPage() {
                     verificationStats.lowCount > 0 ? 'text-red-600' : 'text-gray-400'
                   }`}>건 불일치</p>
                 </div>
-                {/* HIGH 일치율 + 대표 오차율 */}
+                {/* HIGH 일치율 + 평균 오차율 */}
                 <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 flex flex-col gap-1">
                   <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">HIGH 일치율</p>
                   <p className="text-3xl font-black tabular-nums leading-none"
@@ -7180,7 +7206,7 @@ export default function AnalysisResultPage() {
                       : '—'}
                   </p>
                   <p className="text-[10px] text-gray-400">
-                    대표 오차율 ±{fmtDiff(verificationStats.avgDiff)}
+                    평균 오차율 {fmtDiff(verificationStats.avgDiff)}
                   </p>
                 </div>
               </div>
@@ -7219,7 +7245,7 @@ export default function AnalysisResultPage() {
                   S/G 항목은 근거 적합도 분석 기반으로 평가됩니다.
                 </p>
                 <p className="text-xs text-gray-400">
-                  수치 검증 기준 — HIGH: ≤5% · MEDIUM: ≤20% · LOW: &gt;20% · 대표 오차율은 이상값 제외 중위값 기준
+                  수치 검증 기준 — HIGH: ≤5% · MEDIUM: ≤20% · LOW: &gt;20% · 평균 오차율은 전체 지표 산술평균 기준
                 </p>
               </div>
             </div>
@@ -7281,7 +7307,7 @@ export default function AnalysisResultPage() {
                 <FileText size={20} className="text-gray-400" />
               </div>
               <p className="text-sm text-gray-500 font-medium">근거 데이터 부족</p>
-              <p className="text-xs text-gray-400">감사 기준을 충족하는 문서 근거가 확인되지 않았습니다. PDF 또는 CSV 파일을 제출하면 분석 정확도가 향상됩니다.</p>
+              <p className="text-xs text-gray-400">감사 기준을 충족하는 문서 근거가 충분히 확보되지 않았습니다. PDF 또는 CSV 파일을 제출하면 분석 정확도가 향상됩니다.</p>
             </div>
           ) : (
             <>
@@ -7527,26 +7553,6 @@ export default function AnalysisResultPage() {
 
         {activeTab === 'audit-log' && (<>
 
-        {/* ── Audit Log Tab Header ── */}
-        <div className="flex items-center gap-3 px-5 py-3.5 rounded-xl bg-white border border-gray-200 shadow-sm">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-          <span className="text-sm font-semibold text-gray-700">
-            감사 분석 실행 로그
-          </span>
-          <span className="text-xs text-gray-400 ml-1">
-            {d.analyzedAt ? new Date(d.analyzedAt).toLocaleString('ko-KR') : ''}
-          </span>
-          <div className="ml-auto flex items-center gap-2">
-            {d.processingTimeMs && (
-              <span className="text-xs text-gray-500 bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-lg">
-                {(d.processingTimeMs / 1000).toFixed(2)}초 소요
-              </span>
-            )}
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-lg border bg-emerald-50 border-emerald-200 text-emerald-700">
-              완료
-            </span>
-          </div>
-        </div>
 
         {/* ── Audit Execution Timeline ─────────────────────── */}
         {(() => {
@@ -7622,7 +7628,7 @@ export default function AnalysisResultPage() {
             {
               id: 'threshold',
               label: '품질 기준 검사',
-              desc: 'E≥0.50 · S≥0.60 · G≥0.50 적합도 기준',
+              desc: 'E: 수치 오차율 검증 · S/G: 유사도 및 키워드 기반 검증',
               icon: <Shield size={13} />,
               time: '—',
               status: verificationStats.highCount > 0 ? 'success' : verificationStats.lowCount > 3 ? 'warn' : 'success',
@@ -7666,14 +7672,7 @@ export default function AnalysisResultPage() {
                   <Activity size={13} className="text-white" />
                 </span>
                 <div>
-                  <p className="text-sm font-semibold text-gray-800">감사 검증 실행 파이프라인</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">{(() => {
-                    const errCnt  = stages.filter(s => s.status === 'error').length;
-                    const warnCnt = stages.filter(s => s.status === 'warn').length;
-                    const okCnt   = stages.filter(s => s.status === 'success').length;
-                    const label   = errCnt > 0 ? `일부 실패 (${okCnt}/${stages.length})` : warnCnt > 0 ? '부분 검증 포함 완료' : '전체 완료';
-                    return `감사 분석 파이프라인 실행 로그 — ${label}`;
-                  })()}</p>
+                  <p className="text-sm font-semibold text-gray-800">분석 검증 실행 파이프라인</p>
                 </div>
                 <div className="ml-auto flex items-center gap-3">
                   {totalMs > 0 && (
@@ -7681,7 +7680,7 @@ export default function AnalysisResultPage() {
                   )}
                   {finishedAt && (
                     <span className="text-[10px] text-gray-400">
-                      {new Date(finishedAt).toLocaleString('ko-KR', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' })}
+                      {new Date(finishedAt).toLocaleString('ko-KR', { timeZone:'Asia/Seoul', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' })}
                     </span>
                   )}
                 </div>
@@ -7879,92 +7878,6 @@ export default function AnalysisResultPage() {
           isBenchmarkFallback={isBenchmarkFallback}
         />
 
-        {/* ── Audit Conclusion ──────────────────────────── */}
-        {(() => {
-          const eFailed  = analysisSummary?.e?.failed ?? 0;
-          const eTotal5  = analysisSummary?.e?.total  ?? 5;
-          const sgBlocked = blockedIndicators.length;
-          const lowCount  = verificationStats.lowCount;
-          const conf      = d.overallConfidence ?? 100;
-
-          const risks = [];
-          if (eFailed >= eTotal5 && eTotal5 > 0)
-            risks.push({ tone: 'amber', text: `환경(E) ${eFailed}개 지표 수치 증빙 미확인 — 업종 평균 기반 보수적 평가 적용. 실측 데이터 제출 시 정밀 검증이 가능합니다.` });
-          else if (eFailed > 0)
-            risks.push({ tone: 'amber', text: `환경(E) ${eFailed}개 항목 수치 증빙 미확인 — 보수적 평가로 업종 평균 추정치 적용.` });
-          if (lowCount > 0)
-            risks.push({ tone: 'red', text: `수치 불일치 ${lowCount}건 감지 — 입력값과 증빙 문서 간 오차가 허용 범위를 초과하였습니다.` });
-          if (sgBlocked > 0)
-            risks.push({ tone: 'amber', text: `S/G ${sgBlocked}개 지표 운영 근거 미탐지 — 추가 정보 보완 시 분석 신뢰도 향상 가능.` });
-          if (d.gradeCeilingApplied)
-            risks.push({ tone: 'zinc', text: '수치 불일치로 등급 제한(Grade Ceiling)이 적용되었습니다.' });
-
-          const recs = [];
-          if (eFailed > 0)
-            recs.push('실측 환경 데이터(전력·가스·탄소·폐기물·용수)를 포함한 ESG 보고서를 재제출하세요.');
-          if (lowCount > 0)
-            recs.push('환경 데이터 입력값과 증빙 문서 수치를 재검토하여 불일치 항목을 수정하세요.');
-          if (sgBlocked > 0)
-            recs.push('사회(S)/지배구조(G) 관련 정책 문서 및 교육·윤리 운영 증빙을 추가 제출하세요.');
-          if (recs.length === 0)
-            recs.push('현재 분석 결과는 신뢰도가 높습니다. 정기적 ESG 데이터 갱신을 유지하세요.');
-
-          const tone = lowCount >= 3 ? 'red' : (eFailed >= eTotal5 || sgBlocked >= 3) ? 'amber' : 'emerald';
-          const toneColor = tone === 'red' ? '#ef4444' : tone === 'amber' ? '#f59e0b' : '#059669';
-
-          const summaryText = isBenchmarkFallback
-            ? '본 결과는 환경(E) 실측 데이터 부족으로 업종 평균 기반 추정 평가가 적용되었습니다. S/G 지표는 근거 적합도 분석 기반으로 평가되었습니다.'
-            : sgBlocked > 0
-            ? `본 결과는 제출된 ESG 증빙 문서와 입력 데이터를 기반으로 자동 분석되었습니다. ${sgBlocked}개 S/G 지표는 감사 근거 분석 부족으로 체크리스트 기반 평가가 적용되었습니다.`
-            : '본 결과는 제출된 ESG 증빙 문서와 입력 데이터를 기반으로 자동 분석되었습니다. 환경(E) 지표는 수치 검증, S/G 지표는 근거 적합도 분석 방식으로 평가되었습니다.';
-
-          return (
-            <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-              <div className="flex items-center gap-2.5 px-6 py-4 border-b border-gray-100">
-                <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${toneColor}15` }}>
-                  <Shield size={14} style={{ color: toneColor }} />
-                </span>
-                <span className="text-sm font-semibold text-gray-800">감사 분석 결론</span>
-                <span className="ml-auto text-[10px] text-gray-400">AI 종합 평가</span>
-              </div>
-              <div className="px-6 py-5 space-y-4">
-                {/* Summary */}
-                <p className="text-sm text-gray-600 leading-relaxed">{summaryText}</p>
-
-                {/* Risks */}
-                {risks.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">주의 사항</p>
-                    {risks.map((r, i) => (
-                      <div key={i} className={`flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl border ${
-                        r.tone === 'red'   ? 'bg-red-50 border-red-200'
-                        : r.tone === 'amber' ? 'bg-amber-50 border-amber-200'
-                        : 'bg-gray-50 border-gray-200'
-                      }`}>
-                        <AlertTriangle size={11} className={`shrink-0 mt-0.5 ${r.tone === 'red' ? 'text-red-500' : r.tone === 'amber' ? 'text-amber-600' : 'text-gray-400'}`} />
-                        <p className={`text-xs leading-relaxed ${r.tone === 'red' ? 'text-red-600' : r.tone === 'amber' ? 'text-amber-700' : 'text-gray-500'}`}>{r.text}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Recommendations */}
-                <div className="space-y-2">
-                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">개선 권장 사항</p>
-                  <ul className="space-y-1.5">
-                    {recs.map((r, i) => (
-                      <li key={i} className="flex items-start gap-2 text-xs text-gray-500">
-                        <span className="text-emerald-500 shrink-0 mt-0.5 font-bold">→</span>
-                        <span className="leading-relaxed">{r}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-              </div>
-            </div>
-          );
-        })()}
         </>)}
 
         <div className="h-4" />

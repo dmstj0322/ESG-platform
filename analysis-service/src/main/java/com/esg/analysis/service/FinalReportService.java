@@ -340,8 +340,32 @@ public class FinalReportService {
         }
     }
 
+    private String buildEVerificationStats(FinalReportRequest req) {
+        List<FinalReportRequest.EvidenceItem> items = req.getEvidences();
+        if (items == null || items.isEmpty()) return "";
+        long highCnt = 0, medCnt = 0, lowCnt = 0;
+        double maxDiff = 0;
+        boolean hasDiff = false;
+        for (FinalReportRequest.EvidenceItem i : items) {
+            if (i.getIndicatorCode() == null || !i.getIndicatorCode().startsWith("E")) continue;
+            if ("HIGH".equals(i.getNumericMatchLevel()))        highCnt++;
+            else if ("MEDIUM".equals(i.getNumericMatchLevel())) medCnt++;
+            else if ("LOW".equals(i.getNumericMatchLevel()))    lowCnt++;
+            if (i.getNumericDiffPercent() != null && i.getNumericDiffPercent() > maxDiff) {
+                maxDiff = i.getNumericDiffPercent();
+                hasDiff = true;
+            }
+        }
+        if (highCnt + medCnt + lowCnt == 0) return "";
+        StringBuilder sb = new StringBuilder(
+                String.format("HIGH %d건 / MEDIUM %d건 / LOW %d건", highCnt, medCnt, lowCnt));
+        if (hasDiff && maxDiff >= 0.01) sb.append(String.format(" / 최대 오차율 %.2f%%", maxDiff));
+        return sb.toString();
+    }
+
     private String buildPrompt(int e, int s, int g, int total, String grade, FinalReportRequest req) {
         String auditFindings = buildAuditFindings(req);
+        String eVerifStats   = buildEVerificationStats(req);
         return "당신은 ESG 감사 전문가입니다.\n"
                 + "아래 K-ESG 감사 결과를 바탕으로 factual audit summary를 JSON으로 반환하세요.\n\n"
                 + "## 절대 금지 사항\n"
@@ -356,8 +380,15 @@ public class FinalReportService {
                 + "- [부분 근거] 지표(evidence 존재, 정책 상세 부족): 근거 인정 + 구체적 한계 명시\n"
                 + "- 예(부분근거): '[지표명] 관련 운영 근거는 탐지되었으나, 정책 수준의 상세 명시는 제한적이었습니다.'\n"
                 + "- 주의: 실측 데이터(TRIR·재해율·KPI 수치 등)가 감사 실측 데이터에 존재하는 지표는 [부분 근거]가 아닌 직접 근거로 서술할 것\n\n"
+                + "## ESG 점수와 데이터 검증 신뢰도 구분 (반드시 준수)\n"
+                + "- ESG 점수(E/S/G 점수)는 K-ESG 평가 기준 충족도를 의미합니다 (환경 성과, 사회적 책임 이행, 거버넌스 수준)\n"
+                + "- 데이터 검증 신뢰도(HIGH/MEDIUM/LOW 건수, 신뢰도 %)는 제출된 증빙 데이터와 입력값의 일치 수준을 의미합니다\n"
+                + "- 두 개념은 서로 다릅니다: HIGH 검증 건수가 많아도 ESG 점수가 낮을 수 있고, 반대로 ESG 점수가 높아도 증빙 일치율이 낮을 수 있습니다\n"
+                + "- 종합 의견 작성 시 이 차이를 자연스럽게 설명하세요\n"
+                + "- 작성 예시: '환경 부문은 78점(B등급)을 획득하였으며, 데이터 검증 결과 환경 지표 5건 전항목이 HIGH 수준으로 확인되었고 최대 오차율은 0.36%로 높은 신뢰도를 보였습니다.'\n\n"
                 + "## 평가 결과\n"
-                + "- 환경(E): " + e + "점 / " + grade(req.getEnvironmentResult()) + "등급 / 신뢰도 " + conf(req.getEnvironmentResult()) + "%\n"
+                + "- 환경(E): " + e + "점 / " + grade(req.getEnvironmentResult()) + "등급 / 신뢰도 " + conf(req.getEnvironmentResult()) + "%"
+                + (eVerifStats.isEmpty() ? "" : " [수치 검증: " + eVerifStats + "]") + "\n"
                 + "- 사회(S): " + s + "점 / " + grade(req.getSocialResult()) + "등급 / 신뢰도 " + conf(req.getSocialResult()) + "%\n"
                 + "- 지배구조(G): " + g + "점 / " + grade(req.getGovernanceResult()) + "등급 / 신뢰도 " + conf(req.getGovernanceResult()) + "%\n"
                 + "- 종합 점수: " + total + "점 / 최종 등급: " + grade + "\n"

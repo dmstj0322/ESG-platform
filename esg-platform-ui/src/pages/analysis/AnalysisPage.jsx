@@ -1113,7 +1113,7 @@ export default function AnalysisPage() {
           <p className="text-[11px] font-semibold text-emerald-600 uppercase tracking-[0.1em] mb-1.5">GreenTrace ESG 분석</p>
           <h1 className="text-[22px] font-bold text-gray-900 tracking-tight leading-none">ESG 분석 진단</h1>
           <p className="text-[13px] text-gray-500 mt-2">
-            환경(E) · 사회(S) · 지배구조(G) 핵심 ESG 지표를 기반으로 증빙 문서 감사를 수행합니다
+            환경(E) · 사회(S) · 지배구조(G) 핵심 ESG 지표를 기반으로 증빙 문서 분석을분析 완료 · 2026-06-02 18:51 수행합니다
           </p>
         </div>
 
