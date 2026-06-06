@@ -212,7 +212,7 @@ public class AnalysisController {
 
             CategoryAnalysisResponse result =
                     categoryAnalysisService.analyze(category, answers, checkedCount, totalItems,
-                            file, eMetricInputs, ksicCode, envMode, employeeCount);
+                            file, eMetricInputs, ksicCode, envMode, employeeCount, companyId);
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
             log.warn("[Category] 요청 거부 category={} 원인={}", category, e.getMessage());

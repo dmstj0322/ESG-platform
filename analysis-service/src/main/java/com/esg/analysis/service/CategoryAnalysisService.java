@@ -6,6 +6,7 @@ import com.esg.analysis.service.domain.ESGIndicator;
 import com.esg.analysis.service.repository.ESGIndicatorRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -56,6 +57,7 @@ public class CategoryAnalysisService {
     private final ESGIndicatorRepository       indicatorRepository;
     private final NumericExtractionService     numericExtractionService;
     private final EnvironmentBenchmarkService  environmentBenchmarkService;
+    private final SimpMessagingTemplate        messagingTemplate;
 
     /**
      * @param category         "E" / "S" / "G"
@@ -73,7 +75,8 @@ public class CategoryAnalysisService {
                                             Map<String, Double> eMetricInputs,
                                             String ksicCode,
                                             String envMode,
-                                            int employeeCount) {
+                                            int employeeCount,
+                                            Long companyId) {
 
         int checklistScore = computeChecklistScore(checkedCount, totalItems);
         log.info("[CATEGORY-START] category={} checklistScore={} hasFile={} eMetricInputsSize={} ksicCode={} envMode={}",
@@ -124,6 +127,7 @@ public class CategoryAnalysisService {
         String sessionId = UUID.randomUUID().toString();
         try {
             // 1. 파일 형식 분기: E 카테고리 + CSV → Upstage 호출 금지, 직접 파싱
+            sendWs(companyId, "OCR_PROCESSING:" + category);
             String markdown;
             if ("E".equalsIgnoreCase(category) && isCsvFile(file)) {
                 log.info("[CategoryAnalysis] CSV direct parsing mode enabled file={}", file.getOriginalFilename());
@@ -137,6 +141,7 @@ public class CategoryAnalysisService {
             }
 
             // 2. ChromaDB 인덱싱 — category 전달로 G는 더 큰 청크 사이즈 적용
+            sendWs(companyId, "VECTOR_INDEXING:" + category);
             reportRagService.indexReport(sessionId, markdown, category);
             log.info("[CategoryAnalysis] 인덱싱 완료 sessionId={} category={}", sessionId, category);
 
@@ -198,6 +203,7 @@ public class CategoryAnalysisService {
             }
 
             log.info("[RAG-STAGE] evidence mapping started category={} indicatorCount={}", category, indicators.size());
+            sendWs(companyId, "RETRIEVAL:" + category);
 
             for (ESGIndicator indicator : indicators) {
                 log.info("[INDICATOR-ID] category={} indicator={} title='{}'",
@@ -676,6 +682,7 @@ public class CategoryAnalysisService {
 
             log.info("[RAG-STAGE] grade calculation started category={} ragScores={} evidencedIndicators={}",
                     category, ragScores, evidencedIndicatorCount);
+            sendWs(companyId, "VALIDATION:" + category);
 
             // 4. 점수 집계
             int avgRag  = avg(ragScores);
@@ -899,6 +906,7 @@ public class CategoryAnalysisService {
                 }
             }
 
+            sendWs(companyId, "SCORING:" + category);
             String grade = EsgScoreConstants.toGrade(finalScore);
 
             // 5. Grade Ceiling: ≥1→B, ≥3→C, ≥4→D
@@ -1070,6 +1078,15 @@ public class CategoryAnalysisService {
     }
 
     // ── 내부 헬퍼 ────────────────────────────────────────────────────────────
+
+    private void sendWs(Long companyId, String event) {
+        if (companyId == null) return;
+        try {
+            messagingTemplate.convertAndSend("/topic/analysis/" + companyId, event);
+        } catch (Exception e) {
+            log.warn("[CategoryAnalysis] WS 이벤트 전송 실패 event={} 원인={}", event, e.getMessage());
+        }
+    }
 
     // ── Coverage-based VERIFIED determination — cluster 조합 기반 ─────────────────
     // policy statement 없이 "실행 evidence + KPI + 운영 evidence" 조합으로 VERIFIED 판정 허용

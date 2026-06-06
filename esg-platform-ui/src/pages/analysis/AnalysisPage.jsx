@@ -755,9 +755,45 @@ export default function AnalysisPage() {
   const [wsStage, setWsStage] = useState(null);
   const stompRef        = useRef(null);
   const pipelineDoneRef = useRef(false);
+  const onCompletedRef  = useRef(null);
+  const onFailedRef     = useRef(null);
 
-  // WS 연결 해제 (언마운트 시)
-  useEffect(() => () => { stompRef.current?.deactivate(); }, []);
+  // WS 연결 — 마운트 시 연결, 언마운트 시 해제
+  useEffect(() => {
+    if (!companyId) return;
+    stompRef.current?.deactivate();
+    const client = new Client({
+      webSocketFactory: () => new SockJS(`${BASE_URL}ws-esg`),
+      reconnectDelay: 3000,
+      onConnect: () => {
+        client.subscribe(`/topic/analysis/${companyId}`, (frame) => {
+          const status = frame.body?.trim();
+          if (!status) return;
+          if (status.startsWith('COMPLETED')) {
+            const analysisId = status.split(':')[1]?.trim();
+            onCompletedRef.current?.(analysisId);
+          } else if (status === 'FAILED') {
+            onFailedRef.current?.();
+          } else if (
+            status === 'RULE_BASED_SCORING' ||
+            status === 'GPT_SUMMARY' ||
+            status === 'MERGING_SCORE' ||
+            status.startsWith('OCR_PROCESSING:') ||
+            status.startsWith('VECTOR_INDEXING:') ||
+            status.startsWith('RETRIEVAL:') ||
+            status.startsWith('VALIDATION:') ||
+            status.startsWith('SCORING:')
+          ) {
+            setWsStage(status);
+          }
+        });
+      },
+      onStompError: () => onFailedRef.current?.(),
+    });
+    client.activate();
+    stompRef.current = client;
+    return () => { client.deactivate(); };
+  }, [companyId]);
 
   // ── E 파일 업로드 상태 추적 (진단용) ──────────────────────────────────────
   useEffect(() => {
@@ -1044,34 +1080,16 @@ export default function AnalysisPage() {
       setErr('분석 파이프라인 실패 — 입력 데이터를 확인하고 다시 시도해주세요');
     };
 
-    // WebSocket 연결 (재실행 시 wsStage 초기화)
+    // WS 콜백 갱신 — 마운트 시 연결된 WS에서 참조
     setWsStage(null);
-    stompRef.current?.deactivate();
-    const client = new Client({
-      webSocketFactory: () => new SockJS(`${BASE_URL}ws-esg`),
-      reconnectDelay: 3000,
-      onConnect: () => {
-        client.subscribe(`/topic/analysis/${companyId}`, (frame) => {
-          const status = frame.body?.trim();
-          if (!status) return;
-          if (status.startsWith('COMPLETED') || status === 'COMPLETE') {
-            const parts = status.split(':');
-            onCompleted(parts[1]?.trim() || sessionId);
-          } else if (status === 'FAILED') {
-            onFailed();
-          } else if (status === 'RULE_BASED_SCORING' || status === 'GPT_SUMMARY' || status === 'MERGING_SCORE') {
-            setWsStage(status);
-          }
-        });
-        // 구독 완료 후 분석 실행 요청
-        api.post(`/api/v1/analysis/session/${sessionId}/start`, null, {
-          headers: { 'X-CompanyId': String(companyId) },
-        }).catch(() => onFailed());
-      },
-      onStompError: () => onFailed(),
-    });
-    client.activate();
-    stompRef.current = client;
+    pipelineDoneRef.current = false;
+    onCompletedRef.current = onCompleted;
+    onFailedRef.current    = onFailed;
+
+    // 분석 실행 요청 (WS는 마운트 시 이미 연결됨)
+    api.post(`/api/v1/analysis/session/${sessionId}/start`, null, {
+      headers: { 'X-CompanyId': String(companyId) },
+    }).catch(() => onFailed());
 
     // 폴링 fallback (WS 이벤트 누락 안전망)
     const pollDelays = [35000, 65000, 110000, 180000];
