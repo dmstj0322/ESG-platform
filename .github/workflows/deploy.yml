@@ -88,6 +88,8 @@ jobs:
             docker compose pull
             docker compose down
             docker compose up -d
+            
+            docker image prune -af
 
   # 🌟 수정 2: 서버 2 배포가 완전히 끝난 뒤에 서버 1(AI 분석)을 배포합니다.
   deploy-server1:
@@ -106,3 +108,5 @@ jobs:
             docker compose pull
             docker compose down
             docker compose up -d
+            
+            docker image prune -af
