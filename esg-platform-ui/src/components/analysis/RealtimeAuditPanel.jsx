@@ -84,6 +84,12 @@ const FINAL_PIPELINE = [
 // ── Component ─────────────────────────────────────────────────────────────────
 const LOG_PREVIEW = 5;
 
+const WS_STAGE_LOG = {
+  RULE_BASED_SCORING: 'K-ESG 업종 가중치 적용 및 점수 산출 중...',
+  GPT_SUMMARY:        'AI 종합 진단 의견 생성 중...',
+  MERGING_SCORE:      '최종 등급 확정 및 리포트 저장 중...',
+};
+
 export default function RealtimeAuditPanel({
   eLoading = false,
   sLoading = false,
@@ -94,6 +100,7 @@ export default function RealtimeAuditPanel({
   gFile,
   socialAnswers,
   governanceAnswers,
+  wsStage = null,
 }) {
   const [logs, setLogs] = useState(() => {
     const now = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' }).slice(11, 19);
@@ -140,6 +147,12 @@ export default function RealtimeAuditPanel({
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: 'smooth' });
   }, [logs]);
+
+  // ── WebSocket 실시간 이벤트 → 로그 반영 ───────────────────────────────────────
+  useEffect(() => {
+    const text = WS_STAGE_LOG[wsStage];
+    if (text) push('RUN', text);
+  }, [wsStage, push]);
 
   // ── File upload events ─────────────────────────────────────────────────────
   const prevEFile = useRef(undefined);

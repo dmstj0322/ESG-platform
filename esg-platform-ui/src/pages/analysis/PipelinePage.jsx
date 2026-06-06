@@ -103,7 +103,10 @@ const WS_STAGE_MAP = {
   E_ANALYSIS: 'RETRV', S_ANALYSIS: 'RETRV', G_ANALYSIS: 'RETRV', RETRIEVAL: 'RETRV',
   VALIDATION: 'VALID', EVIDENCE_VALIDATION: 'VALID', NUMERIC_VERIFY: 'VALID',
   SCORING: 'SCORE', SCORE_CALCULATION: 'SCORE', GRADING: 'SCORE',
+  RULE_BASED_SCORING: 'SCORE',
   REPORT_GENERATING: 'RPT', REPORT_GENERATION: 'RPT', GPT_REPORT: 'RPT',
+  GPT_SUMMARY: 'RPT',
+  MERGING_SCORE: 'RPT',
 };
 
 const STAGE_ORDER = STAGES.map(s => s.key);
@@ -338,6 +341,11 @@ export default function PipelinePage() {
 
           const mappedStage = WS_STAGE_MAP[status];
           if (mappedStage) {
+            const newIdx = STAGE_ORDER.indexOf(mappedStage);
+            if (newIdx >= 0 && newIdx > stageIdxRef.current) {
+              stageIdxRef.current = newIdx;
+              logIdxRef.current = 0;
+            }
             setStageKey(mappedStage);
             const stageDef = STAGES.find(s => s.key === mappedStage);
             if (stageDef) pushLog('stage', mappedStage, `▶ ${stageDef.label}`);

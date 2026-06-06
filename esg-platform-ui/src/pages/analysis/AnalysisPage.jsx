@@ -752,6 +752,7 @@ export default function AnalysisPage() {
 
   // ── 최종 파이프라인 (WS 기반)
   const [finalPipelineActive, setFinalPipelineActive] = useState(false);
+  const [wsStage, setWsStage] = useState(null);
   const stompRef        = useRef(null);
   const pipelineDoneRef = useRef(false);
 
@@ -1043,7 +1044,8 @@ export default function AnalysisPage() {
       setErr('분석 파이프라인 실패 — 입력 데이터를 확인하고 다시 시도해주세요');
     };
 
-    // WebSocket 연결
+    // WebSocket 연결 (재실행 시 wsStage 초기화)
+    setWsStage(null);
     stompRef.current?.deactivate();
     const client = new Client({
       webSocketFactory: () => new SockJS(`${BASE_URL}ws-esg`),
@@ -1057,6 +1059,8 @@ export default function AnalysisPage() {
             onCompleted(parts[1]?.trim() || sessionId);
           } else if (status === 'FAILED') {
             onFailed();
+          } else if (status === 'RULE_BASED_SCORING' || status === 'GPT_SUMMARY' || status === 'MERGING_SCORE') {
+            setWsStage(status);
           }
         });
         // 구독 완료 후 분석 실행 요청
@@ -1566,6 +1570,7 @@ export default function AnalysisPage() {
                 gFile={gFile}
                 socialAnswers={socialAnswers}
                 governanceAnswers={governanceAnswers}
+                wsStage={wsStage}
               />
             </div>
           </div>
