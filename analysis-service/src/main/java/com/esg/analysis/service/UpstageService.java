@@ -2,6 +2,7 @@ package com.esg.analysis.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
@@ -12,6 +13,8 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Mono;
 import java.io.IOException;
 
 @Slf4j
@@ -23,6 +26,7 @@ public class UpstageService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /** MultipartFile 편의 오버로드 — 내부적으로 byte[] 버전을 호출한다. */
+    @CircuitBreaker(name = "upstageApi", fallbackMethod = "parsePdfFallbackMultipart")
     public String parsePdfToMarkdown(MultipartFile file) throws IOException {
         return parsePdfToMarkdown(file.getBytes(), file.getOriginalFilename(), file.getContentType());
     }
@@ -31,6 +35,7 @@ public class UpstageService {
      * byte[] 기반 호출 — HTTP 요청 스레드가 종료된 후 비동기 스레드에서 호출할 때 사용.
      * MultipartFile 스트림은 요청 범위(request-scoped)이므로 비동기 컨텍스트에서 직접 접근하면 닫혀 있다.
      */
+    @CircuitBreaker(name = "upstageApi", fallbackMethod = "parsePdfFallbackBytes")
     public String parsePdfToMarkdown(byte[] fileBytes, String filename, String contentType) throws IOException {
         log.info(">>>> [Upstage] Layout Analysis 호출 시작: {}", filename);
 
@@ -48,6 +53,33 @@ public class UpstageService {
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(BodyInserters.fromMultipartData(builder.build()))
                     .retrieve()
+                    .onStatus(
+                        status -> status.value() == 429,
+                        clientResponse -> clientResponse.bodyToMono(String.class)
+                            .defaultIfEmpty("(empty body)")
+                            .flatMap(body -> {
+                                String retryAfter = clientResponse.headers().asHttpHeaders()
+                                        .getFirst("Retry-After");
+                                log.error(">>>> [Upstage] 429 Too Many Requests" +
+                                        " filename={} Retry-After={} body={}",
+                                        filename, retryAfter, body);
+                                return Mono.error(new RuntimeException(
+                                        "Upstage 429: Retry-After=" + retryAfter + " body=" + body));
+                            })
+                    )
+                    .onStatus(
+                        status -> status.is4xxClientError() || status.is5xxServerError(),
+                        clientResponse -> clientResponse.bodyToMono(String.class)
+                            .defaultIfEmpty("(empty body)")
+                            .flatMap(body -> {
+                                log.error(">>>> [Upstage] API 오류 status={} filename={} body={}",
+                                        clientResponse.statusCode().value(), filename, body);
+                                return Mono.error(new WebClientResponseException(
+                                        clientResponse.statusCode().value(),
+                                        clientResponse.statusCode().toString(),
+                                        null, body.getBytes(), null));
+                            })
+                    )
                     .bodyToMono(String.class)
                     .block();
 
@@ -74,6 +106,21 @@ public class UpstageService {
             // 에러 발생 시 빈 값을 넘겨 시스템이 멈추지 않게 하거나, 예외를 던집니다.
             throw new RuntimeException("Upstage API 처리 실패: " + e.getMessage());
         }
+    }
+
+    // ── Circuit Breaker Fallback ─────────────────────────────────────────────
+
+    public String parsePdfFallbackMultipart(MultipartFile file, Throwable t) {
+        log.error("[Upstage CB] 회로 차단기 OPEN — PDF 파싱 서비스 일시 중단. 파일명={} 원인={}",
+                file.getOriginalFilename(), t.getMessage());
+        throw new RuntimeException("PDF 파싱 서비스가 일시적으로 중단되었습니다. 잠시 후 다시 시도해주세요.");
+    }
+
+    public String parsePdfFallbackBytes(byte[] fileBytes, String filename,
+                                        String contentType, Throwable t) {
+        log.error("[Upstage CB] 회로 차단기 OPEN — PDF 파싱 서비스 일시 중단. 파일명={} 원인={}",
+                filename, t.getMessage());
+        throw new RuntimeException("PDF 파싱 서비스가 일시적으로 중단되었습니다. 잠시 후 다시 시도해주세요.");
     }
 
     /**

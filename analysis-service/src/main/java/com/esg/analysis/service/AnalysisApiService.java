@@ -555,7 +555,11 @@ public class AnalysisApiService {
         AnalysisResultCache cachedResult = (AnalysisResultCache)
                 redisTemplate.opsForValue().get(CACHE_PREFIX + fileHash);
         if (cachedResult != null) {
-            log.info("[Cache Hit] 동일 파일 hash={}", fileHash);
+            log.warn("[REDIS-CACHE-HIT] 동일 파일 해시 캐시 적중 — GPT 재호출 없이 기존 overallOpinion 반환됨 hash={} overallOpinionPreview='{}'",
+                    fileHash,
+                    cachedResult.getOverallOpinion() != null
+                            ? cachedResult.getOverallOpinion().substring(0, Math.min(80, cachedResult.getOverallOpinion().length()))
+                            : "null");
             AnalysisReport savedReport = transactionTemplate.execute(status -> {
                 AnalysisReport report = AnalysisReport.builder()
                         .memberId(userId)

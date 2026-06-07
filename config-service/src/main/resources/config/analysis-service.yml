@@ -56,6 +56,13 @@ resilience4j:
         waitDurationInOpenState: 30000
         permittedNumberOfCallsInHalfOpenState: 3
         automaticTransitionFromOpenToHalfOpenEnabled: true
+      upstageApi:
+        registerHealthMap: true
+        slidingWindowSize: 5
+        failureRateThreshold: 60
+        waitDurationInOpenState: 60000
+        permittedNumberOfCallsInHalfOpenState: 2
+        automaticTransitionFromOpenToHalfOpenEnabled: true
 
 #langchain4j:
 #  google-ai-gemini:

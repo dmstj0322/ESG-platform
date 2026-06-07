@@ -103,12 +103,15 @@ const WS_STAGE_MAP = {
   E_ANALYSIS: 'RETRV', S_ANALYSIS: 'RETRV', G_ANALYSIS: 'RETRV', RETRIEVAL: 'RETRV',
   VALIDATION: 'VALID', EVIDENCE_VALIDATION: 'VALID', NUMERIC_VERIFY: 'VALID',
   SCORING: 'SCORE', SCORE_CALCULATION: 'SCORE', GRADING: 'SCORE',
+  RULE_BASED_SCORING: 'SCORE',
   REPORT_GENERATING: 'RPT', REPORT_GENERATION: 'RPT', GPT_REPORT: 'RPT',
+  GPT_SUMMARY: 'RPT',
+  MERGING_SCORE: 'RPT',
 };
 
 const STAGE_ORDER = STAGES.map(s => s.key);
 
-const fmtTime  = () => new Date().toTimeString().slice(0, 8);
+const fmtTime  = () => new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' }).slice(11, 19);
 const fmtMs    = (ms) => ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
 const fmtElapsed = (ms) => {
   const s = Math.floor(ms / 1000);
@@ -338,6 +341,11 @@ export default function PipelinePage() {
 
           const mappedStage = WS_STAGE_MAP[status];
           if (mappedStage) {
+            const newIdx = STAGE_ORDER.indexOf(mappedStage);
+            if (newIdx >= 0 && newIdx > stageIdxRef.current) {
+              stageIdxRef.current = newIdx;
+              logIdxRef.current = 0;
+            }
             setStageKey(mappedStage);
             const stageDef = STAGES.find(s => s.key === mappedStage);
             if (stageDef) pushLog('stage', mappedStage, `▶ ${stageDef.label}`);

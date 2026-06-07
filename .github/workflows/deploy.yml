@@ -69,6 +69,7 @@ jobs:
           file: ./esg-platform-ui/Dockerfile
           push: true
           tags: esgplatform/esg-frontend:latest
+          provenance: false
 
   # 🌟 수정 2: 서버 2(핵심 인프라 및 MSA 코어) 배포를 먼저 수행합니다.
   deploy-server2:
@@ -87,6 +88,8 @@ jobs:
             docker compose pull
             docker compose down
             docker compose up -d
+            
+            docker image prune -af
 
   # 🌟 수정 2: 서버 2 배포가 완전히 끝난 뒤에 서버 1(AI 분석)을 배포합니다.
   deploy-server1:
@@ -105,3 +108,5 @@ jobs:
             docker compose pull
             docker compose down
             docker compose up -d
+            
+            docker image prune -af

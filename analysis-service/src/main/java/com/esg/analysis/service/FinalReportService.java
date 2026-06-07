@@ -93,6 +93,9 @@ public class FinalReportService {
     public void processAsync(Long analysisId, Long companyId, FinalReportRequest req, Long memberId) {
         try {
             boolean autoSim = req.isAutoSimulation();
+            log.info("[PROCESS-ASYNC-START] analysisId={} companyId={} autoSim={} evidenceCount={}",
+                    analysisId, companyId, autoSim,
+                    req.getEvidences() != null ? req.getEvidences().size() : 0);
             send(companyId, "RULE_BASED_SCORING");
             Thread.sleep(500);
 
@@ -147,6 +150,9 @@ public class FinalReportService {
             else if (lowCount >= 1) conf = Math.min(conf, 40);
 
             send(companyId, "GPT_SUMMARY");
+            // autoSim 경로 확인 — false이면 buildPrompt() 사용, true이면 callGptSimulation() 사용
+            log.info("[GPT-PATH-SELECT] autoSim={} → {}",
+                    autoSim, autoSim ? "callGptSimulation (buildPrompt 미사용)" : "callGpt → buildPrompt");
             GptOpinion opinion = autoSim
                     ? callGptSimulation(eScore, adjS, gScore, total, grade, req)
                     : callGptWithMismatch(eScore, adjS, gScore, total, grade, req, lowCount);
@@ -232,6 +238,50 @@ public class FinalReportService {
 
     private int conf(FinalReportRequest.CategoryResult r) {
         return r != null && r.getConfidence() != null ? r.getConfidence() : 70;
+    }
+
+    /**
+     * S/G 카테고리 confidence를 구간별 규칙 문구로 변환합니다.
+     * GPT가 숫자를 자의적으로 해석("데이터 일치성 낮음" 등)하지 않도록
+     * 숫자 대신 도메인 적합 레이블을 프롬프트에 전달합니다.
+     */
+    private String sgConfLabel(FinalReportRequest.CategoryResult r, String category) {
+        int c = conf(r);
+        if ("S".equals(category)) {
+            if (c < 60) return "근거 검증 수준: 일부 지표에 대한 추가 증빙 자료 확보 필요";
+            if (c < 80) return "근거 검증 수준: 전반적으로 양호한 수준의 운영 근거 확인";
+            return "근거 검증 수준: 운영 근거 충분히 확인됨";
+        } else {
+            if (c < 60) return "근거 검증 수준: 일부 운영·공시 근거 신뢰도 개선 필요";
+            if (c < 80) return "근거 검증 수준: 전반적으로 양호한 수준의 공시 근거 확인";
+            return "근거 검증 수준: 운영·공시 근거 충분히 확인됨";
+        }
+    }
+
+    /**
+     * 사회(S) 영역 확정 문장 — score·grade·sgLabel(sgConfLabel 결과)만 사용.
+     * confidence 숫자는 sgConfLabel 내부에서 레이블로 변환 후 소비 → 출력에 미포함.
+     */
+    private String buildSTemplateSentence(int score, String gradeStr, String sgLabel) {
+        String base = "사회(S) 부문은 " + score + "점(" + gradeStr + "등급)으로 평가되었으며, ";
+        if (sgLabel.contains("확보 필요")) return base + "일부 지표에 대한 추가 증빙 자료 확보가 필요합니다.";
+        if (sgLabel.contains("충분히"))   return base + "운영 근거가 전반적으로 충분히 확인되었습니다.";
+        return base + "운영 근거가 전반적으로 확인되었습니다.";
+    }
+
+    /**
+     * 지배구조(G) 영역 확정 문장 — score·grade·sgLabel(sgConfLabel 결과)만 사용.
+     * confidence 숫자는 sgConfLabel 내부에서 레이블로 변환 후 소비 → 출력에 미포함.
+     */
+    private String buildGTemplateSentence(int score, String gradeStr, String sgLabel) {
+        log.info("[G-TEMPLATE-CALLED] score={} grade='{}' sgLabel='{}'", score, gradeStr, sgLabel);
+        String base = "지배구조(G) 부문은 " + score + "점(" + gradeStr + "등급)으로 평가되었으며, ";
+        String result;
+        if (sgLabel.contains("개선 필요")) result = base + "일부 운영·공시 근거의 보완이 권장됩니다.";
+        else if (sgLabel.contains("충분히")) result = base + "운영·공시 근거가 전반적으로 충분히 확인되었습니다.";
+        else result = base + "운영·공시 근거가 전반적으로 확인되었습니다.";
+        log.info("[G-TEMPLATE-RESULT] '{}'", result);
+        return result;
     }
 
     private int avgConf(FinalReportRequest req) {
@@ -322,27 +372,51 @@ public class FinalReportService {
 
     private GptOpinion callGpt(int e, int s, int g, int total, String grade, FinalReportRequest req) {
         String prompt = buildPrompt(e, s, g, total, grade, req);
+        // S/G 확정 문장 — sgConfLabel() 레이블 기반 분기 (confidence 숫자 미노출)
+        String sLabel    = sgConfLabel(req.getSocialResult(),      "S");
+        String gLabel    = sgConfLabel(req.getGovernanceResult(),  "G");
+        String sSentence = buildSTemplateSentence(s, grade(req.getSocialResult()),     sLabel);
+        String gSentence = buildGTemplateSentence(g, grade(req.getGovernanceResult()), gLabel);
+        log.info("[GPT-PROMPT-LEN] promptLen={}", prompt.length());
+        log.info("[GPT-PROMPT-PREVIEW] {}", prompt.substring(0, Math.min(1000, prompt.length())).replace("\n", "↵"));
+        log.info("[S-TEMPLATE] '{}'", sSentence);
+        log.info("[G-TEMPLATE] '{}'", gSentence);
         try {
             String raw = openAiClient.callWithRetry(prompt);
             JsonNode node = objectMapper.readTree(raw);
-            String opinion = node.path("overallOpinion").asText(null);
-            String risk    = node.path("riskOpportunity").asText(null);
-            if (opinion == null || opinion.isBlank()) {
-                return fallbackOpinion(e, s, g, total, grade);
+            String eSentence  = node.path("eSentence").asText(null);
+            String risk       = node.path("riskOpportunity").asText(null);
+            if (eSentence == null || eSentence.isBlank()) {
+                return fallbackOpinion(e, s, g, total, grade, sSentence, gSentence);
             }
+            // 종합 결론은 항상 규칙 기반 템플릿 사용 (GPT 환각 방지)
+            String conclusion = buildConclusionTemplate(total, grade, req.getSocialResult(), req.getGovernanceResult());
+            log.info("[GPT-E-SENTENCE]  '{}'", eSentence);
+            log.info("[TMPL-CONCLUSION] '{}'", conclusion);
+            // 최종 overallOpinion = E(GPT) + S(템플릿) + G(템플릿) + 종합(템플릿)
+            String fullOpinion = eSentence + " " + sSentence + " " + gSentence + " " + conclusion;
+            log.info("[FINAL-OPINION] '{}'", fullOpinion);
             return new GptOpinion(
-                    opinion,
+                    fullOpinion,
                     risk != null && !risk.isBlank() ? risk : buildRisk(grade, e, s, g)
             );
         } catch (Exception ex) {
             log.warn("[FinalReport] GPT 실패 — 기본 총평 사용: {}", ex.getMessage());
-            return fallbackOpinion(e, s, g, total, grade);
+            return fallbackOpinion(e, s, g, total, grade, sSentence, gSentence);
         }
     }
 
     private String buildEVerificationStats(FinalReportRequest req) {
         List<FinalReportRequest.EvidenceItem> items = req.getEvidences();
-        if (items == null || items.isEmpty()) return "";
+        if (items == null || items.isEmpty()) {
+            log.info("[E-VERIF-STATS] evidence 없음 → stats 빈 문자열 반환");
+            return "";
+        }
+        // 각 E 지표별 numericMatchLevel / numericDiffPercent 원본값 로그
+        items.stream()
+             .filter(i -> i.getIndicatorCode() != null && i.getIndicatorCode().startsWith("E"))
+             .forEach(i -> log.info("[E-INDICATOR-RAW] code={} numericMatchLevel={} numericDiffPercent={}",
+                     i.getIndicatorCode(), i.getNumericMatchLevel(), i.getNumericDiffPercent()));
         long highCnt = 0, medCnt = 0, lowCnt = 0;
         double maxDiff = 0;
         boolean hasDiff = false;
@@ -356,14 +430,26 @@ public class FinalReportService {
                 hasDiff = true;
             }
         }
-        if (highCnt + medCnt + lowCnt == 0) return "";
+        log.info("[E-VERIF-STATS] highCnt={} medCnt={} lowCnt={} hasDiff={} maxDiff={}",
+                highCnt, medCnt, lowCnt, hasDiff, maxDiff);
+        if (highCnt + medCnt + lowCnt == 0) {
+            log.info("[E-VERIF-STATS] numericMatchLevel 있는 E 지표 없음 → stats 빈 문자열 반환");
+            return "";
+        }
         StringBuilder sb = new StringBuilder(
                 String.format("HIGH %d건 / MEDIUM %d건 / LOW %d건", highCnt, medCnt, lowCnt));
-        if (hasDiff && maxDiff >= 0.01) sb.append(String.format(" / 최대 오차율 %.2f%%", maxDiff));
-        return sb.toString();
+        if (lowCnt == 0 && medCnt == 0 && highCnt > 0) {
+            sb.append(" / 전항목 데이터 일치 확인");
+        }
+        // 오차율 수치는 GPT 프롬프트에 포함하지 않음 — 검증 상세 영역에서만 제공
+        String result = sb.toString();
+        log.info("[E-VERIF-STATS] 최종 stats='{}'", result);
+        return result;
     }
 
     private String buildPrompt(int e, int s, int g, int total, String grade, FinalReportRequest req) {
+        // ★ 버전 마커 — 이 로그가 보이면 수정된 buildPrompt()가 실행 중
+        log.info("[BUILD-PROMPT-VERSION] v2025-FIXED — 하드코딩 예시 제거 버전 실행 중");
         String auditFindings = buildAuditFindings(req);
         String eVerifStats   = buildEVerificationStats(req);
         return "당신은 ESG 감사 전문가입니다.\n"
@@ -380,22 +466,33 @@ public class FinalReportService {
                 + "- [부분 근거] 지표(evidence 존재, 정책 상세 부족): 근거 인정 + 구체적 한계 명시\n"
                 + "- 예(부분근거): '[지표명] 관련 운영 근거는 탐지되었으나, 정책 수준의 상세 명시는 제한적이었습니다.'\n"
                 + "- 주의: 실측 데이터(TRIR·재해율·KPI 수치 등)가 감사 실측 데이터에 존재하는 지표는 [부분 근거]가 아닌 직접 근거로 서술할 것\n\n"
-                + "## ESG 점수와 데이터 검증 신뢰도 구분 (반드시 준수)\n"
-                + "- ESG 점수(E/S/G 점수)는 K-ESG 평가 기준 충족도를 의미합니다 (환경 성과, 사회적 책임 이행, 거버넌스 수준)\n"
-                + "- 데이터 검증 신뢰도(HIGH/MEDIUM/LOW 건수, 신뢰도 %)는 제출된 증빙 데이터와 입력값의 일치 수준을 의미합니다\n"
-                + "- 두 개념은 서로 다릅니다: HIGH 검증 건수가 많아도 ESG 점수가 낮을 수 있고, 반대로 ESG 점수가 높아도 증빙 일치율이 낮을 수 있습니다\n"
-                + "- 종합 의견 작성 시 이 차이를 자연스럽게 설명하세요\n"
-                + "- 작성 예시: '환경 부문은 78점(B등급)을 획득하였으며, 데이터 검증 결과 환경 지표 5건 전항목이 HIGH 수준으로 확인되었고 최대 오차율은 0.36%로 높은 신뢰도를 보였습니다.'\n\n"
+                + "## 서술 규칙\n"
+                + "- 환경(E) 점수는 K-ESG 기준 충족도를 의미하며, 수치 검증 결과(HIGH/MEDIUM/LOW)와 별개입니다\n"
+                + "- 사회(S)·지배구조(G) 점수는 운영 근거 적합도를 의미합니다\n"
+                + "- S·G 부문에서 '신뢰도 X%'·'신뢰도가 X%' 형태로 숫자를 직접 언급하지 말 것\n"
+                + "- S·G 근거 수준은 아래 '평가 결과'의 [근거 검증 수준] 레이블로만 서술할 것\n"
+                + "- 오차율(%, 수치) 언급 절대 금지 — '최대 오차율', '평균 오차율', '오차율 X%' 등 모든 오차율 수치 사용 금지\n"
+                + "- 환경(E) 검증 결과는 HIGH/MEDIUM/LOW 건수와 신뢰도 수준으로만 서술할 것\n"
+                + "- [수치 검증] 항목에 '전항목 데이터 일치 확인'이 포함되어 있으면:\n"
+                + "  → '환경 지표 전항목의 데이터 검증이 완료되어 높은 데이터 신뢰성을 확보하였습니다.' 계열로 작성\n"
+                + "  → '경미한 차이', '오차율', '불일치' 등 표현 절대 금지\n"
+                + "\n## G(지배구조)·S(사회) 서술 규칙 (반드시 준수)\n"
+                + "- 지배구조(G)·사회(S)는 공시 근거·운영 증빙·정책 이행 여부를 평가하는 영역입니다\n"
+                + "- 사용 금지 표현: '데이터 일치성', '수치 일치', '데이터 정합성', '수치 차이', '일치율'\n"
+                + "  → 위 표현은 환경(E) 수치 검증 전용입니다. G/S 서술에 절대 사용 금지\n"
+                + "- G 신뢰도가 낮은 경우: '공시 자료 보완 필요', '일부 세부 검증 항목의 신뢰도 개선 필요' 형태로 서술\n"
+                + "- G 서술 예시: '지배구조 부문은 X점(Y등급)을 획득하였으며, 운영·공시 근거는 확인되었으나 일부 항목의 검증 신뢰도 개선이 필요합니다.'\n"
+                + "- S 서술 예시: '사회 부문은 X점(Y등급)으로 평가되었으며, 안전·인권·지역사회 관련 운영 근거가 확인되었습니다.'\n\n"
                 + "## 평가 결과\n"
                 + "- 환경(E): " + e + "점 / " + grade(req.getEnvironmentResult()) + "등급 / 신뢰도 " + conf(req.getEnvironmentResult()) + "%"
                 + (eVerifStats.isEmpty() ? "" : " [수치 검증: " + eVerifStats + "]") + "\n"
-                + "- 사회(S): " + s + "점 / " + grade(req.getSocialResult()) + "등급 / 신뢰도 " + conf(req.getSocialResult()) + "%\n"
-                + "- 지배구조(G): " + g + "점 / " + grade(req.getGovernanceResult()) + "등급 / 신뢰도 " + conf(req.getGovernanceResult()) + "%\n"
+                + "- 사회(S): " + s + "점 / " + grade(req.getSocialResult()) + "등급 / " + sgConfLabel(req.getSocialResult(), "S") + "\n"
+                + "- 지배구조(G): " + g + "점 / " + grade(req.getGovernanceResult()) + "등급 / " + sgConfLabel(req.getGovernanceResult(), "G") + "\n"
                 + "- 종합 점수: " + total + "점 / 최종 등급: " + grade + "\n"
                 + auditFindings
                 + "\n## 반환 형식 (JSON)\n"
                 + "{\n"
-                + "  \"overallOpinion\": \"200자 내외. 실제 감사 데이터 기반 factual summary. 미검출 지표·수치 불일치를 구체적 코드와 함께 언급.\",\n"
+                + "  \"eSentence\": \"환경(E) 부문 1문장. HIGH/MEDIUM/LOW 검증 건수와 데이터 신뢰성 수준만 서술. confidence%, 오차율, 데이터 일치성 표현 금지. 사회(S)·지배구조(G) 서술 금지.\",\n"
                 + "  \"riskOpportunity\": \"[리스크] 실제 감사 결과 기반 구체적 리스크(에너지 효율·Scope 배출·공시 의무 등). [기회] 개선 가능 항목.\"\n"
                 + "}\n\n"
                 + "절대 금지: 마케팅 과장 표현, 추상적 조언, GPT 일반 답변 패턴.";
@@ -457,12 +554,38 @@ public class FinalReportService {
         return String.valueOf((long) val);
     }
 
-    private GptOpinion fallbackOpinion(int e, int s, int g, int total, String grade) {
-        String opinion = String.format(
-                "K-ESG 종합 점수 %d점(%s등급)으로 평가되었습니다. "
-                + "환경(E) %d점, 사회(S) %d점, 지배구조(G) %d점입니다. "
-                + "균형 있는 ESG 경영 체계 구축과 지속적인 지표 관리가 권고됩니다.",
-                total, grade, e, s, g);
+    /**
+     * 종합 결론 규칙 기반 템플릿 — GPT 미사용, 항상 일관된 결과 보장.
+     * grade 구간별 고정 문구 + S/G 취약 영역 힌트 포함.
+     */
+    private String buildConclusionTemplate(int total, String grade,
+                                            FinalReportRequest.CategoryResult sResult,
+                                            FinalReportRequest.CategoryResult gResult) {
+        String base = String.format("종합 점수는 %d점(%s등급)이며, ", total, grade);
+        switch (grade) {
+            case "S": return base + "전 영역에서 우수한 ESG 관리 수준이 확인되었습니다.";
+            case "A": return base + "전반적으로 우수한 ESG 관리 수준을 유지하고 있습니다.";
+            case "B": return base + "일부 영역의 관리 체계 보완을 통해 ESG 성과를 더욱 향상시킬 수 있습니다.";
+            case "C": {
+                boolean sWeak = conf(sResult) < 60;
+                boolean gWeak = conf(gResult) < 60;
+                if (sWeak && gWeak)
+                    return base + "사회·지배구조 영역의 증빙 자료 및 운영 근거 보완이 권장됩니다.";
+                if (sWeak)
+                    return base + "사회(S) 영역의 운영 증빙 자료 보완이 우선적으로 권장됩니다.";
+                if (gWeak)
+                    return base + "지배구조(G) 영역의 공시 근거 보완이 우선적으로 권장됩니다.";
+                return base + "지속적인 ESG 지표 관리 및 운영 수준 향상을 통해 등급 개선이 가능합니다.";
+            }
+            default: return base + "ESG 관리 체계 전반에 대한 체계적인 개선이 필요합니다.";
+        }
+    }
+
+    private GptOpinion fallbackOpinion(int e, int s, int g, int total, String grade,
+                                       String sSentence, String gSentence) {
+        String eSentence  = String.format("환경(E) 부문은 %d점으로 평가되었습니다.", e);
+        String conclusion = buildConclusionTemplate(total, grade, null, null);
+        String opinion    = eSentence + " " + sSentence + " " + gSentence + " " + conclusion;
         return new GptOpinion(opinion, buildRisk(grade, e, s, g));
     }
 
@@ -499,6 +622,7 @@ public class FinalReportService {
         cache.setTotalScore(total);
         cache.setFinalGrade(grade);
         cache.setOverallConfidence(conf);
+        log.info("[DB-SAVE-OPINION] '{}'", opinion.overallOpinion());
         cache.setOverallOpinion(opinion.overallOpinion());
         cache.setRiskOpportunity(opinion.riskOpportunity());
         cache.setFullReport(buildFullReport(e, s, g, total, grade, opinion.overallOpinion()));

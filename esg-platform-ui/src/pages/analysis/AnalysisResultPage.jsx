@@ -271,12 +271,51 @@ const S203_SAFETY_ONLY_MARKERS = [
   '산업안전 교육', '안전보건 교육', '재해예방 교육', '안전교육', '안전 교육',
 ];
 
-// [1] overallOpinion 정합성 — contradiction 0건일 때 stale mismatch 문구 제거
-const sanitizeOpinionText = (text, contraCount) => {
-  if (!text || (contraCount ?? 0) > 0) return text;
-  return text
-    .replace(/[^.!?。]*[EeSsGg]-\d{3}[^.!?。]*(?:불일치|차이|mismatch|오차)[^.!?。]*[.!?。]?\s*/g, '')
-    .replace(/[^.!?。]*(?:수치 불일치|데이터 불일치|mismatch 감지)[^.!?。]*[.!?。]?\s*/g, '')
+// [1] overallOpinion 정합성
+// contraCount:   CONTRADICTION 지표 수 (0이면 불일치 코드 참조 문구 제거)
+// lowCount:      numericMatchLevel=LOW 건수
+// medCount:      numericMatchLevel=MEDIUM 건수
+// allEVerified:  E-101~E-105 전체가 HIGH인지 여부 (analysisSummary.e 기반)
+//                LOW=0·MEDIUM=0만으로는 추출 실패 항목을 구분할 수 없으므로 별도 전달 필요
+const sanitizeOpinionText = (text, contraCount, lowCount = 0, medCount = 0, allEVerified = false) => {
+  if (!text) return text;
+  let out = text;
+
+  // ── DEBUG: before/after 확인용 ─────────────────────────────────────────
+  console.group('[sanitizeOpinionText] overallOpinion 후처리 디버그');
+  console.log('① 원문(GPT 응답):', text);
+  console.log('  contraCount:', contraCount, '| lowCount:', lowCount, '| medCount:', medCount, '| allEVerified:', allEVerified);
+
+  if ((contraCount ?? 0) === 0) {
+    out = out
+      .replace(/[^.!?。]*[EeSsGg]-\d{3}[^.!?。]*(?:불일치|차이|mismatch|오차)[^.!?。]*[.!?。]?\s*/g, '')
+      .replace(/[^.!?。]*(?:수치 불일치|데이터 불일치|mismatch 감지)[^.!?。]*[.!?。]?\s*/g, '');
+  }
+
+  // ── 오차율 수치 제거 ────────────────────────────────────────────────────
+  // [A] 구체적 퍼센트 수치 언급 문장 — GPT 환각 수치이므로 항상 제거
+  const specificPat = /[^.!?。]*오차율[^\d%]*[\d.]+%[^.!?。]*[.!?。]?\s*/g;
+  const afterSpecific = out.replace(specificPat, '');
+
+  // [B] 정성적 불일치 표현 — 실제 불일치(LOW/MEDIUM)가 없을 때만 제거
+  //     lowCount>0 또는 medCount>0이면 GPT 문장이 사실에 부합하므로 제거하지 않음
+  //     "일부 항목에서 차이/오차" 패턴은 너무 광범위하여 삭제함 (E 점수 문장도 제거되는 원인)
+  const qualPat = /[^.!?。]*(?:경미한\s*(?:수치\s*)?차이|미세한\s*(?:수치\s*)?차이|소폭\s*(?:수치\s*)?차이|약간의?\s*(?:수치\s*)?차이|미미한\s*(?:수치\s*)?차이|사소한\s*(?:수치\s*)?차이|오차(?:율|가|를)\s*(?:존재|발생|확인|발견|감지|있|나타))[^.!?。]*[.!?。]?\s*/g;
+  const cleaned = (lowCount === 0 && medCount === 0)
+    ? afterSpecific.replace(qualPat, '')
+    : afterSpecific;
+
+  console.log('② sanitize 적용 전(contra 제거 후):', out);
+  console.log('③ sanitize 적용 후:', cleaned);
+  console.groupEnd();
+
+  // allEVerified(전항목 HIGH)이고 삭제된 문장이 있을 때만 올바른 문구 삽입
+  out = (allEVerified && cleaned !== out)
+    ? '환경 지표 전항목의 데이터 검증이 완료되어 높은 데이터 신뢰성을 확보하였습니다. ' + cleaned
+    : cleaned;
+
+  return out
+    .replace(/([.!?。])(?=[^\s])/g, '$1 ')  // 마침표 뒤 공백 보장
     .replace(/\s{2,}/g, ' ')
     .trim() || text;
 };
@@ -3957,22 +3996,23 @@ function buildAnalysisSummary(data) {
   const eMaxDiff = eEvs.length === 0 ? null
     : eEvs.reduce((max, ev) => Math.max(max, ev.numericDiffPercent ?? 0), 0);
   const isAllEFailed = eEvs.length === 0 && eTotal > 0;
+  // 오차율 3단계 해석 레이블 (LOW=0 전제)
+  const eQualityLabel = (diff) =>
+    diff == null || diff <= 5  ? '매우 높은 데이터 일관성을 보였습니다.' :
+    diff <= 15                 ? '전반적으로 양호한 데이터 일관성을 보였습니다.' :
+                                 '일부 지표 간 차이가 확인되었으나 허용 범위 내로 평가되었습니다.';
   const eSummary = isAllEFailed
     ? '기업 실측 데이터 추출에 실패하여 업종 평균 벤치마크 기반 추정 평가가 적용되었습니다.'
     : eFailed >= 3
     ? `${eFailed}개 항목의 수치 추출에 실패했습니다. 업종 평균 기반 추정치가 부분 적용되었습니다.`
     : eLow >= 3
-    ? `${eLow}개 항목의 증빙 수치 불일치가 감지되어 보수적 평가가 적용되었습니다.`
+    ? `${eLow}개 지표에서 입력값과 증빙 수치 간 불일치가 감지되어 보수적 평가가 적용되었습니다. 해당 항목의 측정 기준 및 데이터 출처 재확인이 권장됩니다.`
     : eLow >= 1
-    ? `일부 지표에서 수치 불일치가 확인되어 추가 검토가 필요합니다.`
+    ? `${eLow}개 지표에서 수치 불일치가 확인되어 추가 검토가 필요합니다.${eHigh + eMed > 0 ? ` 나머지 ${eHigh + eMed}개 지표는 정상 검증되었습니다.` : ''}`
     : eMed >= 1
-    ? (eAvgDiff != null && eAvgDiff >= 0.01
-        ? `대부분의 환경 지표가 검증되었으며, 평균 오차율은 ${fmtDiff(eAvgDiff)}로 확인되었습니다.`
-        : `대부분의 환경 지표가 검증되었으며 경미한 차이가 확인되었습니다.`)
+    ? `환경 데이터 검증 결과 LOW 수준의 불일치는 발견되지 않았으며, ${eQualityLabel(eAvgDiff)} (HIGH ${eHigh}건 · MEDIUM ${eMed}건)`
     : eHigh > 0
-    ? (eMaxDiff != null && eMaxDiff >= 0.01
-        ? `환경 지표 ${eHigh}건 전항목이 HIGH 수준으로 검증되었으며, 최대 오차율은 ${fmtDiff(eMaxDiff)}로 확인되었습니다.`
-        : `환경 지표 ${eHigh}건 전항목이 HIGH 수준으로 검증되어 높은 데이터 신뢰도를 확보하였습니다.`)
+    ? `환경 지표 ${eHigh}건 전항목이 HIGH 수준으로 검증되어 높은 데이터 신뢰성을 확보하였습니다.`
     : '증빙 수치 검증이 완료되었습니다.';
   const eTone = isAllEFailed ? 'amber' : eLow >= 2 ? 'red' : eLow === 1 ? 'amber' : eMed >= 1 ? 'amber' : eFailed >= 3 ? 'amber' : 'emerald';
 
@@ -3992,13 +4032,19 @@ function buildAnalysisSummary(data) {
   const sVerifiedEvs = sEvs.filter(e => getVerificationStatus(e) === 'VERIFIED');
   const sWeakEvs     = sEvs.filter(e => ['PARTIAL','WEAK'].includes(getVerificationStatus(e)));
   const sVerifiedCodes = new Set(sVerifiedEvs.map(e => e.indicatorCode)).size;
+  // S 검증 커버리지 등급 레이블 (sMissing=0, sLowConf=0 전제)
+  const sCovLabel = sTotal > 0
+    ? (sVerifiedCodes / sTotal >= 0.8 ? '근거 신뢰도가 높은 수준입니다.'
+     : sVerifiedCodes / sTotal >= 0.5 ? '전반적으로 양호한 수준의 근거가 확인되었습니다.'
+     : '일부 지표의 근거 강화가 권장됩니다.')
+    : '';
   const sSummary = sUniq === 0
     ? '검증 근거가 충분히 확보되지 않았습니다. 관련 실적 자료 및 운영 증빙 문서 보완이 필요합니다.'
     : sMissing >= 1
-    ? '정책·실적 관련 증빙 자료를 보완하면 사회 부문 평가 신뢰도를 높일 수 있습니다.'
+    ? `${sUniq}개 지표에서 운영 근거가 확인되었으며, ${sMissing}개 지표는 증빙이 부족합니다. 정책·실적 자료 보완 시 사회 부문 평가 신뢰도를 높일 수 있습니다.`
     : sLowConf > 0
-    ? '일부 항목의 신뢰도 향상을 위해 관련 운영 증빙 문서 보완이 권장됩니다.'
-    : '사회 지표 전반에 대해 검증 근거가 확인되었습니다.';
+    ? `사회(S) 지표 ${sUniq}개 모두 운영 근거가 확인되었습니다. 다만 일부 세부 검증 항목의 신뢰도가 낮아 관련 운영 증빙 문서 보완이 권장됩니다.`
+    : `사회(S) 지표 ${sUniq}개 전항목에서 검증 근거가 확인되었습니다. ${sCovLabel}`;
   const sTone = sMissing >= 2 ? 'red' : sMissing === 1 ? 'amber' : 'emerald';
 
   // ── G 카테고리 (사용자 선택 기준 5개 지표) ────────────────────────────
@@ -4014,13 +4060,19 @@ function buildAnalysisSummary(data) {
   const gWeakEvs     = gEvs.filter(e => ['PARTIAL','WEAK'].includes(getVerificationStatus(e)));
   const gVerifiedCodes = new Set(gVerifiedEvs.map(e => e.indicatorCode)).size;
   const gPartialCodes  = new Set(gWeakEvs.map(e => e.indicatorCode)).size;
+  // G 공시 커버리지 등급 레이블 (gMissing=0, gLowConf=0 전제)
+  const gCovLabel = gTotal > 0
+    ? (gVerifiedCodes / gTotal >= 0.8 ? '공시 근거 신뢰도가 높은 수준입니다.'
+     : gVerifiedCodes / gTotal >= 0.5 ? '전반적으로 양호한 수준의 공시 근거가 확인되었습니다.'
+     : '일부 지표의 공시 근거 강화가 권장됩니다.')
+    : '';
   const gSummary = gUniq === 0
-    ? '검증 근거가 충분히 확보되지 않았습니다. 관련 정책 문서 및 공시 자료 보완이 필요합니다.'
+    ? '공시 근거가 충분히 확보되지 않았습니다. 윤리경영·이사회 독립성·내부통제 관련 정책 문서 및 공시 자료 보완이 필요합니다.'
     : gMissing >= 1
-    ? '공시·내부통제 관련 문서를 보완하면 지배구조 부문 평가 신뢰도를 높일 수 있습니다.'
+    ? `${gUniq}개 지표에서 운영·공시 근거가 확인되었으며, ${gMissing}개 지표는 관련 공시가 부족합니다. 이사회 독립성·내부통제·외부감사 관련 문서 보완 시 지배구조 평가 신뢰도가 향상됩니다.`
     : gLowConf > 0
-    ? '일부 항목의 신뢰도 향상을 위해 이사회·감사 관련 공시 자료 보완이 권장됩니다.'
-    : '지배구조 지표 전반에 대해 검증 근거가 확인되었습니다.';
+    ? `지배구조(G) 지표 ${gUniq}개 모두 운영·공시 근거가 확인되었습니다. 다만 일부 세부 검증 항목의 신뢰도 개선이 필요하며, 감사·이사회 관련 공시 자료 구체화가 권장됩니다.`
+    : `지배구조(G) 지표 ${gUniq}개 전항목에서 운영·공시 근거가 확인되었습니다. ${gCovLabel}`;
   const gTone = gMissing >= 2 ? 'red' : gMissing === 1 ? 'amber' : 'emerald';
 
   return {
@@ -4034,10 +4086,10 @@ function buildAnalysisSummary(data) {
 }
 
 // ── 최종 평가 요약 빌더 ────────────────────────────────────────────────
+// 환경(E) 데이터 검증 결과 영역 전용 — ESG 성과 등급이 아닌 검증 결과(HIGH/MEDIUM/LOW)만 표시
 function buildFinalSummary({ finalGrade, confidence, lowCount, mediumCount, avgDiff, evidenceCount, isBenchmarkFallback, isFullBenchmark }) {
   const low    = lowCount    ?? 0;
   const medium = mediumCount ?? 0;
-  const grade  = finalGrade  ?? '';
 
   if (isFullBenchmark) {
     return { text: '환경(E) 수치 데이터가 제출되지 않아 체크리스트 기반으로만 평가가 진행되었습니다. PDF 또는 CSV 파일 제출 시 정확도가 향상됩니다.', tone: 'amber' };
@@ -4045,35 +4097,18 @@ function buildFinalSummary({ finalGrade, confidence, lowCount, mediumCount, avgD
   if (isBenchmarkFallback) {
     return { text: '환경(E) 실측 데이터 없이 평가가 진행되었습니다. 수치 데이터를 제출하면 정확도가 향상됩니다.', tone: 'amber' };
   }
-  if (grade === 'S') {
-    return { text: '탐지된 증빙 데이터 기준으로 ESG 전 영역에서 높은 수치 일관성이 확인되었습니다.', tone: 'emerald' };
-  }
-  if (grade === 'A') {
-    return { text: '탐지된 증빙 데이터 기준으로 대부분의 지표에서 높은 일관성이 확인되었습니다.', tone: 'emerald' };
-  }
-  if (grade === 'B') {
-    if (low >= 1)
-      return { text: `일부 항목에서 증빙 수치 차이(${low}건)가 발견되어 등급이 제한되었으나 전반적으로 양호한 수준입니다.`, tone: 'amber' };
-    if (medium >= 1)
-      return { text: `경미한 수치 차이(${medium}건)가 확인되었으나 전반적으로 양호한 수준입니다.`, tone: 'amber' };
-    return { text: '일부 항목에서 경미한 차이가 발견되었으나 전반적으로 양호한 수준입니다.', tone: 'amber' };
-  }
-  if (grade === 'C') {
-    if (low >= 1)
-      return { text: `여러 항목(${low}건)에서 입력값과 증빙 데이터 간 차이가 발견되어 신뢰도가 제한되었습니다.`, tone: 'red' };
-    if (medium >= 1)
-      return { text: `경미한 수치 차이(${medium}건)가 감지되어 등급이 조정되었습니다.`, tone: 'amber' };
-    return { text: '데이터 검증 결과 C등급 수준의 ESG 성과가 산출되었습니다.', tone: 'amber' };
-  }
-  if (grade === 'D') {
-    if (low >= 1)
-      return { text: `다수 항목(${low}건)에서 수치 불일치가 감지되었습니다. 증빙 문서의 보완 및 추가 공시가 권장됩니다.`, tone: 'red' };
-    return { text: '환경(E) 지표의 포괄적인 데이터 보강 및 공시가 권장됩니다.', tone: 'red' };
-  }
-  // fallback
+  // LOW 불일치 기반
   if (low >= 3)
-    return { text: '입력값과 증빙 데이터 간 차이가 발견되어 일부 항목의 신뢰도가 낮게 평가되었습니다.', tone: 'red' };
-  return { text: 'ESG 데이터와 증빙 문서를 기반으로 평가가 완료되었습니다.', tone: 'zinc' };
+    return { text: `환경 지표 ${low}개 항목에서 수치 불일치(LOW)가 감지되었습니다. 증빙 문서의 수치 정합성을 점검하십시오.`, tone: 'red' };
+  if (low >= 1)
+    return { text: `${low}개 항목에서 수치 불일치(LOW)가 감지되었습니다. 해당 항목의 증빙 자료를 재검토하세요.`, tone: 'amber' };
+  // MEDIUM 근사 일치
+  if (medium >= 1)
+    return { text: `${medium}개 항목에서 근사 일치(MEDIUM)가 확인되었습니다. 전반적인 수치 검증은 완료되었습니다.`, tone: 'amber' };
+  // 전항목 HIGH
+  if (avgDiff == null || avgDiff < 0.01)
+    return { text: '모든 환경 지표가 검증되었으며 데이터 일치율이 매우 높습니다.', tone: 'emerald' };
+  return { text: `수치 검증이 완료되었습니다. 평균 오차율 ${fmtDiff(avgDiff)}로 데이터 신뢰도가 확인되었습니다.`, tone: 'emerald' };
 }
 
 // ── Evidence 상세 모달 ─────────────────────────────────────────────────
@@ -5250,11 +5285,15 @@ export default function AnalysisResultPage() {
     return (analysisSummary?.e?.failed ?? 0) >= (analysisSummary?.e?.total ?? 5);
   }, [data, analysisSummary]);
 
-  // 신뢰도-점수 불일치 감지 (점수 높은데 confidence 낮은 경우)
+  // 신뢰도-점수 불일치 감지 — LOW mismatch vs 증빙 부족 원인 구분
   const confidenceMismatch = useMemo(() => {
-    const score = data?.totalScore ?? 0;
-    const conf  = data?.overallConfidence ?? 100;
-    if (score >= 80 && conf < 50) return { score, conf };
+    const score    = data?.totalScore ?? 0;
+    const conf     = data?.overallConfidence ?? 100;
+    const lowCount = data?.lowMismatchCount ?? 0;
+    if (score >= 80 && conf < 50) {
+      const reason = lowCount > 0 ? 'LOW_MISMATCH' : 'EVIDENCE_SHORTAGE';
+      return { score, conf, reason };
+    }
     return null;
   }, [data]);
 
@@ -5264,12 +5303,10 @@ export default function AnalysisResultPage() {
     return (data?.evidenceMatches ?? []).filter(e => e.indicatorCode?.startsWith('E')).length === 0;
   }, [data, isBenchmarkFallback]);
 
-  // 신뢰도: floor(VERIFIED 충분) + ceiling(WEAK 과다 시 최대 75) 적용
+  // 신뢰도: 서버값(overallConfidence)을 SoT로 사용 — floor 보정 제거
+  // ceiling(WEAK 과다 시 최대 75)만 유지
   const adjustedConfidence = useMemo(() => {
     let base = data?.overallConfidence ?? 100;
-    // floor: VERIFIED 충분하고 불일치 적으면 최소 65
-    if (auditCounts.verified >= 6 && auditCounts.contra <= 1 && base < 65) base = 65;
-    // ceiling: 진짜 WEAK(제한검증) 비율 > 40% — 증빙 품질 불충분으로 최대 75% 제한
     const activeTotal = auditCounts.total > 0 ? auditCounts.total : 1;
     const weakRatio = (auditCounts.weak ?? 0) / activeTotal;
     if (weakRatio > 0.40 && base > 75) base = 75;
@@ -5709,9 +5746,6 @@ export default function AnalysisResultPage() {
                     } ${adjustedConfidence < 50 ? 'opacity-70' : ''}`}>
                       <Shield size={10} className="shrink-0" />
                       분석 신뢰도 {adjustedConfidence}%
-                      {adjustedConfidence < d.overallConfidence && (
-                        <span className="text-gray-400 text-[8px] ml-0.5">(보정 전 {d.overallConfidence}%)</span>
-                      )}
                       <ConfidenceTooltip />
                     </span>
                     {adjustedConfidence < 50 && (
@@ -5749,8 +5783,39 @@ export default function AnalysisResultPage() {
                   )}
                 </div>
               )}
-              {/* ── AI 검증 제한 상태 카드 (신뢰도 < 50%) ── */}
-              {!isAutoSimulation && adjustedConfidence < 50 && (
+              {/* ── 수치 불일치 경고 — 환경(E) 검증 결과 직후, 핵심 이슈 직전 ── */}
+              {!isAutoSimulation && (d.lowMismatchCount ?? 0) > 0 && (
+                <div className="mt-3 flex items-start gap-3 rounded-xl border px-4 py-3 bg-red-50 border-red-200">
+                  <AlertTriangle size={14} className="text-red-500 shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-[11px] font-bold text-red-700">
+                        {(d.lowMismatchCount ?? 0) >= 4 ? '심각한 수치 불일치 감지' : '수치 불일치 감지'}
+                      </p>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 border border-red-300 text-red-700">
+                        검증 실패 {d.lowMismatchCount}건
+                      </span>
+                      {d.gradeCeilingApplied && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-700">
+                          등급 제한 적용
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-red-600 mt-1">
+                      {(d.lowMismatchCount ?? 0) >= 4
+                        ? `입력한 ESG 환경 데이터 ${d.lowMismatchCount}개 항목이 증빙 문서 수치와 심각하게 불일치합니다.`
+                        : `입력한 ESG 환경 데이터가 증빙 문서 수치와 일치하지 않는 항목이 있습니다.`}
+                      {d.gradeCeilingApplied && (
+                        <span className="ml-2 font-semibold text-amber-700">
+                          수치 검증 실패로 등급 제한이 적용되었습니다.
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              )}
+              {/* ── AI 검증 제한 상태 카드 (신뢰도 < 50%, 증빙 부족 케이스만) ── */}
+              {!isAutoSimulation && adjustedConfidence < 50 && (data?.lowMismatchCount ?? 0) === 0 && (
                 <div className="mt-3 flex items-start gap-3 px-4 py-3 rounded-xl border bg-amber-50 border-amber-200">
                   <AlertTriangle size={14} className="text-amber-500 shrink-0 mt-0.5" />
                   <div className="min-w-0">
@@ -5854,13 +5919,13 @@ export default function AnalysisResultPage() {
                   </details>
                 );
               })()}
-              {/* 신뢰도-점수 불일치 경고 (MANUAL only) */}
-              {!isAutoSimulation && confidenceMismatch && (
+              {/* 신뢰도-점수 불일치 경고 — EVIDENCE_SHORTAGE 케이스만 표시 */}
+              {/* LOW_MISMATCH는 상단 빨간 경고 박스에서 이미 처리 */}
+              {!isAutoSimulation && confidenceMismatch?.reason === 'EVIDENCE_SHORTAGE' && (
                 <div className="mt-2 flex items-start gap-2.5 px-4 py-2.5 rounded-xl border bg-amber-50 border-amber-200">
                   <AlertTriangle size={12} className="text-amber-500 shrink-0 mt-0.5" />
                   <p className="text-xs text-amber-700 leading-relaxed">
-                    증빙 부족 상태에서 체크리스트 기반 점수가 반영되었습니다.
-                    분석 신뢰도({confidenceMismatch.conf}%)과 종합 점수({confidenceMismatch.score}) 간 불일치가 존재합니다.
+                    증빙 부족 상태에서 체크리스트 기반 점수가 반영되었습니다. 분석 신뢰도({confidenceMismatch.conf}%)가 낮아 결과를 참고용으로만 활용하십시오.
                   </p>
                 </div>
               )}
@@ -5868,7 +5933,7 @@ export default function AnalysisResultPage() {
             <div className="flex flex-col items-end gap-2 shrink-0">
               <GradeBadge grade={d.finalGrade} size="lg" />
               {d.gradeCeilingApplied && !isAutoSimulation && (
-                <span className="text-[9px] font-bold text-red-400 whitespace-nowrap">⚠ 검증 실패 등급 제한</span>
+                <span className="text-[9px] font-bold text-amber-600 whitespace-nowrap">검증 결과로 인한 등급 제한 적용</span>
               )}
               {d.analyzedAt && (
                 <div className="flex items-center gap-1 text-[10px] text-gray-400 mt-1">
@@ -6200,7 +6265,14 @@ export default function AnalysisResultPage() {
               {/* ── 종합 진단 의견 (AI 생성) ── */}
               {d.overallOpinion && (
                 <p className="text-[14px] text-gray-600 border-t border-gray-100 pt-5 mt-1" style={{ lineHeight: '1.9' }}>
-                  {d.overallOpinion
+                  {sanitizeOpinionText(
+                    d.overallOpinion,
+                    auditCounts.contra,
+                    verificationStats.lowCount,
+                    verificationStats.mediumCount,
+                    (analysisSummary?.e?.high ?? 0) === (analysisSummary?.e?.total ?? 5)
+                      && (analysisSummary?.e?.high ?? 0) > 0
+                  )
                     .replace(/<[^>]+>/g, ' ')
                     .replace(/확인되지\s+않았습니다\s*지표는\s+없습니다[.!?。]?/g, '')
                     .replace(/[^.!?。]*지표는\s+없습니다[.!?。]?/g, '')
@@ -6245,37 +6317,6 @@ export default function AnalysisResultPage() {
           </div>
         )}
 
-        {/* ── 수치 검증 실패 경고 배너 ─────────────────────── */}
-        {(d.lowMismatchCount > 0) && activeTab === 'summary' && (
-          <div className="flex items-start gap-3 rounded-2xl border px-5 py-4 bg-red-50 border-red-200">
-            <AlertTriangle size={15} className="text-red-500 shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="text-sm font-bold text-red-700">
-                  {d.lowMismatchCount >= 4 ? '심각한 수치 불일치 감지' : '수치 불일치 감지'}
-                </p>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 border border-red-300 text-red-700">
-                  검증 실패 {d.lowMismatchCount}건
-                </span>
-                {d.gradeCeilingApplied && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-700">
-                    등급 제한 적용
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-red-600 mt-1">
-                {d.lowMismatchCount >= 4
-                  ? `입력한 ESG 환경 데이터 ${d.lowMismatchCount}개 항목이 증빙 문서 수치와 심각하게 불일치합니다.`
-                  : `입력한 ESG 환경 데이터가 증빙 문서 수치와 일치하지 않는 항목이 있습니다.`}
-                {d.gradeCeilingApplied && (
-                  <span className="ml-2 font-semibold text-amber-700">
-                    수치 검증 실패로 등급 제한이 적용되었습니다.
-                  </span>
-                )}
-              </p>
-            </div>
-          </div>
-        )}
 
         {/* ── E vs S/G 검증 방식 설명 ─────────────────────── */}
         {activeTab === 'summary' && (
@@ -7680,7 +7721,7 @@ export default function AnalysisResultPage() {
                   )}
                   {finishedAt && (
                     <span className="text-[10px] text-gray-400">
-                      {new Date(finishedAt).toLocaleString('ko-KR', { timeZone:'Asia/Seoul', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' })}
+                      {fmtKST(finishedAt)}
                     </span>
                   )}
                 </div>

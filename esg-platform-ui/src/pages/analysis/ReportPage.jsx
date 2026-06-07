@@ -20,7 +20,10 @@ const GRADE_CLS = {
 
 const fmtDate = (s) => {
   if (!s) return '—';
-  try { return new Date(s).toLocaleDateString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }); }
+  try {
+    const utc = /Z$|[+-]\d{2}:?\d{2}$/.test(s) ? s : s + 'Z';
+    return new Date(utc).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul', year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  }
   catch { return '—'; }
 };
 
@@ -329,12 +332,13 @@ export default function ReportPage() {
                 </span>
                 <span className="text-sm font-semibold text-gray-800">최근 분석 요약</span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
+              <div className="grid grid-cols-2 sm:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
                 {[
                   { label: 'ESG 등급',    value: grade,                      color: gc,       sub: 'K-ESG 기준' },
                   { label: '종합 점수',   value: total != null ? `${total}점` : '—', color: gc, sub: '/ 100점' },
                   { label: '환경 (E)',    value: scores.E != null ? `${Math.round(scores.E)}점` : '—', color: '#059669', sub: 'Environment' },
                   { label: '사회 (S)',    value: scores.S != null ? `${Math.round(scores.S)}점` : '—', color: '#3b82f6', sub: 'Social' },
+                  { label: '지배구조 (G)', value: scores.G != null ? `${Math.round(scores.G)}점` : '—', color: '#f59e0b', sub: 'Governance' },
                 ].map(item => (
                   <div key={item.label} className="px-6 py-5">
                     <p className="kpi-label mb-2">{item.label}</p>
