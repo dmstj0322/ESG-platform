@@ -29,8 +29,6 @@ public class Member extends BaseTimeEntity {
   @Enumerated(EnumType.STRING)
   private Role role;
 
-  private int point;
-
   @Builder
   public Member(Long companyId, String email, String password, String nickname, Role role) {
     this.companyId = companyId;
@@ -38,6 +36,5 @@ public class Member extends BaseTimeEntity {
     this.password = password;
     this.nickname = nickname;
     this.role = role;
-    this.point = 0;
   }
 }

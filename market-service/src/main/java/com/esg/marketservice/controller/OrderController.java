@@ -4,6 +4,7 @@ import com.esg.common.security.AuthUser;
 import com.esg.marketservice.dto.OrderRequestDto;
 import com.esg.marketservice.dto.OrderResponseDto;
 import com.esg.marketservice.dto.OrderViewResponseDto;
+import com.esg.marketservice.service.OrderFacade;
 import com.esg.marketservice.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -18,11 +19,12 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/orders")
 public class OrderController {
   private final OrderService orderService;
+  private final OrderFacade orderFacade;
 
   @PostMapping
   public ResponseEntity<Long> placeOrder(@AuthenticationPrincipal AuthUser authUser,
                                          @RequestBody OrderRequestDto dto) {
-    Long orderId = orderService.createOrder(
+    Long orderId = orderFacade.createOrder(
       authUser.memberId(),
       authUser.companyId(),
       dto.productId(),

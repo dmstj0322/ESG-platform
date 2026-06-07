@@ -16,8 +16,6 @@ import com.esg.marketservice.repository.ProductRepository;
 import com.esg.marketservice.repository.VoucherRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.redisson.api.RLock;
-import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -36,7 +33,6 @@ public class OrderService {
   private final OrderRepository orderRepository;
   private final VoucherRepository voucherRepository;
   private final DonationRecordRepository donationRecordRepository;
-  private final RedissonClient redissonClient;
   private final PointClient pointClient;
   private final AuthClient authClient;
   private final OrderEventProducer orderEventProducer;
@@ -47,84 +43,61 @@ public class OrderService {
 
   @Transactional
   public Long createOrder(Long memberId, Long companyId, Long productId, int count) {
-    String lockKey = "lock:product:" + productId;
-    RLock lock = redissonClient.getLock(lockKey);
+    // 재고 및 상태 검증
+    Product product = productRepository.findById(productId)
+      .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다."));
+
+    if (product.getStatus() != ProductStatus.ON_SALE) {
+      throw new IllegalStateException("현재 판매 중인 상품이 아닙니다.");
+    }
+
+    MemberResponse employee = authClient.getMemberById(memberId);
+    String adminEmail = authClient.getAdminEmailByCompanyId(companyId);
+
+    // 포인트 서비스 연동 (포인트 차감 요청)
+    Long totalAmount = product.getPrice() * count;
+    pointClient.usePoints(new PointRequest(memberId, companyId, totalAmount, product.getName() + " 구매", productId, 0));
 
     try {
-      // 락 획득 시도 (waitTime: 5초)
-      boolean isLocked = lock.tryLock(5, TimeUnit.SECONDS);
+      // OrderItem 및 Order 생성 (내부에서 재고 차감 실행)
+      OrderItem orderItem = OrderItem.createOrderItem(product, count);
+      Order order = Order.createOrder(memberId, product.getCompanyId(), employee.name(), List.of(orderItem));
 
-      if (!isLocked) {
-        log.info("락 획득 실패 - productId: {}", productId);
-        throw new RuntimeException("현재 주문이 많아 잠시 후 다시 시도해주세요.");
+      Order savedOrder = orderRepository.save(order);
+      log.info("주문 생성 완료 - orderId: {}", savedOrder.getId());
+
+      donateOrder(product, employee, totalAmount, count, savedOrder.getId());
+
+      if (product.getCategory() == Category.GIFTICON) {
+        Voucher voucher = voucherRepository.findFirstByProductIdAndOrderIdIsNull(productId)
+          .orElseThrow(() -> new RuntimeException("사용 가능한 바우처 재고가 없습니다."));
+
+        voucher.assignToOrder(order.getId());
       }
-      log.info("락 획득 성공 - productId: {}", productId);
 
-      // 재고 및 상태 검증
-      Product product = productRepository.findById(productId)
-        .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다."));
+      String detailLink = String.format("%s/my-page/%d", frontendBaseUrl, order.getId());
 
-      if (product.getStatus() != ProductStatus.ON_SALE) {
-        throw new IllegalStateException("현재 판매 중인 상품이 아닙니다.");
-      }
+      orderEventProducer.sendOrderEvent(new OrderCreatedEvent(
+        savedOrder.getId(),
+        memberId,
+        companyId,
+        employee.email(),
+        adminEmail,
+        product.getName(),
+        product.getVoucherUrl(),
+        detailLink,
+        savedOrder.getTotalPrice(),
+        "AUTO_SEND_BY_ADMIN",
+        product.getCategory()
+      ));
 
-      MemberResponse employee = authClient.getMemberById(memberId);
-      String adminEmail = authClient.getAdminEmailByCompanyId(companyId);
+      return savedOrder.getId();
 
-      // 포인트 서비스 연동 (포인트 차감 요청)
-      Long totalAmount = product.getPrice() * count;
-      pointClient.usePoints(new PointRequest(memberId, companyId, totalAmount, product.getName() + " 구매", productId, 0));
-
-      try {
-        // OrderItem 및 Order 생성 (내부에서 재고 차감 실행)
-        OrderItem orderItem = OrderItem.createOrderItem(product, count);
-        Order order = Order.createOrder(memberId, product.getCompanyId(), employee.name(), List.of(orderItem));
-
-        Order savedOrder = orderRepository.save(order);
-        log.info("주문 생성 완료 - orderId: {}", savedOrder.getId());
-
-        donateOrder(product, employee, totalAmount, count, savedOrder.getId());
-
-        if (product.getCategory() == Category.GIFTICON) {
-          Voucher voucher = voucherRepository.findFirstByProductIdAndOrderIdIsNull(productId)
-            .orElseThrow(() -> new RuntimeException("사용 가능한 바우처 재고가 없습니다."));
-
-          voucher.assignToOrder(order.getId());
-        }
-
-        String detailLink = String.format("%s/my-page/%d", frontendBaseUrl, order.getId());
-
-        orderEventProducer.sendOrderEvent(new OrderCreatedEvent(
-          savedOrder.getId(),
-          memberId,
-          companyId,
-          employee.email(),
-          adminEmail,
-          product.getName(),
-          product.getVoucherUrl(),
-          detailLink,
-          savedOrder.getTotalPrice(),
-          "AUTO_SEND_BY_ADMIN",
-          product.getCategory()
-        ));
-
-        return savedOrder.getId();
-
-      } catch (Exception e) {
-        log.error("주문 생성 중 진짜 에러 발생: ", e);
-        log.error("주문 저장 실패, 포인트 환불 진행 - memberId: {}, amount: {}", memberId, totalAmount);
-        pointClient.refundPoints(new PointRequest(memberId, companyId, totalAmount, "주문 생성 실패로 인한 환불", productId, 0));
-        throw new RuntimeException("주문 처리 중 오류가 발생하여 결제가 취소되었습니다.");
-      }
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new RuntimeException("시스템 오류가 발생했습니다.");
-    } finally {
-      // 락 해제
-      if (lock.isHeldByCurrentThread()) {
-        lock.unlock();
-        log.info("락 해제 완료 - productId: {}", productId);
-      }
+    } catch (Exception e) {
+      log.error("주문 생성 중 진짜 에러 발생: ", e);
+      log.error("주문 저장 실패, 포인트 환불 진행 - memberId: {}, amount: {}", memberId, totalAmount);
+      pointClient.refundPoints(new PointRequest(memberId, companyId, totalAmount, "주문 생성 실패로 인한 환불", productId, 0));
+      throw new RuntimeException("주문 처리 중 오류가 발생하여 결제가 취소되었습니다.");
     }
   }
 
