@@ -79,7 +79,7 @@ function KpiSkeleton() {
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { latestReport, fetchLatestData, fetchBenchmarkData } = useAnalysis();
+  const { latestReport, fetchLatestData, fetchBenchmarkData, companyProfileName } = useAnalysis();
 
   const [rawData,          setRawData]          = useState(null);
   const [loading,          setLoading]          = useState(false);
@@ -262,7 +262,7 @@ export default function DashboardPage() {
             <h1 className="text-[26px] font-black text-gray-900 tracking-tight leading-snug">
               안녕하세요,{' '}
               <span style={{ color: gradeAccent }}>
-                {kpis?.companyName ?? user?.nickname ?? '기업'}
+                {kpis?.companyName ?? companyProfileName ?? user?.nickname ?? '기업'}
               </span>{' '}
               관리자님!
             </h1>
