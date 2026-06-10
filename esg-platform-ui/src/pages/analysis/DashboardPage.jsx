@@ -216,7 +216,7 @@ export default function DashboardPage() {
   const fmtFeedTime = (s) => {
     if (!s) return '';
     try {
-      const date = new Date(s.includes('Z') ? s : s + 'Z');
+      const date = new Date(s);
       const diff = Date.now() - date.getTime();
       const mins = Math.floor(diff / 60000);
       if (mins < 60) return `${mins}분 전`;
