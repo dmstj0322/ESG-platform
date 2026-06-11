@@ -64,7 +64,7 @@ const AdminDashboard = () => {
     if (!companyId) return;
     setLoading(true);
     try {
-      let postUrl = `/admin/posts?page=${postPage}&size=10&sort=createdDate,desc`;
+      let postUrl = `/admin/posts?page=${postPage}&size=12&sort=createdDate,desc`;
       if (postFilter !== 'ALL') {
         postUrl += `&status=${postFilter}`;
       }
@@ -245,7 +245,7 @@ const AdminDashboard = () => {
                     </p> */}
                     <div style={{ marginBottom: '10px' }}>
                       <span style={aiLabelStyle}>👤 사용자 선택 활동</span>
-                      <p style={{ margin: '4px 0', fontSize: '14px', fontWeight: 'bold', color: '#0062b3' }}>
+                      <p style={{ margin: '4px 0', fontSize: '14px', fontWeight: 'bold', color: '#0D7A58' }}>
                         {getActivityName(post.activityType)}
                       </p>
                     </div>
@@ -309,7 +309,7 @@ const AdminDashboard = () => {
                         </>
                       ) : (
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                          <span style={{ fontSize: '14px', color: '#1864ab', fontWeight: 'bold' }}>✓ {getActivityName(post.activityType)}</span>
+                          <span style={{ fontSize: '14px', color: '#0D7A58', fontWeight: 'bold' }}>✓ {getActivityName(post.activityType)}</span>
                           <button
                             onClick={() => setEditingPostId(post.id)}
                             style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 'bold', border: '1px solid #16A87A', color: '#16A87A', backgroundColor: '#fff', borderRadius: '6px', cursor: 'pointer' }}

@@ -132,7 +132,7 @@ const headerStyle = { fontSize: '1.5rem', fontWeight: '800', marginBottom: '1.56
 
 const infoBoxStyle = { marginBottom: '1.5625rem', padding: '0.9375rem', backgroundColor: '#f8f9fa', borderRadius: '0.625rem' };
 const labelStyle = { display: 'block', fontSize: '0.875rem', fontWeight: 'bold', color: '#666', marginBottom: '0.5rem' };
-const activityBadgeStyle = { backgroundColor: '#e7f5ff', color: '#0062b3', padding: '0.25rem 0.75rem', borderRadius: '1.25rem', fontSize: '0.75rem', fontWeight: 'bold', display: 'inline-block', border: '1px solid #74c0fc' };
+const activityBadgeStyle = { backgroundColor: '#E6F7F1', color: '#0D7A58', padding: '0.25rem 0.75rem', borderRadius: '1.25rem', fontSize: '0.75rem', fontWeight: 'bold', display: 'inline-block', border: '1px solid #A8DFD0' };
 const helperTextStyle = { fontSize: '0.75rem', color: '#adb5bd', marginTop: '0.625rem' };
 
 const inputGroupStyle = { marginBottom: '1.25rem' };
@@ -144,6 +144,6 @@ const imageGridStyle = { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
 const imgStyle = { width: '100%', height: '6.25rem', objectFit: 'cover', borderRadius: '0.5rem', opacity: 0.7 };
 
 const buttonGroupStyle = { display: 'flex', gap: '0.625rem' };
-const submitBtnStyle = { flex: 1, padding: '0.9375rem', backgroundColor: '#339af0', color: '#fff', border: 'none', borderRadius: '0.625rem', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' };
+const submitBtnStyle = { flex: 1, padding: '0.9375rem', backgroundColor: '#16A87A', color: '#fff', border: 'none', borderRadius: '0.625rem', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' };
 const cancelBtnStyle = { flex: 1, padding: '0.9375rem', backgroundColor: '#f1f3f5', color: '#495057', border: 'none', borderRadius: '0.5rem', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' };
 export default PostEdit;
