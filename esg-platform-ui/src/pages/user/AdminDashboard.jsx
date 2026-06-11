@@ -242,7 +242,7 @@ const AdminDashboard = () => {
                   <div style={aiAnalysisBoxStyle}>
                     <div style={{ marginBottom: '10px' }}>
                       <span style={aiLabelStyle}>👤 사용자 선택 활동</span>
-                      <p style={{ margin: '4px 0', fontSize: '14px', fontWeight: 'bold', color: '#0D7A58' }}>
+                      <p style={{ margin: '4px 0', fontSize: '14px', fontWeight: 'bold', color: '#495057' }}>
                         {getActivityName(post.activityType)}
                       </p>
                     </div>
