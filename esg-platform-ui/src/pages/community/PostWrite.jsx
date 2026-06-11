@@ -148,7 +148,7 @@ const PostWrite = () => {
                 border: '1px solid #2b8a3e',
                 borderRadius: '8px',
                 outline: 'none',
-                backgroundColor: isAnalyzing ? '#f8f9fa' : '#e7f5ff',
+                backgroundColor: isAnalyzing ? '#f8faf8' : '#E6F7F1',
                 cursor: isAnalyzing ? 'not-allowed' : 'pointer',
                 fontWeight: 'bold',
                 color: '#0D7A58',
