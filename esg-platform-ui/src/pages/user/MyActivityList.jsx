@@ -113,43 +113,43 @@ const MyActivityList = () => {
               return (
                 <div key={item.orderId || index} style={listCardStyle}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flex: '1', minWidth: '150px', opacity: item.status === 'CANCELED' ? 0.5 : 1 }}>
-        {item.category === 'GIFTICON' ? (
-          <div style={iconCircleStyle('#E6F7F1', '#16A87A')}>🎁</div>
-        ) : (
-          <div style={iconCircleStyle('#f3f0ff', '#7048e8')}>🤝</div>
-        )}
-        
-        {/* 텍스트 영역: nowrap 유지 */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <div style={{ fontWeight: '700', fontSize: '0.9375rem', color: '#212529', whiteSpace: 'nowrap', overflow: 'visible' }}>
-            {item.status === 'CANCELED' ? <del>{item.productName}</del> : item.productName}
-          </div>
-          <div style={{ fontSize: '0.75rem', color: '#868e96', marginTop: '0.25rem', whiteSpace: 'nowrap' }}>
-            <span style={{ color: '#16A87A', fontWeight: '800' }}>{item.totalPrice?.toLocaleString()} P</span>
-            <span> | {new Date(item.orderDate || item.createdDate).toLocaleDateString()}</span>
-          </div>
-        </div>
-      </div>
+                    {item.category === 'GIFTICON' ? (
+                      <div style={iconCircleStyle('#E6F7F1', '#16A87A')}>🎁</div>
+                    ) : (
+                      <div style={iconCircleStyle('#f3f0ff', '#7048e8')}>🤝</div>
+                    )}
 
-      {/* 🌟 2. 버튼 영역: 아래로 내려갈 수 있게 flex-basis를 100%로 강제할 필요 없음. 
+                    {/* 텍스트 영역: nowrap 유지 */}
+                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                      <div style={{ fontWeight: '700', fontSize: '0.9375rem', color: '#212529', whiteSpace: 'nowrap', overflow: 'visible' }}>
+                        {item.status === 'CANCELED' ? <del>{item.productName}</del> : item.productName}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#868e96', marginTop: '0.25rem', whiteSpace: 'nowrap' }}>
+                        <span style={{ color: '#16A87A', fontWeight: '800' }}>{item.totalPrice?.toLocaleString()} P</span>
+                        <span> | {new Date(item.orderDate || item.createdDate).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 🌟 2. 버튼 영역: 아래로 내려갈 수 있게 flex-basis를 100%로 강제할 필요 없음. 
           flex-wrap: wrap이 적용된 부모가 알아서 처리함 */}
-      <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0, alignItems: 'center', marginLeft: 'auto' }}>
-        {item.status !== 'CANCELED' && (
-          <button onClick={() => navigate(`/my-page/${item.orderId}`)} style={viewVoucherBtnStyle}>
-            {item.category === 'DONATION' ? '인증서 확인' : '바우처 확인'}
-          </button>
-        )}
-        {canCancel ? (
-          <button onClick={() => handleCancel(item.orderId, item.productName)} style={cancelBtnStyle}>주문 취소</button>
-        ) : (
-          item.status !== 'CANCELED' && (
-            <button disabled style={disabledCancelBtnStyle}>{reason}</button>
-          )
-        )}
-        {item.status === 'CANCELED' && (
-          <span style={{ fontSize: '0.75rem', color: '#adb5bd', paddingRight: '0.3125rem' }}>취소 완료</span>
-        )}
-      </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0, alignItems: 'center', marginLeft: 'auto' }}>
+                    {item.status !== 'CANCELED' && (
+                      <button onClick={() => navigate(`/my-page/${item.orderId}`)} style={viewVoucherBtnStyle}>
+                        {item.category === 'DONATION' ? '인증서 확인' : '바우처 확인'}
+                      </button>
+                    )}
+                    {canCancel ? (
+                      <button onClick={() => handleCancel(item.orderId, item.productName)} style={cancelBtnStyle}>주문 취소</button>
+                    ) : (
+                      item.status !== 'CANCELED' && (
+                        <button disabled style={disabledCancelBtnStyle}>{reason}</button>
+                      )
+                    )}
+                    {item.status === 'CANCELED' && (
+                      <span style={{ fontSize: '0.75rem', color: '#adb5bd', paddingRight: '0.3125rem' }}>취소 완료</span>
+                    )}
+                  </div>
                 </div>
               );
             }
@@ -158,12 +158,7 @@ const MyActivityList = () => {
               return (
                 <div key={item.id || index} style={listCardStyle} onClick={() => navigate(`/posts/${item.id}`)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, overflow: 'hidden', cursor: 'pointer' }}>
-                    {/* {item.imageUrls?.[0] ? (
-                      <img src={item.imageUrls[0]} style={thumbnailImgStyle} alt="thumb" />
-                    ) : (
-                      <div style={iconCircleStyle('#E6F7F1', '#16A87A')}>📝</div>
-                    )} */}
-                    <div style={{ position: 'relative', width: '50px', height: '50px' }}>
+                    <div style={{ position: 'relative', width: '3.125rem', height: '3.125rem', flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                       {item.imageUrls?.[0] ? (
                         <>
                           <img src={item.imageUrls[0]} style={thumbnailImgStyle} alt="thumb" />
@@ -217,31 +212,24 @@ const MyActivityList = () => {
 
             if (type === 'comments') {
               return (
-                <div key={item.id || index} onClick={() => navigate(`/posts/${item.postId}`)} style={{
-                  display: 'flex', flexWrap: 'nowrap', gap: '12px', justifyContent: 'space-between',
-                  alignItems: 'center', padding: '16px', backgroundColor: '#fff',
-                  border: '1px solid #e9ecef', borderRadius: '12px', width: '100%', boxSizing: 'border-box', overflow: 'hidden', cursor: 'pointer'
-                }}>
-
-                  {/* 왼쪽 영역 */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+                <div key={item.id || index} style={listCardStyle} onClick={() => navigate(`/posts/${item.postId}`)}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, minWidth: 0, cursor: 'pointer' }}>
                     <div style={iconCircleStyle('#f3f0ff', '#845ef7')}>💬</div>
 
-                    {/* 🌟 텍스트를 감싸는 영역 (overflow: hidden, minWidth: 0 필수) */}
-                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                      <span style={{ fontWeight: '700', color: '#212529', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>
-                        "{item.content}"
-                      </span>
-                      <span style={{ fontSize: '13px', color: '#868e96', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', marginTop: '4px' }}>
-                        → {item.postTitle || '원문 게시글'}
-                      </span>
+                    <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                      <div style={mainTitleStyle}>"{item.content}"</div>
+                      <div style={postTitleInCommentStyle}>
+                        <span style={{ color: '#adb5bd', flexShrink: 0 }}>→</span>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {item.postTitle || '원문 게시글'}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* 오른쪽 날짜 영역 */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, marginLeft: 'auto' }}>
-                    <span style={{ fontSize: '13px', color: '#adb5bd' }}>{new Date(item.createdDate || item.createdAt).toLocaleDateString()}</span>
-                    <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#ced4da' }}>〉</span>
+                  <div style={rightMetaStyle}>
+                    <span>{new Date(item.createdDate || item.createdAt).toLocaleDateString()}</span>
+                    <span style={arrowStyle}>〉</span>
                   </div>
                 </div>
               );
@@ -294,7 +282,7 @@ const postTitleInCommentStyle = { fontSize: '0.8125rem', color: '#868e96', margi
 const rightMetaStyle = { display: 'flex', alignItems: 'center', gap: '1rem', color: '#adb5bd', fontSize: '0.8125rem', flexShrink: 0 };
 const arrowStyle = { fontWeight: 'bold', fontSize: '0.875rem', color: '#ced4da' };
 
-const thumbnailImgStyle = { width: '3.125rem', height: '3.125rem', borderRadius: '0.5rem', objectFit: 'cover', flexShrink: 0 };
+const thumbnailImgStyle = { width: '100%', height: '100%', borderRadius: '0.5rem', objectFit: 'cover', objectPosition: 'center', flexShrink: 0 };
 const verifyBadgeStyle = (bg, color) => ({ padding: '0.25rem 0.625rem', borderRadius: '0.375rem', fontSize: '0.6875rem', fontWeight: 'bold', backgroundColor: bg, color: color, display: 'inline-block' });
 const iconCircleStyle = (bg, color) => ({ width: '2.5rem', height: '2.5rem', borderRadius: '50%', backgroundColor: bg, color: color, display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0 });
 

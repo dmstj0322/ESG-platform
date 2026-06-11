@@ -435,8 +435,8 @@ const unifiedBoxStyle = (status, isEditing) => {
     minHeight: isLarge ? '96px' : '52px',
     borderRadius: '12px',
     border: '1px solid',
-    borderColor: status === 'APPROVED' ? '#d0ffdb' : status === 'WAITING' ? '#ffec99' : '#ffc9c9',
-    backgroundColor: status === 'APPROVED' ? '#f1fff8' : status === 'WAITING' ? '#fff9db' : '#fff5f5',
+    borderColor: status === 'APPROVED' ? '#abecba' : status === 'WAITING' ? '#ffec99' : '#ffc9c9',
+    backgroundColor: status === 'APPROVED' ? '#f8fffb' : status === 'WAITING' ? '#fff9db' : '#fff5f5',
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'center',
@@ -484,7 +484,7 @@ const postTitleStyle = { margin: 0, fontSize: '16px', flex: 1, whiteSpace: 'nowr
 const imgScrollStyle = { display: 'flex', gap: '10px', overflowX: 'auto', marginBottom: '15px', paddingBottom: '5px' };
 const postImgStyle = { width: '100px', height: '100px', objectFit: 'cover', borderRadius: '10px', border: '1px solid #eee' };
 
-const aiAnalysisBoxStyle = { backgroundColor: '#f8fffb', padding: '12px', borderRadius: '12px', marginBottom: '15px', border: '1px solid #d3f9d8' };
+const aiAnalysisBoxStyle = { backgroundColor: '#f8fffb', padding: '12px', borderRadius: '12px', marginBottom: '15px', border: '1px solid #abecba' };
 const aiLabelStyle = { fontSize: '12px', color: '#868e96', fontWeight: 'bold' };
 const aiScoreStyle = (score) => ({ fontSize: '12px', color: score >= 0.8 ? '#16A87A' : '#fa5252', fontWeight: 'bold' });
 
