@@ -1366,7 +1366,7 @@ const fmtKST = (isoStr, len = 16) => {
   if (!isoStr) return '';
   try {
     // LocalDateTime.now() returns UTC without 'Z' -> append 'Z' to force UTC parsing
-    const utc = /Z$|[+-]\d{2}:?\d{2}$/.test(isoStr) ? isoStr : isoStr + 'Z';
+    const utc = /Z$|[+-]\d{2}:?\d{2}$/.test(isoStr) ? isoStr : isoStr + '+09:00';
     return new Date(utc)
       .toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' })
       .slice(0, len);

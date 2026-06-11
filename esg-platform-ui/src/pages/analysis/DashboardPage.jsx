@@ -29,7 +29,7 @@ const wrapStyle = { maxWidth: 1440, margin: '0 auto' };
 const fmtDateTime = (s) => {
   if (!s) return null;
   try {
-    const utc = /Z$|[+-]\d{2}:?\d{2}$/.test(s) ? s : s + 'Z';
+    const utc = /Z$|[+-]\d{2}:?\d{2}$/.test(s) ? s : s + '+09:00';
     const d = new Date(utc);
     return d.toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit' })
       + ' ' + d.toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit' });
