@@ -483,7 +483,7 @@ const subtitleStyle = { margin: '8px 0 0 0', color: '#868e96', fontSize: '14px' 
 
 const btnPrimary = { backgroundColor: '#16A87A', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', boxShadow: '0 4px 10px rgba(22, 168, 122, 0.2)', transition: 'background 0.2s' };
 const btnCancel = { backgroundColor: '#e9ecef', color: '#495057', border: 'none', padding: '12px 24px', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' };
-const btnSubmit = { backgroundColor: '#1864ab', color: '#fff', border: 'none', padding: '12px 30px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '15px' };
+const btnSubmit = { backgroundColor: '#16A87A', color: '#fff', border: 'none', padding: '12px 30px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '15px' };
 const btnCancelLine = { backgroundColor: 'transparent', color: '#868e96', border: '1px solid #dee2e6', padding: '12px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' };
 
 const formCard = { backgroundColor: '#fff', padding: '35px', borderRadius: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '35px', border: '1px solid #f1f3f5' };
@@ -522,7 +522,7 @@ const participationPrice = { fontWeight: '800', color: '#16A87A', fontSize: '15p
 const targetAmountLabel = { fontSize: '11px', color: '#adb5bd', fontWeight: 'normal' };
 const gifticonPrice = { fontWeight: '800', color: '#495057', fontSize: '15px' };
 
-const imageUploadWrapper = { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', minHeight: '180px', border: '2px dashed #a5d8ff', borderRadius: '12px', backgroundColor: '#f8f9fa', cursor: 'pointer', position: 'relative', overflow: 'hidden', transition: 'border 0.2s ease, background 0.2s ease', boxSizing: 'border-box' };
+const imageUploadWrapper = { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', minHeight: '180px', border: '2px dashed #888', borderRadius: '12px', backgroundColor: '#f8f9fa', cursor: 'pointer', position: 'relative', overflow: 'hidden', transition: 'border 0.2s ease, background 0.2s ease', boxSizing: 'border-box' };
 const uploadPlaceholder = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', padding: '30px' };
 const uploadIcon = { fontSize: '32px', marginBottom: '4px' };
 const uploadMainText = { fontSize: '14px', fontWeight: '800', color: '#16A87A' };
