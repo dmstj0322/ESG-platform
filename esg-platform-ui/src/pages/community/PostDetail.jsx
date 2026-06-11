@@ -188,7 +188,7 @@ const containerStyle = { maxWidth: '40rem', margin: 'auto', padding: '0 1.25rem'
 const headerSectionStyle = { marginBottom: '1.875rem' };
 const mainTitleStyle = { fontSize: '1.5rem', fontWeight: '850', color: '#1a1a1a', margin: '0.9375rem 0', letterSpacing: '-0.5px' };
 const authorInfoStyle = { display: 'flex', alignItems: 'center', gap: '0.625rem', marginTop: '1.25rem' };
-const miniAvatarStyle = { width: '2rem', height: '2rem', borderRadius: '50%', backgroundColor: '#f1f3f5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.875rem', fontWeight: 'bold', color: '#339af0' };
+const miniAvatarStyle = { width: '2rem', height: '2rem', borderRadius: '50%', backgroundColor: '#f1f3f5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.875rem', fontWeight: 'bold', color: '#16A87A' };
 const detailSliderWrapper = { borderRadius: '1rem', overflow: 'hidden', boxShadow: '0 0.625rem 2.5rem rgba(0,0,0,0.1)', marginBottom: '2.5rem' };
 const bodyContentStyle = { padding: '0 0.625rem', marginBottom: '3.125rem' };
 const paragraphStyle = { fontSize: '1.125rem', lineHeight: '1.8', color: '#343a40', whiteSpace: 'pre-wrap' };
@@ -199,5 +199,5 @@ const activeLikeBtnStyle = { ...likeBtnStyle, backgroundColor: '#fff0f0', border
 const listBackBtnStyle = { padding: '0.75rem 1.5rem', borderRadius: '1.875rem', border: 'none', backgroundColor: '#f1f3f5', cursor: 'pointer', fontWeight: 'bold' };
 const deleteLinkStyle = { background: 'none', border: 'none', color: '#fa5252', cursor: 'pointer', fontSize: '0.875rem', textDecoration: 'underline' };
 const outlineBtnStyle = { padding: '0.5rem 1rem', borderRadius: '0.375rem', border: '1px solid #dee2e6', backgroundColor: '#fff', cursor: 'pointer', fontSize: '0.875rem' };
-const activityBadgeStyle = { backgroundColor: '#e7f5ff', color: '#0062b3', padding: '0.3125rem 0.875rem', borderRadius: '1.25rem', fontSize: '0.75rem', fontWeight: 'bold', display: 'inline-block', border: '1px solid #74c0fc' };
+const activityBadgeStyle = { backgroundColor: '#E6F7F1', color: '#0D7A58', padding: '0.3125rem 0.875rem', borderRadius: '1.25rem', fontSize: '0.75rem', fontWeight: 'bold', display: 'inline-block', border: '1px solid #A8DFD0' };
 export default PostDetails;

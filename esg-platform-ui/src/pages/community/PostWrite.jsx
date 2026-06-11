@@ -135,7 +135,7 @@ const PostWrite = () => {
         <div style={inputGroupStyle}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '5px' }}>
             <label style={{ fontWeight: 'bold', fontSize: '14px', color: '#333' }}>
-              활동 유형 {isAnalyzing && <span style={{fontSize: '12px', color: '#339af0', fontWeight: 'normal'}}>(🔄 AI 분석 중...)</span>}
+              활동 유형 {isAnalyzing && <span style={{fontSize: '12px', color: '#16A87A', fontWeight: 'normal'}}>(🔄 AI 분석 중...)</span>}
             </label>
 
             <select
@@ -145,13 +145,13 @@ const PostWrite = () => {
               style={{
                 padding: '12px',
                 fontSize: '15px',
-                border: '1px solid #339af0',
+                border: '1px solid #2b8a3e',
                 borderRadius: '8px',
                 outline: 'none',
                 backgroundColor: isAnalyzing ? '#f8f9fa' : '#e7f5ff',
                 cursor: isAnalyzing ? 'not-allowed' : 'pointer',
                 fontWeight: 'bold',
-                color: '#0062b3',
+                color: '#0D7A58',
                 appearance: 'auto'
               }}
             >
@@ -164,7 +164,7 @@ const PostWrite = () => {
             {previews.length > 0 && !isAnalyzing && (
               <div style={{
                 fontSize: '12px',
-                color: activityType === 'FAIL' ? '#d32f2f' : '#0062b3',
+                color: activityType === 'FAIL' ? '#d32f2f' : '#0D7A58',
                 paddingLeft: '4px'
               }}>
                 {aiResult === 'FAIL'
@@ -204,7 +204,7 @@ const PostWrite = () => {
 // --- 스타일 정의 ---
 const containerStyle = { maxWidth: '31.25rem', margin: '1.25rem auto', padding: '0 1.25rem', textAlign: 'left' };
 const formStyle = { backgroundColor: '#fff', padding: '1.25rem', borderRadius: '0.75rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 0 1px rgba(0,0,0,0.04)' };
-const headerStyle = { fontSize: '1.5rem', fontWeight: '800', marginBottom: '1.5625rem', color: '#339af0' };
+const headerStyle = { fontSize: '1.5rem', fontWeight: '800', marginBottom: '1.5625rem', color: '#2b8a3e' };
 
 const uploadBoxStyle = { marginBottom: '1.25rem' };
 const emptyUploadStyle = { display: 'flex', height: '12.5rem', border: '2px dashed #ddd', borderRadius: '0.625rem', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#888' };
@@ -219,7 +219,7 @@ const titleInputStyle = { padding: '0.75rem', fontSize: '1rem', border: '1px sol
 const textAreaStyle = { padding: '0.75rem', fontSize: '0.9375rem', border: '1px solid #eee', borderRadius: '0.5rem', outline: 'none', minHeight: '9.375rem', resize: 'none' };
 
 const submitBtnStyle = (disabled) => ({
-  width: '100%', padding: '0.9375rem', marginTop: '1.25rem', backgroundColor: disabled ? '#adb5bd' : '#339af0', color: '#fff',
+  width: '100%', padding: '0.9375rem', marginTop: '1.25rem', backgroundColor: disabled ? '#adb5bd' : '#2b8a3e', color: '#fff',
   border: 'none', borderRadius: '0.625rem', fontSize: '1rem', fontWeight: 'bold', cursor: disabled ? 'not-allowed' : 'pointer'
 });
 const cancelBtnStyle = { width: '100%', padding: '0.625rem', marginTop: '0.625rem', background: 'none', border: 'none', color: '#888', cursor: 'pointer' };
