@@ -242,7 +242,7 @@ const AdminDashboard = () => {
                   <div style={aiAnalysisBoxStyle}>
                     <div style={{ marginBottom: '10px' }}>
                       <span style={aiLabelStyle}>👤 사용자 선택 활동</span>
-                      <p style={{ margin: '4px 0', fontSize: '14px', fontWeight: 'bold', color: '#0D7A58' }}>
+                      <p style={{ margin: '4px 0', fontSize: '14px', fontWeight: 'bold', color: '#495057' }}>
                         {getActivityName(post.activityType)}
                       </p>
                     </div>
@@ -250,7 +250,7 @@ const AdminDashboard = () => {
                       <span style={aiLabelStyle}>🤖 AI 분석 결과</span>
                       <span style={aiScoreStyle(post.aiScore)}>{(post.aiScore * 100).toFixed(1)}% 신뢰</span>
                     </div>
-                    <p style={{ margin: 0, fontSize: '14px' }}>예측 활동: <strong>{getActivityName(post.aiResult)}</strong></p>
+                    <p style={{ margin: 0, fontSize: '14px', color: '#495057' }}>예측 활동: <strong>{getActivityName(post.aiResult)}</strong></p>
                   </div>
 
                   <div style={unifiedBoxStyle(post.adminStatus, isEditing)}>
@@ -440,13 +440,12 @@ const unifiedBoxStyle = (status, isEditing) => {
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'center',
-    gap: '10px',
-    color: '#16A87A'
+    gap: '10px'
   };
 };
 
 const unifiedSelectStyle = {
-  flex: 1, height: '38px', padding: '0 12px', borderRadius: '8px', border: '1px solid #dee6e3', fontSize: '13px', color: '#495057', backgroundColor: '#fff', outline: 'none', cursor: 'pointer'
+  flex: 1, height: '38px', padding: '0 12px', borderRadius: '8px', border: '1px solid #16A87A', fontSize: '13px', color: '#495057', backgroundColor: '#fff', outline: 'none', cursor: 'pointer'
 };
 
 const unifiedBtnStyle = {
@@ -485,7 +484,7 @@ const postTitleStyle = { margin: 0, fontSize: '16px', flex: 1, whiteSpace: 'nowr
 const imgScrollStyle = { display: 'flex', gap: '10px', overflowX: 'auto', marginBottom: '15px', paddingBottom: '5px' };
 const postImgStyle = { width: '100px', height: '100px', objectFit: 'cover', borderRadius: '10px', border: '1px solid #eee' };
 
-const aiAnalysisBoxStyle = { backgroundColor: '#f1fff8', padding: '12px', borderRadius: '12px', marginBottom: '15px', color: '#16A87A' };
+const aiAnalysisBoxStyle = { backgroundColor: '#f8fffb', padding: '12px', borderRadius: '12px', marginBottom: '15px', border: '1px solid #d3f9d8' };
 const aiLabelStyle = { fontSize: '12px', color: '#868e96', fontWeight: 'bold' };
 const aiScoreStyle = (score) => ({ fontSize: '12px', color: score >= 0.8 ? '#16A87A' : '#fa5252', fontWeight: 'bold' });
 

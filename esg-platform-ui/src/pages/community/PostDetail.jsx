@@ -116,7 +116,7 @@ const PostDetails = () => {
           {/* 🌟 본인 글일 때 상단 배지 노출 */}
           {isAuthor && (
             <div style={{
-              padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold',
+              padding: '0.3125rem 0.875rem', borderRadius: '1.25rem', fontSize: '0.75rem', fontWeight: 'bold',
               color: badge.color, backgroundColor: badge.bgColor, border: `1px solid ${badge.color}50`
             }}>
               {badge.text}

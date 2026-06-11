@@ -571,7 +571,7 @@ const postTitleInCommentStyle = { fontSize: '0.8125rem', color: '#868e96', margi
 const rightMetaStyle = { display: 'flex', alignItems: 'center', gap: '0.625rem', color: '#adb5bd', fontSize: '0.8125rem', flexShrink: 0, marginLeft: 'auto' };
 const arrowStyle = { fontWeight: 'bold', fontSize: '0.875rem', color: '#ced4da' };
 
-const thumbnailImgStyle = { width: '3.125rem', height: '3.125rem', borderRadius: '0.5rem', objectFit: 'cover', flexShrink: 0 };
+const thumbnailImgStyle = { width: '3.125rem', height: '3.125rem', borderRadius: '0.5rem', objectFit: 'cover', objectPosition: 'center', flexShrink: 0 };
 const verifyBadgeStyle = (bg, color) => ({ padding: '0.25rem 0.625rem', borderRadius: '0.375rem', fontSize: '0.6875rem', fontWeight: 'bold', backgroundColor: bg, color: color, display: 'inline-block' });
 const iconCircleStyle = (bg, color) => ({ width: '2.5rem', height: '2.5rem', borderRadius: '50%', backgroundColor: bg, color: color, display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0 });
 
