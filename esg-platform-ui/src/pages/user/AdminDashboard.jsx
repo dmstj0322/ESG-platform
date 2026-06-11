@@ -240,9 +240,6 @@ const AdminDashboard = () => {
                   </div>
 
                   <div style={aiAnalysisBoxStyle}>
-                    {/* <p style={{ margin: '4px 0', fontSize: '14px' }}>
-                      선택한 활동: <strong style={{ color: '#0062b3' }}>{getActivityName(post.activityType)}</strong>
-                    </p> */}
                     <div style={{ marginBottom: '10px' }}>
                       <span style={aiLabelStyle}>👤 사용자 선택 활동</span>
                       <p style={{ margin: '4px 0', fontSize: '14px', fontWeight: 'bold', color: '#0D7A58' }}>
@@ -438,8 +435,8 @@ const unifiedBoxStyle = (status, isEditing) => {
     minHeight: isLarge ? '96px' : '52px',
     borderRadius: '12px',
     border: '1px solid',
-    borderColor: status === 'APPROVED' ? '#d0ebff' : status === 'WAITING' ? '#ffec99' : '#ffc9c9',
-    backgroundColor: status === 'APPROVED' ? '#f1f7ff' : status === 'WAITING' ? '#fff9db' : '#fff5f5',
+    borderColor: status === 'APPROVED' ? '#d0ffdb' : status === 'WAITING' ? '#ffec99' : '#ffc9c9',
+    backgroundColor: status === 'APPROVED' ? '#f1fff8' : status === 'WAITING' ? '#fff9db' : '#fff5f5',
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'center',
@@ -448,7 +445,7 @@ const unifiedBoxStyle = (status, isEditing) => {
 };
 
 const unifiedSelectStyle = {
-  flex: 1, height: '38px', padding: '0 12px', borderRadius: '8px', border: '1px solid #dee2e6', fontSize: '13px', color: '#495057', backgroundColor: '#fff', outline: 'none', cursor: 'pointer'
+  flex: 1, height: '38px', padding: '0 12px', borderRadius: '8px', border: '1px solid #dee6e3', fontSize: '13px', color: '#495057', backgroundColor: '#fff', outline: 'none', cursor: 'pointer'
 };
 
 const unifiedBtnStyle = {
@@ -456,7 +453,7 @@ const unifiedBtnStyle = {
 };
 
 // 🌟 추가된 내비게이션 스타일 
-const subNavContainerStyle = { display: 'flex', gap: '30px', marginBottom: '30px', borderBottom: '2px solid #f1f3f5' };
+const subNavContainerStyle = { display: 'flex', gap: '30px', marginBottom: '30px', borderBottom: '2px solid #f1f5f3' };
 const subTabStyle = (active) => ({ padding: '10px 5px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '16px', fontWeight: active ? '700' : '500', color: active ? '#16A87A' : '#868e96', borderBottom: active ? '3px solid #16A87A' : 'none' });
 
 const containerStyle = { padding: '40px 20px', maxWidth: '1200px', margin: '0 auto', backgroundColor: '#fdfdfd', minHeight: '100vh' };
@@ -464,7 +461,7 @@ const headerContainerStyle = { display: 'flex', justifyContent: 'space-between',
 const dashboardTitleStyle = { margin: 0, fontSize: '28px', fontWeight: '800', color: '#333' };
 const subtitleStyle = { margin: '5px 0 0 0', color: '#adb5bd', fontSize: '15px' };
 
-const tabBarStyle = { display: 'flex', gap: '30px', borderBottom: '2px solid #f1f3f5', marginBottom: '20px' };
+const tabBarStyle = { display: 'flex', gap: '30px', borderBottom: '2px solid #f1f5f3', marginBottom: '20px' };
 const tabItemStyle = (active) => ({ padding: '15px 10px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '17px', fontWeight: active ? 'bold' : '500', color: active ? '#16A87A' : '#adb5bd', borderBottom: active ? '3px solid #16A87A' : 'none' });
 
 const countBadgeStyle = { backgroundColor: '#E6F7F1', color: '#16A87A', padding: '2px 8px', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold' };
@@ -474,12 +471,12 @@ const orderFilterGroupStyle = { display: 'flex', gap: '10px', alignItems: 'cente
 const filterLabelStyle = { fontSize: '14px', fontWeight: 'bold', color: '#495057', minWidth: '45px' };
 
 const filterBtnStyle = (active) => ({
-  padding: '8px 20px', borderRadius: '20px', border: active ? 'none' : '1px solid #dee2e6',
+  padding: '8px 20px', borderRadius: '20px', border: active ? 'none' : '1px solid #dee6e3',
   backgroundColor: active ? '#16A87A' : '#fff', color: active ? '#fff' : '#495057', cursor: 'pointer', fontWeight: '600', fontSize: '14px'
 });
 
 const postGridStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' };
-const postCardStyle = { backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #f1f3f5', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
+const postCardStyle = { backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #f1fff8', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
 const cardHeaderStyle = { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '15px' };
 const postIdStyle = { fontSize: '12px', color: '#adb5bd', fontWeight: 'bold' };
 const postTitleStyle = { margin: 0, fontSize: '16px', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#212529' };
@@ -487,7 +484,7 @@ const postTitleStyle = { margin: 0, fontSize: '16px', flex: 1, whiteSpace: 'nowr
 const imgScrollStyle = { display: 'flex', gap: '10px', overflowX: 'auto', marginBottom: '15px', paddingBottom: '5px' };
 const postImgStyle = { width: '100px', height: '100px', objectFit: 'cover', borderRadius: '10px', border: '1px solid #eee' };
 
-const aiAnalysisBoxStyle = { backgroundColor: '#f8f9fa', padding: '12px', borderRadius: '12px', marginBottom: '15px' };
+const aiAnalysisBoxStyle = { backgroundColor: '#f1fff8', padding: '12px', borderRadius: '12px', marginBottom: '15px' };
 const aiLabelStyle = { fontSize: '12px', color: '#868e96', fontWeight: 'bold' };
 const aiScoreStyle = (score) => ({ fontSize: '12px', color: score >= 0.8 ? '#16A87A' : '#fa5252', fontWeight: 'bold' });
 
@@ -500,14 +497,14 @@ const statusBadge = (status) => ({
 const orderContentWrapper = {
   backgroundColor: '#fff',
   borderRadius: '12px',
-  border: '1px solid #f1f3f5',
+  border: '1px solid #f1fff8',
   boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
   overflow: 'hidden'
 };
 
 const orderTableStyle = { width: '100%', borderCollapse: 'collapse' };
-const tableHeaderRowStyle = { backgroundColor: '#f8f9fa', textAlign: 'center', height: '50px', fontSize: '14px', color: '#495057', borderBottom: '2px solid #eee' };
-const tableRowStyle = { borderBottom: '1px solid #f8f9fa', textAlign: 'center', height: '60px', fontSize: '14px' };
+const tableHeaderRowStyle = { backgroundColor: '#f1fff8', textAlign: 'center', height: '50px', fontSize: '14px', color: '#495057', borderBottom: '2px solid #eee' };
+const tableRowStyle = { borderBottom: '1px solid #f1fff8', textAlign: 'center', height: '60px', fontSize: '14px' };
 
 const actionBtnStyle = (color) => ({
   backgroundColor: 'transparent', border: `1px solid ${color}`, color: color, padding: '6px 12px', borderRadius: '8px',
@@ -521,7 +518,7 @@ const orderStatusBadge = (status) => ({
 
 const paginationContainerStyle = { display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px 0', gap: '20px' };
 const pageBtnStyle = (disabled) => ({
-  padding: '8px 16px', borderRadius: '10px', border: '1px solid #dee2e6', backgroundColor: disabled ? '#f8f9fa' : '#fff',
+  padding: '8px 16px', borderRadius: '10px', border: '1px solid #dee6e3', backgroundColor: disabled ? '#f1fff8' : '#fff',
   color: disabled ? '#adb5bd' : '#16A87A', cursor: disabled ? 'default' : 'pointer', fontWeight: 'bold', transition: '0.2s'
 });
 const pageInfoStyle = { fontSize: '15px', fontWeight: '600', color: '#495057' };
