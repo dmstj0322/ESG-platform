@@ -68,7 +68,7 @@ const LANDING_STYLE = `
   }
   .eco-hero-title {
     font-size: 50px; font-weight: 800; line-height: 1.15;
-    letter-spacing: -.03em; margin-bottom: 1.25rem;
+    letter-spacing: -.03em; margin-bottom: 1.25rem; color: var(--text-1);
   }
   .eco-hero-title em { color: var(--green); font-style: normal; }
   .eco-hero-title strong { color: var(--text-1); }
@@ -272,7 +272,7 @@ const LANDING_STYLE = `
     font-size: 11px; font-weight: 800; color: var(--green);
     letter-spacing: .1em; text-transform: uppercase; margin-bottom: .75rem;
   }
-  .eco-sec-title { font-size: 36px; font-weight: 800; line-height: 1.2; letter-spacing: -.025em; margin-bottom: 1rem; }
+  .eco-sec-title { font-size: 36px; font-weight: 800; line-height: 1.2; letter-spacing: -.025em; margin-bottom: 1rem; color: var(--text-1); }
   .eco-sec-desc { font-size: 15.5px; color: var(--text-2); line-height: 1.8; max-width: 520px; }
 
   /* ── Features ── */
