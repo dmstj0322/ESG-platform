@@ -5,11 +5,12 @@ import lombok.*;
 import java.util.List;
 
 @Getter
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 public class RegionalBenchmarkDto {
 
+    private String companyName;
     private String regionName;           // "서울특별시"
     private String industryName;         // "전자·반도체"
     private double annualMyTotal;        // 우리 기업 연간 합계 tCO2eq

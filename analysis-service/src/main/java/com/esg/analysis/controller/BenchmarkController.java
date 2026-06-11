@@ -77,7 +77,8 @@ public class BenchmarkController {
             companyId, company.name(), company.industryName(),
             ksicCode, regionCode, employeeCount);
 
-    return ResponseEntity.ok(
-      benchmarkService.getBenchmark(companyId, year, regionCode, ksicCode, employeeCount));
+    RegionalBenchmarkDto result =
+      benchmarkService.getBenchmark(companyId, year, regionCode, ksicCode, employeeCount);
+    return ResponseEntity.ok(result.toBuilder().companyName(company.name()).build());
   }
 }

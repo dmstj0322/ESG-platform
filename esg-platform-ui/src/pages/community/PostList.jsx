@@ -142,7 +142,7 @@ const PostList = () => {
     <div className="feed-wrapper" style={{ textAlign: 'left' }}>
       <div className="feed-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
         <div>
-          <h2 style={{ fontSize: '28px', fontWeight: '800', margin: 0 }}>🌱 ESG Community</h2>
+          <h2 style={{ fontSize: '28px', fontWeight: '800', margin: 0, color: '#1a1a1a' }}>🌱 ESG Community</h2>
           {isSystemAdmin && (
             <span style={{ fontSize: '12px', color: '#16A87A', fontWeight: 'bold' }}>● 시스템 관리자 모드 (전체 기업 노출)</span>
           )}

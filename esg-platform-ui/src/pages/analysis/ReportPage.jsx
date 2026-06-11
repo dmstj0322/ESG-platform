@@ -21,7 +21,7 @@ const GRADE_CLS = {
 const fmtDate = (s) => {
   if (!s) return '—';
   try {
-    const utc = /Z$|[+-]\d{2}:?\d{2}$/.test(s) ? s : s + 'Z';
+    const utc = /Z$|[+-]\d{2}:?\d{2}$/.test(s) ? s : s + '+09:00';
     return new Date(utc).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul', year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
   }
   catch { return '—'; }

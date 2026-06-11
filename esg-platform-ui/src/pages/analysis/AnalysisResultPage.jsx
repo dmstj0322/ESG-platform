@@ -1366,7 +1366,7 @@ const fmtKST = (isoStr, len = 16) => {
   if (!isoStr) return '';
   try {
     // LocalDateTime.now() returns UTC without 'Z' -> append 'Z' to force UTC parsing
-    const utc = /Z$|[+-]\d{2}:?\d{2}$/.test(isoStr) ? isoStr : isoStr + 'Z';
+    const utc = /Z$|[+-]\d{2}:?\d{2}$/.test(isoStr) ? isoStr : isoStr + '+09:00';
     return new Date(utc)
       .toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' })
       .slice(0, len);
@@ -7553,41 +7553,13 @@ export default function AnalysisResultPage() {
 
         {/* ── Risk & Opportunity — Industry Position 탭 통합 ── */}
         {activeTab === 'industry' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <SectionCard title="업계 대비 리스크 & 기회 분석" icon={AlertTriangle} iconColor="#f59e0b">
-              <div
-                className="text-sm text-gray-600 leading-relaxed"
-                style={{ lineHeight: '1.9' }}
-                dangerouslySetInnerHTML={{ __html: renderMd(buildIndustryRiskOpportunity(benchMetrics, d)) }}
-              />
-            </SectionCard>
-
-            <div className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col gap-4">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">업종 대비 E/S/G 현황</p>
-              <div className="space-y-3">
-                {[
-                  { label: '환경(E) 점수',     value: d.eScore,    color: ESG_COLOR.E },
-                  { label: '사회(S) 점수',     value: d.sScore,    color: ESG_COLOR.S },
-                  { label: '지배구조(G) 점수', value: d.gScore,    color: ESG_COLOR.G },
-                  { label: '종합 점수',         value: d.totalScore, color: gradeAccentColor },
-                ].map(item => (
-                  <div key={item.label}>
-                    <div className="flex justify-between items-center mb-1.5">
-                      <span className="text-xs text-gray-500">{item.label}</span>
-                      <span className="text-sm font-bold text-gray-900 tabular-nums">{item.value ?? 0}</span>
-                    </div>
-                    <ScoreProgressBar score={item.value} color={item.color} height="h-1" />
-                  </div>
-                ))}
-              </div>
-              {d.finalGrade && (
-                <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
-                  <span className="text-xs text-gray-500">최종 등급</span>
-                  <GradeBadge grade={d.finalGrade} size="lg" />
-                </div>
-              )}
-            </div>
-          </div>
+          <SectionCard title="업계 대비 리스크 & 기회 분석" icon={AlertTriangle} iconColor="#f59e0b">
+            <div
+              className="text-sm text-gray-600 leading-relaxed"
+              style={{ lineHeight: '1.9' }}
+              dangerouslySetInnerHTML={{ __html: renderMd(buildIndustryRiskOpportunity(benchMetrics, d)) }}
+            />
+          </SectionCard>
         )}
 
         {/* ESG 분석 상세 섹션 제거 — Evidence 탭에서 중복 summary 정리 */}

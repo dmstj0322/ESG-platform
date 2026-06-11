@@ -102,7 +102,8 @@
       "Bash(xargs ls -la)",
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('scripts',{}\\)\\)\")",
       "Bash(chromium-cli help *)",
-      "Bash(python *)"
+      "Bash(python *)",
+      "Bash(xargs grep -l \"category.*E\")"
     ]
   }
 }
