@@ -440,7 +440,8 @@ const unifiedBoxStyle = (status, isEditing) => {
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'center',
-    gap: '10px'
+    gap: '10px',
+    color: '#16A87A'
   };
 };
 
@@ -484,7 +485,7 @@ const postTitleStyle = { margin: 0, fontSize: '16px', flex: 1, whiteSpace: 'nowr
 const imgScrollStyle = { display: 'flex', gap: '10px', overflowX: 'auto', marginBottom: '15px', paddingBottom: '5px' };
 const postImgStyle = { width: '100px', height: '100px', objectFit: 'cover', borderRadius: '10px', border: '1px solid #eee' };
 
-const aiAnalysisBoxStyle = { backgroundColor: '#f1fff8', padding: '12px', borderRadius: '12px', marginBottom: '15px' };
+const aiAnalysisBoxStyle = { backgroundColor: '#f1fff8', padding: '12px', borderRadius: '12px', marginBottom: '15px', color: '#16A87A' };
 const aiLabelStyle = { fontSize: '12px', color: '#868e96', fontWeight: 'bold' };
 const aiScoreStyle = (score) => ({ fontSize: '12px', color: score >= 0.8 ? '#16A87A' : '#fa5252', fontWeight: 'bold' });
 
