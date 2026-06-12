@@ -523,6 +523,7 @@ public class AnalysisApiService {
      */
     public Long initiateAnalysis(Long userId, Long companyId, MultipartFile file) {
 
+        log.error("★★★★★ initiateAnalysis 호출됨 ★★★★★");
         // ── 0. 파일 바이트를 요청 스레드에서 즉시 복사 ─────────────────────
         // MultipartFile 스트림은 요청 범위(request-scoped)이므로 비동기 스레드에서
         // 접근하면 이미 닫혀 있다. 여기서 byte[]로 복사해야 한다.

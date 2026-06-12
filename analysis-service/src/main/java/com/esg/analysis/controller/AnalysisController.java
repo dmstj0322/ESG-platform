@@ -134,6 +134,7 @@ public class AnalysisController {
             @RequestHeader("X-Company-Id") Long companyId,
             @RequestParam("file") MultipartFile file) {
 
+        log.error("★★★★★ requestReport 호출됨 ★★★★★");
         log.info("★파일 수신★ 이름: {}, 크기: {} bytes", file.getOriginalFilename(), file.getSize());
 
         Long analysisId = analysisApiService.initiateAnalysis(userId, companyId, file);
