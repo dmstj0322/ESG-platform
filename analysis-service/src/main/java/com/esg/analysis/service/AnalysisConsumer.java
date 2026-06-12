@@ -63,6 +63,10 @@ public class AnalysisConsumer {
     // 각 repository 메서드는 Spring Data JPA 기본 @Transactional(REQUIRED)로 독립 관리.
     @KafkaListener(topics = "esg-analysis-requests", groupId = "analysis-group")
     public void consumeDtoRequest(AnalysisRequestDto request) {
+
+        log.error("★★★★★ AnalysisConsumer 실행됨 analysisId={} ★★★★★",
+                request.getAnalysisId());
+
         Long analysisId = request.getAnalysisId();
         String fileHash = request.getFileHash();
         Long companyId  = request.getCompanyId();

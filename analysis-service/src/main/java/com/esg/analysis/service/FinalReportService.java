@@ -91,6 +91,10 @@ public class FinalReportService {
 
     @Async("analysisExecutor")
     public void processAsync(Long analysisId, Long companyId, FinalReportRequest req, Long memberId) {
+
+        log.error("★★★★★ FinalReportService 실행됨 analysisId={} ★★★★★",
+                analysisId);
+
         try {
             boolean autoSim = req.isAutoSimulation();
             log.info("[PROCESS-ASYNC-START] analysisId={} companyId={} autoSim={} evidenceCount={}",
