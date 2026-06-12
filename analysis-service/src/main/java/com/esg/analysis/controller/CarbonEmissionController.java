@@ -74,11 +74,14 @@ public class CarbonEmissionController {
    */
   @GetMapping("/report-data")
   public ResponseEntity<Map<String, Object>> getReportData(
+
+
     @RequestHeader("X-Company-Id") Long companyId,
     @RequestParam String year,
     @RequestParam String month,
     @RequestParam(required = false, defaultValue = "26110") String ksicCode) {
 
+    System.out.println("🔥 [TEST] GET /carbon/report-data 호출됨");
     Map<String, Object> response = new HashMap<>();
 
     // 1. 우리 회사 데이터 (DB 조회)
@@ -107,6 +110,8 @@ public class CarbonEmissionController {
 
   @PostMapping("/collect")
   public ResponseEntity<String> collectData(@RequestHeader("X-Company-Id") Long companyId, @RequestParam String year, @RequestParam String month) {
+
+    System.out.println("🔥 [TEST] POST /carbon/collect 호출됨");
     externalDataService.collectAndSaveEmission(companyId, year, month);
     return ResponseEntity.ok(year + "년 " + month + "월 데이터 수집 완료");
   }

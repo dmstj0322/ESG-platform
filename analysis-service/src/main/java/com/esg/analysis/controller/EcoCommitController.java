@@ -30,20 +30,20 @@ public class EcoCommitController {
         return ResponseEntity.ok(preview);
     }
 
-    /**
-     * [POST] 성과 확정 및 반영 — 분산 락 → 포인트 조회 → 계산 → Kafka 발행
-     * X-UserId, X-CompanyId 헤더는 게이트웨이가 삽입
-     */
-    @PostMapping("/commit")
-    public ResponseEntity<Map<String, Object>> commit(
-      @AuthenticationPrincipal AuthUser authUser) {
-
-        log.info("[EcoCommit] 성과 확정 요청 — userId: {}, companyId: {}", authUser.memberId(), authUser.companyId());
-        Long analysisId = ecoCommitService.initiateEcoCommit(authUser.memberId(), authUser.companyId());
-
-        return ResponseEntity.accepted().body(Map.of(
-                "analysisId", analysisId,
-                "message", "성과 확정 처리가 시작되었습니다. AI가 재분석을 수행합니다."
-        ));
-    }
+//    /**
+//     * [POST] 성과 확정 및 반영 — 분산 락 → 포인트 조회 → 계산 → Kafka 발행
+//     * X-UserId, X-CompanyId 헤더는 게이트웨이가 삽입
+//     */
+//    @PostMapping("/commit")
+//    public ResponseEntity<Map<String, Object>> commit(
+//      @AuthenticationPrincipal AuthUser authUser) {
+//
+//        log.info("[EcoCommit] 성과 확정 요청 — userId: {}, companyId: {}", authUser.memberId(), authUser.companyId());
+//        Long analysisId = ecoCommitService.initiateEcoCommit(authUser.memberId(), authUser.companyId());
+//
+//        return ResponseEntity.accepted().body(Map.of(
+//                "analysisId", analysisId,
+//                "message", "성과 확정 처리가 시작되었습니다. AI가 재분석을 수행합니다."
+//        ));
+//    }
 }
