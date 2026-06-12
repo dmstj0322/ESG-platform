@@ -426,7 +426,7 @@ const MyPage = () => {
               {myPosts.length === 0 ? <div style={emptyTextStyle}>작성한 글이 없습니다.</div> : myPosts.slice(0, 10).map(post => (
                 <div key={post.id} style={listCardStyle} onClick={() => navigate(`/posts/${post.id}`)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, overflow: 'hidden', cursor: 'pointer' }}>
-                    <div style={{ position: 'relative', width: '50px', height: '50px' }}>
+                    <div style={{ position: 'relative', width: '3.125rem', height: '3.125rem', flexShrink: 0, display: 'flex',justifyContent: 'center', alignItems: 'center' }}>
                       {post.imageUrls?.[0] ? (
                         <>
                           <img src={post.imageUrls[0]} style={thumbnailImgStyle} alt="thumb" />
@@ -571,7 +571,7 @@ const postTitleInCommentStyle = { fontSize: '0.8125rem', color: '#868e96', margi
 const rightMetaStyle = { display: 'flex', alignItems: 'center', gap: '0.625rem', color: '#adb5bd', fontSize: '0.8125rem', flexShrink: 0, marginLeft: 'auto' };
 const arrowStyle = { fontWeight: 'bold', fontSize: '0.875rem', color: '#ced4da' };
 
-const thumbnailImgStyle = { width: '3.125rem', height: '3.125rem', borderRadius: '0.5rem', objectFit: 'cover', objectPosition: 'center', flexShrink: 0 };
+const thumbnailImgStyle = { width: '100%', height: '100%', borderRadius: '0.5rem', objectFit: 'cover', objectPosition: 'center', flexShrink: 0 };
 const verifyBadgeStyle = (bg, color) => ({ padding: '0.25rem 0.625rem', borderRadius: '0.375rem', fontSize: '0.6875rem', fontWeight: 'bold', backgroundColor: bg, color: color, display: 'inline-block' });
 const iconCircleStyle = (bg, color) => ({ width: '2.5rem', height: '2.5rem', borderRadius: '50%', backgroundColor: bg, color: color, display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0 });
 
