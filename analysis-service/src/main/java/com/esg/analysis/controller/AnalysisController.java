@@ -27,7 +27,6 @@ import java.util.stream.Collectors;
 @Slf4j
 @RestController
 @RequestMapping
-//@CrossOrigin(origins = "http://localhost:5173")
 @RequiredArgsConstructor
 public class AnalysisController {
 
@@ -125,21 +124,6 @@ public class AnalysisController {
         return ResponseEntity.ok(history);
     }
 
-    /**
-     * [POST] 파일 업로드 및 분석 시작
-     */
-//    @PostMapping("/api/v1/analysis/report")
-//    public ResponseEntity<?> requestReport(
-//            @RequestHeader("X-Member-Id") Long userId,
-//            @RequestHeader("X-Company-Id") Long companyId,
-//            @RequestParam("file") MultipartFile file) {
-//
-//        log.error("★★★★★ requestReport 호출됨 ★★★★★");
-//        log.info("★파일 수신★ 이름: {}, 크기: {} bytes", file.getOriginalFilename(), file.getSize());
-//
-//        Long analysisId = analysisApiService.initiateAnalysis(userId, companyId, file);
-//        return ResponseEntity.accepted().body(analysisId);
-//    }
 
     /**
      * [POST] E / S / G 카테고리 단독 분석 (OCR/RAG + 체크리스트 혼합)
@@ -305,12 +289,12 @@ public class AnalysisController {
         }
     }
 
-    /**
-     * [GET] QueryDSL 동작 테스트
-     */
-    @GetMapping("/test/querydsl")
-    public String testQueryDsl(@RequestHeader("X-Company-Id") Long companyId) {
-        long count = analysisReportRepository.countByCompanyAndStatus(companyId, "COMPLETED");
-        return "기업 ID [" + companyId + "]의 완료된 분석 리포트: " + count + "개";
-    }
+//    /**
+//     * [GET] QueryDSL 동작 테스트
+//     */
+//    @GetMapping("/test/querydsl")
+//    public String testQueryDsl(@RequestHeader("X-Company-Id") Long companyId) {
+//        long count = analysisReportRepository.countByCompanyAndStatus(companyId, "COMPLETED");
+//        return "기업 ID [" + companyId + "]의 완료된 분석 리포트: " + count + "개";
+//    }
 }

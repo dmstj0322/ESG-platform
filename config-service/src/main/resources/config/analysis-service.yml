@@ -24,28 +24,17 @@ spring:
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    consumer:
-      group-id: analysis-group
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: "*"
-        spring.json.use.type.headers: false
-        spring.json.value.default.type: "com.esg.analysis.dto.AnalysisRequestDto"
+#    consumer:
+#      group-id: analysis-group
+#      auto-offset-reset: earliest
+#      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+#      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+#      properties:
+#        spring.json.trusted.packages: "*"
+#        spring.json.use.type.headers: false
+#        spring.json.value.default.type: "com.esg.analysis.dto.AnalysisRequestDto"
 
-## spring 블록 밖으로
-#resilience4j:
-#  circuitbreaker:
-#    instances:
-#      geminiAnalysis:
-#        registerHealthMap: true
-#        slidingWindowSize: 10
-#        failureRateThreshold: 50
-#        waitDurationInOpenState: 30000
-#        permittedNumberOfCallsInHalfOpenState: 3
-#        automaticTransitionFromOpenToHalfOpenEnabled: true
-# spring 블록 밖으로
+
 resilience4j:
   circuitbreaker:
     instances:
@@ -64,44 +53,17 @@ resilience4j:
         permittedNumberOfCallsInHalfOpenState: 2
         automaticTransitionFromOpenToHalfOpenEnabled: true
 
-#langchain4j:
-#  google-ai-gemini:
-#    chat-model:
-#      api-key: "AIzaSyAoTOkwLMkAeJDEsKJ1fkIl0C6kCUiwgoM"
-#      model-name: "models/gemini-2.5-flash" # 403 방지를 위해 일단 1.5로 테스트 권장
 
-## 1. 공통 API 키 설정 (가장 상단이나 변수 구역에 배치)
-#google:
-#  ai:
-#    api-key: "AIzaSyBcgsDJV74kiJNHAEJw4iR7vY7xCjRkPgM"
-#
-#langchain4j:
-#  google-ai-gemini:
-#    chat-model:
-#      api-key: ${google.ai.api-key}
-#      model-name: "gemini-2.5-flash-lite"
-#    embedding-model:
-#      api-key: ${google.ai.api-key}
-#      model-name: "text-embedding-004" # Ollama를 쓰더라도 설정값은 남겨둡니다.
-#logging:
-#  level:
-#    dev.langchain4j: DEBUG
 
-groq:
-  api:
-    key: ${GROQ_API_KEY}
-    url: https://api.groq.com/openai/v1/chat/completions
-    model: llama-3.3-70b-versatile
+#groq:
+#  api:
+#    key: ${GROQ_API_KEY}
+#    url: https://api.groq.com/openai/v1/chat/completions
+#    model: llama-3.3-70b-versatile
 
 upstage:
   api:
     key: ${UPSTAGE_API_KEY}
-
-external-api:
-  kepco:
-    key: ${KEPCO_API_KEY}
-  kogas:
-    key: ${KOGAS_API_KEY}
 
 openai:
   api:
