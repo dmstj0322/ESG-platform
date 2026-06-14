@@ -41,10 +41,10 @@ public enum ActivityType {
     List.of("recycling", "recycling_bin", "waste_sorting"),
 
     // ✅ Secondary: 쓰레기통 자체나 재활용되는 재질들 (단순 쓰레기통 강등)
-    List.of("waste_container", "trash_can", "bin", "garbage", "plastic", "plastic_bottle", "bottle", "box", "cardboard", "can", "glass_bottle", "paper", "packaging"),
+    List.of("waste_container", "trash_can", "bin", "garbage", "plastic_bottle", "bottle", "box", "cardboard", "can", "glass_bottle", "paper", "packaging"),
 
-    // 🚨 Reject: 안 씻은 용기, 음식물, 길거리 무단투기 (liquid 추가로 액체 남은 쓰레기 차단)
-    List.of("food", "meal", "junk_food", "litter", "soft_drink", "beverage", "liquid", "drinkware", "drinking_straw", "cup"),
+    // 🚨 Reject: 안 씻은 용기, 음식물, 길거리 무단투기
+    List.of("food", "meal", "junk_food", "litter", "soft_drink", "beverage", "drinking", "drinking_straw"),
 
     "분리배출",
     500
