@@ -18,14 +18,12 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     runtimeOnly 'com.mysql:mysql-connector-j'
 
-    // [수정] LangChain4j 설정
+    // LangChain4j 설정
     def lcVersion = "0.35.0"
     implementation "dev.langchain4j:langchain4j:${lcVersion}"
-    // Gemini 라이브러리는 Groq 사용 시 필요 없으므로 주석 처리하거나 제거하세요.
-    // implementation "dev.langchain4j:langchain4j-google-ai-gemini:${lcVersion}"
     implementation "dev.langchain4j:langchain4j-ollama:${lcVersion}"
 
-    // Apache Tika (문서 파싱용 - 이건 유지해야 리포트 읽어요!)
+    // Apache Tika
     implementation "dev.langchain4j:langchain4j-document-parser-apache-tika:${lcVersion}"
 
     // chroma 영속성 벡터 DB
@@ -33,7 +31,7 @@ dependencies {
 
     // Redis & Kafka & 기타
     implementation "org.redisson:redisson-spring-boot-starter:${rootProject.ext.redissonVersion}"
-    implementation 'org.springframework.kafka:spring-kafka'
+//    implementation 'org.springframework.kafka:spring-kafka'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
     implementation 'io.github.resilience4j:resilience4j-spring-boot3'
     implementation 'org.springframework.boot:spring-boot-starter-aop'
@@ -45,7 +43,7 @@ dependencies {
     // HTML 태그 제거 (PDF chunk sanitize)
     implementation 'org.jsoup:jsoup:1.17.2'
 
-    // QueryDSL (기존 유지)
+    // QueryDSL 
     implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
     annotationProcessor "com.querydsl:querydsl-apt:5.0.0:jakarta"
     annotationProcessor "jakarta.annotation:jakarta.annotation-api"

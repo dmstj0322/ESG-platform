@@ -245,8 +245,8 @@ export default function DashboardPage() {
     { label: '근거 추적',          desc: '지표별 증빙·근거 확인',     Icon: FileSearch,    color: '#059669', tab: 'evidence' },
     { label: '개선 과제',          desc: '개선 우선순위·필요 서류',   Icon: Zap,           color: '#dc2626', tab: 'action' },
     { label: '업종 비교',          desc: '업종 통계 기반 환경 비교',  Icon: TrendingUp,    color: '#7c3aed', tab: 'industry' },
-    { label: '분석 기록',          desc: '시스템 처리 이력 확인',     Icon: ClipboardList, color: '#d97706', tab: 'audit-log' },
     { label: 'PDF 다운로드',       desc: '전체 리포트 내보내기',      Icon: Download,      color: '#64748b', tab: null, action: () => rawData && exportAnalysisResult(rawData, analysisId, ecoPool?.esgPoints ?? null) },
+    { label: '새 분석 시작',       desc: '기업 데이터 재입력·재진단', Icon: Plus,          color: '#0ea5e9', tab: null, action: () => navigate('/analysis') },
   ];
 
   // ── KPI 셀 컴포넌트 (재사용) ──────────────────────────────────────
@@ -585,13 +585,7 @@ export default function DashboardPage() {
                   { cat: 'E', label: '환경',     v: kpis.eScore, color: '#059669', bg: '#05966910', Icon: Leaf },
                   { cat: 'S', label: '사회',     v: kpis.sScore, color: '#2563eb', bg: '#2563eb10', Icon: Users },
                   { cat: 'G', label: '지배구조', v: kpis.gScore, color: '#d97706', bg: '#d9770610', Icon: Building2 },
-                ].map(({ cat, label, v, color, bg, Icon }) => {
-                  // 업종 평균 대비 diff: E는 실데이터 우선, S/G는 참조값 기반
-                  const diffPct = cat === 'E' && kpis.envBenchmarkDiffPct != null
-                    ? kpis.envBenchmarkDiffPct
-                    : null;
-                  const isAbove = diffPct != null && diffPct >= 0;
-                  return (
+                ].map(({ cat, label, v, color, bg, Icon }) => (
                   <div key={cat}>
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
@@ -601,33 +595,17 @@ export default function DashboardPage() {
                         </span>
                         <span className="text-[11px] font-medium text-gray-500">{cat} · {label}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {diffPct != null && (
-                          <span className={`text-[10px] font-medium ${isAbove ? 'text-emerald-500' : 'text-red-400'} opacity-90`}>
-                            {isAbove ? '▲' : '▼'}{Math.abs(diffPct).toFixed(1)}%
-                          </span>
-                        )}
-                        <span className="text-[20px] font-black font-mono tabular-nums leading-none"
-                          style={{ color: v > 0 ? color : '#e2e8f0' }}>
-                          {v > 0 ? Math.round(v) : '—'}
-                        </span>
-                      </div>
+                      <span className="text-[20px] font-black font-mono tabular-nums leading-none"
+                        style={{ color: v > 0 ? color : '#e2e8f0' }}>
+                        {v > 0 ? Math.round(v) : '—'}
+                      </span>
                     </div>
                     <div className="h-[3px] bg-gray-100 rounded-full overflow-hidden">
                       <div className="h-full rounded-full transition-all duration-700"
                         style={{ width: `${v > 0 ? Math.min(v, 100) : 0}%`, background: color, opacity: 0.5 }} />
                     </div>
-                    {diffPct != null && (
-                      <p className="text-[9px] text-gray-400 mt-0.5 tabular-nums">
-                        업종 평균 대비{' '}
-                        <span className={isAbove ? 'text-emerald-500' : 'text-red-400'}>
-                          {isAbove ? '+' : ''}{diffPct.toFixed(1)}%
-                        </span>
-                      </p>
-                    )}
                   </div>
-                  );
-                })}
+                ))}
 
                 {kpis.benchmarkIndustry && (
                   <div className="pt-2.5 border-t border-gray-100">
@@ -734,14 +712,6 @@ export default function DashboardPage() {
                 <Clock size={11} className="text-slate-500" />
               </span>
               <p className="text-[12px] font-semibold text-gray-800">최근 분석 이력</p>
-              {hasData && (
-                <button
-                  onClick={() => toResult('audit-log')}
-                  className="ml-auto text-[10px] text-gray-400 hover:text-emerald-600 transition-colors flex items-center gap-0.5"
-                >
-                  전체 이력 <ChevronRight size={9} />
-                </button>
-              )}
             </div>
 
             {auditEvents.length === 0 ? (

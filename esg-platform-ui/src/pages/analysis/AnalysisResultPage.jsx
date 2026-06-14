@@ -4920,7 +4920,7 @@ function validateAuditConsistency({ verifiedEv, partialEv, missingEv, contraEv, 
 
 // ── 메인 ─────────────────────────────────────────────────────────────
 
-const VALID_TABS = ['summary', 'evidence', 'action', 'industry', 'audit-log'];
+const VALID_TABS = ['summary', 'evidence', 'action', 'industry'];
 
 export default function AnalysisResultPage() {
   const { analysisId } = useParams();
@@ -6183,10 +6183,9 @@ export default function AnalysisResultPage() {
                 ? { count: `${benchMetrics.length}개 지표`, cls: 'bg-purple-50 text-purple-700 border-purple-200' }
                 : null,
             },
-            { id: 'audit-log', label: '분석 기록', badge: null },
           ];
           return (
-            <div id="esg-tab-nav" className="flex items-center gap-0 border-b border-gray-200 -mx-8 px-8 overflow-x-auto">
+            <div id="esg-tab-nav" className="flex items-center gap-0 border-b border-gray-200 -mx-8 px-8 overflow-x-auto overflow-y-hidden">
               {tabs.map(tab => (
                 <button
                   key={tab.id}
@@ -7378,10 +7377,10 @@ export default function AnalysisResultPage() {
               {/* 카테고리 탭 */}
               <div className="flex flex-wrap gap-1.5 mb-5">
                 {['ALL', 'E', 'S', 'G'].map((tab) => {
-                  // evidenceList 기준으로 카운트 (numeric 우선 dedup 포함)
+                  // 테이블과 동일한 completeIndicatorList 기준으로 카운트 (지표 코드별 1개)
                   const cnt = tab === 'ALL'
-                    ? evidenceList.length
-                    : evidenceList.filter(e => e.indicatorCode?.startsWith(tab)).length;
+                    ? completeIndicatorList.length
+                    : completeIndicatorList.filter(e => e.indicatorCode?.startsWith(tab)).length;
                   return (
                     <button
                       key={tab}
@@ -7562,11 +7561,7 @@ export default function AnalysisResultPage() {
           </SectionCard>
         )}
 
-        {/* ESG 분석 상세 섹션 제거 — Evidence 탭에서 중복 summary 정리 */}
-
-        {activeTab === 'audit-log' && (<>
-
-
+        {false && (<>
         {/* ── Audit Execution Timeline ─────────────────────── */}
         {(() => {
           const totalMs = d.processingTimeMs ?? 0;

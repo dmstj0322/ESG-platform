@@ -319,13 +319,6 @@ export const computeDashboardKPIs = (data) => {
   const highCount = recs.filter(r => r.sev === 'HIGH').length;
   const medCount  = recs.filter(r => r.sev === 'MED').length;
 
-  // 환경 Benchmark 첫 번째 지표 diff (Snapshot 표시용)
-  const benchMetrics = data.benchmarkComparison?.metrics ?? [];
-  const firstBenchMetric = benchMetrics[0] ?? null;
-  const envDiffPct = firstBenchMetric?.company != null && (firstBenchMetric?.industryAvg ?? 0) > 0
-    ? (firstBenchMetric.company - firstBenchMetric.industryAvg) / firstBenchMetric.industryAvg * 100
-    : null;
-
   return {
     // ── API 직접 필드 (서버 계산값) ──
     finalGrade:  data.finalGrade,
@@ -350,9 +343,6 @@ export const computeDashboardKPIs = (data) => {
     recs: recs.slice(0, 4),
     highCount,
     medCount,
-    // ── Snapshot 표시용 ──
-    envBenchmarkLabel:  firstBenchMetric?.name ?? null,
-    envBenchmarkDiffPct: envDiffPct,
     benchmarkIndustry:  data.benchmarkComparison?.industry ?? null,
     benchmarkRegion:    data.benchmarkComparison?.regionName ?? null,
   };

@@ -45,7 +45,6 @@ public class AnalysisController {
         log.info(">>>> [API 호출] 기업 ID {}의 최신 COMPLETED 리포트 조회", companyId);
 
         return analysisReportRepository
-                // ✅ id DESC 기준으로 변경
                 .findFirstByCompanyIdAndStatusOrderByIdDesc(companyId, "COMPLETED")
                 .map(report -> {
                     log.info(">>>> [조회 성공] 리포트 ID: {}, 등급: {}", report.getId(), report.getGrade());
@@ -288,13 +287,4 @@ public class AnalysisController {
             return ResponseEntity.notFound().build();
         }
     }
-
-//    /**
-//     * [GET] QueryDSL 동작 테스트
-//     */
-//    @GetMapping("/test/querydsl")
-//    public String testQueryDsl(@RequestHeader("X-Company-Id") Long companyId) {
-//        long count = analysisReportRepository.countByCompanyAndStatus(companyId, "COMPLETED");
-//        return "기업 ID [" + companyId + "]의 완료된 분석 리포트: " + count + "개";
-//    }
 }

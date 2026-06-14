@@ -24,16 +24,6 @@ spring:
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-#    consumer:
-#      group-id: analysis-group
-#      auto-offset-reset: earliest
-#      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-#      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-#      properties:
-#        spring.json.trusted.packages: "*"
-#        spring.json.use.type.headers: false
-#        spring.json.value.default.type: "com.esg.analysis.dto.AnalysisRequestDto"
-
 
 resilience4j:
   circuitbreaker:
@@ -52,14 +42,6 @@ resilience4j:
         waitDurationInOpenState: 60000
         permittedNumberOfCallsInHalfOpenState: 2
         automaticTransitionFromOpenToHalfOpenEnabled: true
-
-
-
-#groq:
-#  api:
-#    key: ${GROQ_API_KEY}
-#    url: https://api.groq.com/openai/v1/chat/completions
-#    model: llama-3.3-70b-versatile
 
 upstage:
   api:

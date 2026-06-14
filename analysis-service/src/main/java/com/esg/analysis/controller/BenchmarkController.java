@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/benchmark")
 @RequiredArgsConstructor
-//@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
 public class BenchmarkController {
 
   private final BenchmarkService benchmarkService;
