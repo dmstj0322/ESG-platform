@@ -44,7 +44,7 @@ public enum ActivityType {
     List.of("waste_container", "trash_can", "bin", "garbage", "plastic_bottle", "bottle", "box", "cardboard", "can", "glass_bottle", "paper", "packaging"),
 
     // 🚨 Reject: 안 씻은 용기, 음식물, 길거리 무단투기
-    List.of("food", "meal", "junk_food", "litter", "soft_drink", "beverage", "drinking_straw"),
+    List.of("food", "meal", "junk_food", "litter", "soft_drink", "beverage", "bottled_water", "drinking_straw"),
 
     "분리배출",
     500
