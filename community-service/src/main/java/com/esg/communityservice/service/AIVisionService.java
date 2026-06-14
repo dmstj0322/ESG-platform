@@ -75,41 +75,41 @@ public class AIVisionService {
 
     aiLogger.info("AI 분석된 전체 라벨: {}", allDetectedLabels);
 
-    // 🌟 기본값을 FAIL로 설정
     ActivityType bestType = ActivityType.FAIL;
     double highestScore = 0.0;
 
     for (ActivityType type : ActivityType.values()) {
-      if (type == ActivityType.FAIL) continue; // FAIL 타입은 검사에서 제외
+      if (type == ActivityType.FAIL) continue;
 
-      // 1. 부정 키워드 감지 시 해당 타입 후보에서 즉시 제외
+      // 1. 🌟 면책 특권 조건 확인 (Primary 키워드가 0.8 이상인지)
+      boolean hasStrongPrimary = allDetectedLabels.stream()
+        .anyMatch(label -> type.getPrimaryKeywords().stream()
+          .anyMatch(primary -> isExactMatch(label.description(), primary) && label.score() >= 0.8f));
+
+      // 2. 부정 키워드 감지
       boolean isRejected = allDetectedLabels.stream()
         .anyMatch(label -> type.getRejectKeywords().stream()
           .anyMatch(reject -> isExactMatch(label.description(), reject)
             && label.score() > REJECT_THRESHOLD));
 
+      // 3. 🛡️ 탈락 방어 로직 적용
       if (isRejected) {
-        aiLogger.info("❌ {}: 부정 키워드 감지 → 후보 탈락", type);
-        continue;
+        if (hasStrongPrimary) {
+          aiLogger.info("🛡️ [면책 발동] 강력한 긍정 증거(Primary >= 0.8)가 있어 부정 키워드를 무시합니다. 활동: {}", type);
+        } else {
+          aiLogger.info("❌ {}: 부정 키워드 감지 → 후보 탈락", type);
+          continue; // 면책 특권이 없으면 기존처럼 탈락
+        }
       }
 
-      // 2. 긍정 키워드 점수 합산
-//      double scoreSum = allDetectedLabels.stream()
-//        .filter(label -> type.getKeywords().contains(label.description()) && label.score() > ACCEPT_THRESHOLD)
-//        .mapToDouble(LabelInfo::score)
-//        .sum();
-
-      // 2. 가중치를 적용한 점수 합산
+      // 4. 가중치를 적용한 점수 합산
       double scoreSum = 0.0;
       for (LabelInfo label : allDetectedLabels) {
         if (label.score() < ACCEPT_THRESHOLD) continue;
 
-        // 🌟 Primary 키워드는 점수를 1.5배로 계산하여 압도적인 우위를 줌
         if (type.getPrimaryKeywords().stream().anyMatch(k -> isExactMatch(label.description(), k))) {
           scoreSum += (label.score() * 2.0);
-        }
-        // 일반 키워드는 그대로 합산
-        else if (type.getKeywords().stream().anyMatch(k -> isExactMatch(label.description(), k))) {
+        } else if (type.getKeywords().stream().anyMatch(k -> isExactMatch(label.description(), k))) {
           scoreSum += label.score();
         }
       }
@@ -148,26 +148,30 @@ public class AIVisionService {
           .toList()
           .toString();
 
-        // 1. 부정 키워드 체크 (발견 시 즉각 -1.0 반환)
+        // 1. 🌟 면책 특권 조건 확인 (Primary 키워드가 0.8 이상인지)
+        boolean hasStrongPrimary = labels.stream()
+          .anyMatch(label -> type.getPrimaryKeywords().stream()
+            .anyMatch(primary -> isExactMatch(label.description(), primary) && label.score() >= 0.8f));
+
+        // 2. 부정 키워드 체크
         boolean isRejected = labels.stream()
           .anyMatch(label -> type.getRejectKeywords().stream()
             .anyMatch(reject -> isExactMatch(label.description(), reject)
-            && label.score() > REJECT_THRESHOLD));
+              && label.score() > REJECT_THRESHOLD));
 
+        // 3. 🛡️ 탈락 방어 로직 적용
         if (isRejected) {
-          aiLogger.warn("🚨 부정 키워드 감지됨! AI 자동 탈락 처리. 활동: {}, 이미지: {}", type, urlString);
-          return new AiResult(-1.0, "🚨 부정 키워드 감지됨!\n감지된 라벨: " + currentLabelsStr, urlString);
+          if (hasStrongPrimary) {
+            aiLogger.info("🛡️ [면책 발동] 강력한 긍정 증거(Primary >= 0.8)가 있어 부정 키워드를 무시합니다. 활동: {}", type);
+          } else {
+            aiLogger.warn("🚨 부정 키워드 감지됨! AI 자동 탈락 처리. 활동: {}, 이미지: {}", type, urlString);
+            return new AiResult(-1.0, "🚨 부정 키워드 감지됨!\n감지된 라벨: " + currentLabelsStr, urlString);
+          }
         }
 
-//        // 2. 긍정 키워드 합산
-//        double currentScore = labels.stream()
-//          .filter(label -> type.getKeywords().contains(label.description()) && label.score() > ACCEPT_THRESHOLD)
-//          .mapToDouble(LabelInfo::score)
-//          .sum();
-
-        // 2. 긍정 키워드 합산 (가중치 적용)
+        // 4. 긍정 키워드 합산 (가중치 적용)
         double currentScore = 0.0;
-        int matchCount = 0; // 매칭된 유효 키워드 개수
+        int matchCount = 0;
 
         for (LabelInfo label : labels) {
           if (label.score() < ACCEPT_THRESHOLD) continue;
@@ -182,10 +186,14 @@ public class AIVisionService {
         }
 
         if (currentScore > 0) {
-          // 3. 점수 정규화 및 보너스 점수
+          // 점수 정규화 및 보너스 점수
           double finalScore = (currentScore / 2.0) + (matchCount * 0.05);
-          // 합산 점수가 1.0을 넘지 않도록 캡핑
           currentScore = Math.min(1.0, finalScore);
+
+          // 🌟 추가: 강력한 결정타(Primary 0.8 이상)가 있으면 무조건 0.85 이상을 보장하여 억울한 탈락(수동 검수행) 방지
+          if (hasStrongPrimary) {
+            currentScore = Math.max(0.85, currentScore);
+          }
         } else {
           aiLogger.info("이미지에서 긍정 키워드를 찾을 수 없습니다. (0점 처리)");
         }
