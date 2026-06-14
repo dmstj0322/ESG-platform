@@ -128,18 +128,18 @@ public class AnalysisController {
     /**
      * [POST] 파일 업로드 및 분석 시작
      */
-    @PostMapping("/api/v1/analysis/report")
-    public ResponseEntity<?> requestReport(
-            @RequestHeader("X-Member-Id") Long userId,
-            @RequestHeader("X-Company-Id") Long companyId,
-            @RequestParam("file") MultipartFile file) {
-
-        log.error("★★★★★ requestReport 호출됨 ★★★★★");
-        log.info("★파일 수신★ 이름: {}, 크기: {} bytes", file.getOriginalFilename(), file.getSize());
-
-        Long analysisId = analysisApiService.initiateAnalysis(userId, companyId, file);
-        return ResponseEntity.accepted().body(analysisId);
-    }
+//    @PostMapping("/api/v1/analysis/report")
+//    public ResponseEntity<?> requestReport(
+//            @RequestHeader("X-Member-Id") Long userId,
+//            @RequestHeader("X-Company-Id") Long companyId,
+//            @RequestParam("file") MultipartFile file) {
+//
+//        log.error("★★★★★ requestReport 호출됨 ★★★★★");
+//        log.info("★파일 수신★ 이름: {}, 크기: {} bytes", file.getOriginalFilename(), file.getSize());
+//
+//        Long analysisId = analysisApiService.initiateAnalysis(userId, companyId, file);
+//        return ResponseEntity.accepted().body(analysisId);
+//    }
 
     /**
      * [POST] E / S / G 카테고리 단독 분석 (OCR/RAG + 체크리스트 혼합)
