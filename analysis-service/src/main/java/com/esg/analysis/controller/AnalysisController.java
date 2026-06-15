@@ -6,7 +6,6 @@ import com.esg.analysis.dto.FinalReportRequest;
 import com.esg.analysis.dto.GradeStatDto;
 import com.esg.analysis.service.AnalysisApiService;
 import com.esg.analysis.service.CategoryAnalysisService;
-import com.esg.analysis.service.EsgGuidelineService;
 import com.esg.analysis.service.FinalReportService;
 import com.esg.analysis.service.repository.AnalysisReportRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -32,7 +31,6 @@ public class AnalysisController {
 
     private final AnalysisApiService analysisApiService;
     private final AnalysisReportRepository analysisReportRepository;
-    private final EsgGuidelineService esgGuidelineService;
     private final FinalReportService finalReportService;
     private final CategoryAnalysisService categoryAnalysisService;
     private final ObjectMapper objectMapper;
@@ -263,15 +261,6 @@ public class AnalysisController {
     public ResponseEntity<List<GradeStatDto>> getGradeStats(@RequestHeader("X-Company-Id") Long companyId) {
         List<GradeStatDto> stats = analysisReportRepository.getGradeDistribution(companyId);
         return ResponseEntity.ok(stats);
-    }
-
-    /**
-     * [POST] K-ESG 가이드라인 학습 (Admin)
-     */
-    @PostMapping("/admin/ingest")
-    public ResponseEntity<String> ingestGuideline(@RequestParam String fileName) {
-        esgGuidelineService.ingestGuideline(fileName);
-        return ResponseEntity.ok("가이드라인 학습 성공: " + fileName);
     }
 
     /**
