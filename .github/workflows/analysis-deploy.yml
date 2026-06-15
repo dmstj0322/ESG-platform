@@ -1,0 +1,49 @@
+name: Analysis Deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'analysis-service/**'
+      - '.github/workflows/analysis-deploy.yml'
+
+jobs:
+  build-analysis:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./analysis-service/Dockerfile
+          push: true
+          tags: esgplatform/analysis-service:latest
+
+  deploy-analysis:
+    needs: build-analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER1_HOST }}
+          username: ${{ secrets.SERVER1_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          script: |
+            cd /home/ubuntu/esg-deploy
+
+            docker compose pull analysis-service
+            docker compose up -d analysis-service
+
+            docker image prune -af
