@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Barcode from 'react-barcode';
 import api from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
-import html2canvas from 'html2canvas';
+// 🌟 html2canvas 대신 html-to-image 사용
+import { toPng } from 'html-to-image'; 
 
 const VoucherDetail = () => {
   const { orderId } = useParams();
@@ -16,7 +17,6 @@ const VoucherDetail = () => {
 
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   
-  // 🌟 화면 크기에 따라 폰트 크기 변경
   const responsiveFont = (mobile, desktop) => (windowWidth < 500 ? mobile : desktop);
 
   useEffect(() => {
@@ -84,30 +84,29 @@ const VoucherDetail = () => {
 
     try {
       setIsDownloading(true);
-      await new Promise(resolve => setTimeout(resolve, 100)); 
+      await document.fonts.ready; 
+      await new Promise(resolve => setTimeout(resolve, 200)); 
 
-      const canvas = await html2canvas(element, {
-        scale: 2, 
-        useCORS: true,
+      // 🌟 html-to-image 변환 로직 (브라우저 렌더링 100% 일치)
+      const dataUrl = await toPng(element, {
+        cacheBust: true,
+        pixelRatio: 2, 
         backgroundColor: "#fcfcfc",
-        onclone: (clonedDoc) => {
-          const clonedCard = clonedDoc.querySelector(".ticket-card");
-          clonedCard.style.width = "400px";
-          clonedCard.style.boxShadow = "none";
-
-          const imgContainer = clonedDoc.querySelector(".img-container");
-          if (imgContainer) {
-            imgContainer.style.height = "250px";
-          }
+        style: {
+          width: '400px', // 이미지 가로폭 고정
+          margin: '0',
+          boxShadow: 'none',
+          transform: 'scale(1)',
+          transformOrigin: 'top left'
         }
       });
 
-      const image = canvas.toDataURL("image/png");
       const link = document.createElement("a");
-      link.href = image;
+      link.href = dataUrl;
       link.download = `GreenTrace_${data.productName}.png`;
       link.click();
     } catch (error) {
+      console.error("이미지 저장 에러:", error);
       alert("이미지 저장에 실패했습니다.");
     } finally {
       setIsDownloading(false);
@@ -131,7 +130,6 @@ const VoucherDetail = () => {
         {isDonation ? (
           <div className="cert-inner" style={{
             ...certInnerStyle,
-            // 🌟 너무 좁았던 여백을 조금 더 자연스럽게(10%) 조정
             padding: windowWidth < 500 ? '2.5rem 10%' : '4rem 2rem'
           }}>
             <div style={{ width: '100%' }}>
@@ -190,9 +188,9 @@ const VoucherDetail = () => {
             </div>
 
             <div style={guideBoxStyle}>
-              <p style={{ fontSize: responsiveFont('11px', '13px') }}>• 사용처: {data.productName} 전국 제휴 매장</p>
-              <p style={{ fontSize: responsiveFont('11px', '13px') }}>• 유효기간: 발행일로부터 90일 이내</p>
-              <p style={{ fontSize: responsiveFont('11px', '13px'), color: '#fa5252' }}>• 결제 시 바코드를 보여주세요.</p>
+              <p style={{ fontSize: responsiveFont('11px', '13px'), margin: '0 0 5px 0' }}>• 사용처: {data.productName} 전국 제휴 매장</p>
+              <p style={{ fontSize: responsiveFont('11px', '13px'), margin: '0 0 5px 0' }}>• 유효기간: 발행일로부터 90일 이내</p>
+              <p style={{ fontSize: responsiveFont('11px', '13px'), color: '#fa5252', margin: 0 }}>• 결제 시 바코드를 보여주세요.</p>
             </div>
           </div>
         )}
@@ -214,7 +212,6 @@ const VoucherDetail = () => {
 
 // --- 스타일 객체 ---
 
-// 🌟 핵심 해결: width: '100%'를 추가하여 Z Fold처럼 넓은 화면에서도 가운데 쏠림 보장
 const containerStyle = { 
   display: 'flex', 
   flexDirection: 'column', 
@@ -223,7 +220,6 @@ const containerStyle = {
   backgroundColor: '#f1f3f5', 
   minHeight: '100vh',
   width: '100%',
-  padding: '1.3rem',
   boxSizing: 'border-box'
 };
 
@@ -243,7 +239,7 @@ const certCardStyle = {
   border: '0.625rem double #d4af37',
   backgroundColor: '#fffcf5',
   padding: '0.75rem',
-  minHeight: '35rem',
+  minHeight: '37rem',
   display: 'flex',
   flexDirection: 'column'
 };
@@ -260,22 +256,8 @@ const certInnerStyle = {
   boxSizing: 'border-box'
 };
 
-const imageContainerStyle = {
-  width: '100%',
-  aspectRatio: '16 / 10',
-  borderRadius: '1rem',
-  overflow: 'hidden',
-  marginBottom: '1.25rem',
-  backgroundColor: '#f8f9fa'
-};
-
-const buttonGroupStyle = {
-  display: 'flex',
-  gap: '0.625rem',
-  width: '95vw',
-  maxWidth: '25rem',
-  marginTop: '1.5rem'
-};
+const imageContainerStyle = { width: '100%', height: '250px', borderRadius: '1rem', overflow: 'hidden', marginBottom: '1.25rem', backgroundColor: '#f8f9fa' };
+const buttonGroupStyle = { display: 'flex', gap: '0.625rem', width: '100%', maxWidth: '25rem', marginTop: '1.5rem' };
 
 const topNavStyle = { width: '100%', maxWidth: '25rem', marginBottom: '1.25rem' };
 const backBtnStyle = { background: 'none', border: 'none', color: '#868e96', cursor: 'pointer', fontSize: '14px', padding: 0 };

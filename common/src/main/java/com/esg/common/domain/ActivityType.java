@@ -26,10 +26,10 @@ public enum ActivityType {
     // 🌟 Primary: 명확한 대중교통/자전거 수단
     List.of("subway", "train", "bus", "bicycle", "metro"),
 
-    // ✅ Secondary: 대중교통 관련 환경/부품 (commercial_vehicle 포함)
+    // ✅ Secondary: 대중교통 관련 환경/부품
     List.of("public_transport", "railway", "transit", "commuter", "passenger", "station", "stop", "commercial_vehicle"),
 
-    // 🚨 Reject: 개인 승용차/오토바이/택시 철저히 차단 (motor_vehicle, driving 등 버스에서 잡힐 수 있는 단어 제거)
+    // 🚨 Reject: 개인 승용차/오토바이/택시 철저히 차단
     List.of("car", "taxi", "cab", "motorcycle", "scooter", "moped", "personal_luxury_car", "luxury_vehicle", "traffic_jam"),
 
     "대중교통 및 자전거 이용",
@@ -40,7 +40,7 @@ public enum ActivityType {
     // 🌟 Primary: '분리배출/재활용'을 명확히 지칭하는 단어
     List.of("recycling", "recycling_bin", "waste_sorting"),
 
-    // ✅ Secondary: 쓰레기통 자체나 재활용되는 재질들 (단순 쓰레기통 강등)
+    // ✅ Secondary: 쓰레기통 자체나 재활용되는 재질들
     List.of("waste_container", "trash_can", "bin", "garbage", "plastic_bottle", "bottle", "box", "cardboard", "can", "glass_bottle", "paper", "packaging"),
 
     // 🚨 Reject: 안 씻은 용기, 음식물, 길거리 무단투기
