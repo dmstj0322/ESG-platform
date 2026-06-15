@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - 'analysis-service/**'
+      - '.github/workflows/analysis-deploy.yml'
 
 jobs:
   docker-build-push:
