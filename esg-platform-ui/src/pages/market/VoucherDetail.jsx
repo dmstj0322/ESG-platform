@@ -92,6 +92,9 @@ const VoucherDetail = () => {
         cacheBust: true,
         pixelRatio: 2, 
         backgroundColor: "#fcfcfc",
+        filter: (node) => {
+          return node.tagName !== 'LINK' || (node.href && !node.href.includes('fonts.googleapis.com'));
+        },
         style: {
           width: '400px', // 이미지 가로폭 고정
           margin: '0',

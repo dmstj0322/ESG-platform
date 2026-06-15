@@ -426,7 +426,7 @@ const MyPage = () => {
               {myPosts.length === 0 ? <div style={emptyTextStyle}>작성한 글이 없습니다.</div> : myPosts.slice(0, 10).map(post => (
                 <div key={post.id} style={listCardStyle} onClick={() => navigate(`/posts/${post.id}`)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, overflow: 'hidden', cursor: 'pointer' }}>
-                    <div style={{ position: 'relative', width: '3.125rem', height: '3.125rem', flexShrink: 0, display: 'flex',justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ position: 'relative', width: '3.125rem', height: '3.125rem', flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                       {post.imageUrls?.[0] ? (
                         <>
                           <img src={post.imageUrls[0]} style={thumbnailImgStyle} alt="thumb" />
