@@ -13,7 +13,7 @@ public enum ActivityType {
     List.of("tumbler", "thermos", "reusable", "flask", "lunch_box", "tupperware", "vacuum_flask"),
 
     // ✅ Secondary: 포괄적인 용기
-    List.of("mug", "cup", "tableware", "cookware", "bakeware", "bowl", "coffee_cup", "bottle", "water_bottle", "container", "cylinder", "food_storage"),
+    List.of("mug", "cup", "tableware", "cookware", "bakeware", "bowl", "coffee_cup", "bottle", "water_bottle", "container", "drinkware", "cylinder", "food_storage"),
 
     // 🚨 Reject: 일회용품, 테이크아웃 컵의 강력한 증거
     List.of("disposable", "straw", "drinking_straw", "paper_cup", "plastic_cup", "sleeve", "cup_sleeve", "plastic_bottle", "takeout", "fast_food"),
