@@ -50,6 +50,8 @@ const NotificationPanel = ({ memberId, onClose, onRead }) => {
     switch (n.type) {
       case 'POINT_EARNED': return '💰';
       case 'POINT_USED': return '💸';
+      case 'POINT_REFUNDED': return '🔄';
+      case 'POINT_CANCELED': return '⚠️';
       case 'ACTIVITY_PENDING': return '⏳';
       case 'ACTIVITY_APPROVED': return '🌱';
       case 'ACTIVITY_REJECTED': return '❌';
