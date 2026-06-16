@@ -1,5 +1,6 @@
 package com.esg.communityservice.service;
 
+import com.esg.common.domain.ActivityType;
 import com.esg.communityservice.domain.AIStatus;
 import com.esg.communityservice.domain.AdminStatus;
 import com.esg.communityservice.domain.ImageFile;
@@ -7,6 +8,7 @@ import com.esg.communityservice.domain.Post;
 import com.esg.communityservice.dto.PostRequestDto;
 import com.esg.communityservice.dto.PostResponseDto;
 import com.esg.communityservice.event.PostCreatedEvent;
+import com.esg.communityservice.event.PostDeletedEvent;
 import com.esg.communityservice.repository.MemberBadgeRepository;
 import com.esg.communityservice.repository.PostLikeRepository;
 import com.esg.communityservice.repository.PostRepository;
@@ -177,7 +179,24 @@ public class PostService {
       throw new IllegalArgumentException("삭제 권한이 없습니다.");
     }
 
+    boolean wasApproved = (post.getAdminStatus() == AdminStatus.APPROVED || post.getAiStatus() == AIStatus.SUCCESS);
+    ActivityType activityType = post.getActivityType() != null ? post.getActivityType() : null;
+
     postRepository.delete(post);
+
+    if (wasApproved && activityType != null) {
+      if (TransactionSynchronizationManager.isActualTransactionActive()) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+          @Override
+          public void afterCommit() {
+            log.info("승인된 게시글 삭제됨. 보상 회수 이벤트를 발행합니다. Post ID: {}", postId);
+
+            PostDeletedEvent event = new PostDeletedEvent(postId, memberId, companyId, activityType);
+            kafkaTemplate.send("post-deleted-topic", event);
+          }
+        });
+      }
+    }
   }
 
   @Transactional(readOnly = true)

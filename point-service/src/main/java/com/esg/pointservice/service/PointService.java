@@ -19,7 +19,6 @@ public class PointService {
   private final PointBalanceRepository pointBalanceRepository;
   private final PointHistoryRepository pointHistoryRepository;
   private final CompanyEsgPoolRepository companyEsgPoolRepository;
-  private final ProcessedEventRepository processedEventRepository;
   private final NotificationProducer notificationProducer;
 
   /**
@@ -222,5 +221,47 @@ public class PointService {
   @Transactional(readOnly = true)
   public Page<PointHistory> getPointHistory(Long memberId, Pageable pageable) {
     return pointHistoryRepository.findByMemberIdOrderByCreatedDateDesc(memberId, pageable);
+  }
+
+
+  @Transactional
+  public void cancelPoints(Long memberId, Long companyId, Long amount, int co2Amount, Long targetId) {
+    PointBalance balance = pointBalanceRepository.findById(memberId)
+      .orElseThrow(() -> new IllegalArgumentException("잔액 정보가 없습니다."));
+
+    // 1. 개인 잔액 & 탄소량 차감
+    balance.use(amount);
+    balance.addCo2Reduction(-co2Amount);
+    pointBalanceRepository.save(balance);
+
+    // 2. 회사 ESG Pool 차감 (지급했던 회사 통계도 원상복구)
+    if (companyId != null) {
+      companyEsgPoolRepository.findById(companyId).ifPresent(pool -> {
+        pool.consume(amount);
+        companyEsgPoolRepository.save(pool);
+      });
+    }
+
+    // 3. 차감 내역 히스토리 저장
+    String description = "게시글 삭제로 인한 보상 회수";
+    PointHistory history = PointHistory.builder()
+      .memberId(memberId)
+      .companyId(companyId)
+      .amount(-amount)
+      .type(PointType.CANCEL)
+      .description(description)
+      .balance(balance.getBalance())
+      .targetId(targetId)
+      .build();
+    pointHistoryRepository.save(history);
+
+    // 4. 회수 알림 전송
+    notificationProducer.send(
+      memberId,
+      String.format("⚠️ 게시글 삭제로 인해 %d 포인트와 탄소 절감 내역이 회수되었습니다.", amount),
+      "POINT_CANCELED", targetId
+    );
+
+    log.info("[REWARD-CANCEL] targetId={} memberId={} 회수포인트={} 회수탄소량={}", targetId, memberId, amount, co2Amount);
   }
 }
