@@ -9,13 +9,13 @@ import java.util.List;
 @AllArgsConstructor
 public enum ActivityType {
   TUMBLER(
-    // 🌟 Primary: 명확한 다회용기/텀블러 (일반 bottle, container 제외)
+    // 🌟 Primary: 명확한 다회용기/텀블러
     List.of("tumbler", "thermos", "reusable", "flask", "lunch_box", "tupperware", "vacuum_flask"),
 
-    // ✅ Secondary: 포괄적인 용기 (단독으로는 약하지만 Primary와 조합되면 고득점)
+    // ✅ Secondary: 포괄적인 용기
     List.of("mug", "cup", "tableware", "cookware", "bakeware", "bowl", "coffee_cup", "bottle", "water_bottle", "container", "drinkware", "cylinder", "food_storage"),
 
-    // 🚨 Reject: 일회용품, 테이크아웃 컵의 강력한 증거 (takeout, cup_sleeve 등 추가)
+    // 🚨 Reject: 일회용품, 테이크아웃 컵의 강력한 증거
     List.of("disposable", "straw", "drinking_straw", "paper_cup", "plastic_cup", "sleeve", "cup_sleeve", "plastic_bottle", "takeout", "fast_food"),
 
     "텀블러 및 다회용기 사용",

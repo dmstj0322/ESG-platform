@@ -48,10 +48,15 @@ export default function Header() {
         }
     }, [user, isAdmin]);
 
+    const onNotification = useCallback(() => {
+        fetchPoints(); // 헤더의 포인트 즉시 갱신
+        window.dispatchEvent(new CustomEvent('esgUpdate'));
+    }, [fetchPoints]);
+
     // 알림 훅 연결
     const { hasUnread, setHasUnread } = useNotification(
-        user?.memberId || user?.id,
-        fetchPoints
+        user?.memberId,
+        onNotification
     );
 
     useEffect(() => {
