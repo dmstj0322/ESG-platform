@@ -34,8 +34,9 @@ public class PointKafka {
     }
   }
 
-  @KafkaListener(topics = "post-deleted-topic", groupId = "point-service-group")
+  @KafkaListener(topics = "post-deleted-topic", groupId = "point-service-group", containerFactory = "postDeletedContainerFactory")
   public void consumeDeleted(PostDeletedEvent event) {
+    log.info("[DEBUG] ✅ 카프카 메시지 수신 완료: PostID={}", event.postId()); // 이게 찍히는지 확인!
     try {
       log.info("Kafka 회수 이벤트 수신! 포인트/탄소 회수 시작: Post ID {}", event.postId());
 

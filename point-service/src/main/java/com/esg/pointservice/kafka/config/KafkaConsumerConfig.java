@@ -1,6 +1,7 @@
 package com.esg.pointservice.kafka.config;
 
 import com.esg.pointservice.event.PostCreatedEvent;
+import com.esg.pointservice.event.PostDeletedEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,6 +50,29 @@ public class KafkaConsumerConfig {
                                                                                                          DefaultErrorHandler errorHandler) {
     ConcurrentKafkaListenerContainerFactory<String, PostCreatedEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
     factory.setConsumerFactory(consumerFactory);
+    factory.setCommonErrorHandler(errorHandler);
+    return factory;
+  }
+
+  @Bean
+  public ConsumerFactory<String, PostDeletedEvent> postDeletedConsumerFactory() {
+    Map<String, Object> props = new HashMap<>();
+    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+    props.put(ConsumerConfig.GROUP_ID_CONFIG, "point-service-group");
+
+    // PostDeletedEvent를 역직렬화할 수 있게 설정
+    JsonDeserializer<PostDeletedEvent> deserializer = new JsonDeserializer<>(PostDeletedEvent.class, false);
+    deserializer.addTrustedPackages("*");
+
+    return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+  }
+
+  @Bean
+  public ConcurrentKafkaListenerContainerFactory<String, PostDeletedEvent> postDeletedContainerFactory(
+    ConsumerFactory<String, PostDeletedEvent> postDeletedConsumerFactory,
+    DefaultErrorHandler errorHandler) {
+    ConcurrentKafkaListenerContainerFactory<String, PostDeletedEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
+    factory.setConsumerFactory(postDeletedConsumerFactory);
     factory.setCommonErrorHandler(errorHandler);
     return factory;
   }
