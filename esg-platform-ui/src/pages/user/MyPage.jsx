@@ -214,7 +214,7 @@ const MyPage = () => {
                     <div style={{ fontSize: '12px', color: '#868e96' }}>{new Date(post.createdDate).toLocaleDateString()}</div>
                   </div>
                   <div style={{ fontWeight: 'bold', color: '#16A87A', flexShrink: 0 }}>
-                    +{co2ReductionMap[post.aiResult] || 0}g
+                    +{co2ReductionMap[post.activityType] || 0}g
                   </div>
                 </div>
               ))}

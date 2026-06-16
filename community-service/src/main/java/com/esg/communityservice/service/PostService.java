@@ -182,8 +182,10 @@ public class PostService {
     boolean wasApproved = (post.getAdminStatus() == AdminStatus.APPROVED || post.getAiStatus() == AIStatus.SUCCESS);
     ActivityType activityType = post.getActivityType() != null ? post.getActivityType() : null;
 
+    log.info("[DEBUG] 삭제 로직 직전: postStatus={}", post.getAdminStatus());
     postRepository.delete(post);
 
+    log.info("[DEBUG] 이벤트 발행 시도 중...");
     if (wasApproved && activityType != null) {
       if (TransactionSynchronizationManager.isActualTransactionActive()) {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -195,6 +197,8 @@ public class PostService {
             kafkaTemplate.send("post-deleted-topic", event);
           }
         });
+      } else {
+        log.error("[ERROR] ❌ 트랜잭션이 활성화되어 있지 않아 afterCommit이 등록되지 않았습니다!");
       }
     }
   }
