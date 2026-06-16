@@ -21,7 +21,8 @@ const PointHistory = () => {
   const typeMap = {
     'EARN': '적립',
     'USE': '사용',
-    'REFUND': '환불'
+    'REFUND': '환불',
+    'CANCEL': '회수'
   };
 
   return (
@@ -60,7 +61,7 @@ const PointHistory = () => {
                       textAlign: 'right',
                       fontWeight: 'bold',
                       // 유형별 텍스트 색상 차별화 (적립: 블루, 사용: 레드, 환불: 퍼플)
-                      color: history.type === 'USE' ? '#ff6b6b' : (history.type === 'REFUND' ? '#7048e8' : '#16A87A')
+                      color: history.type === 'USE' ? '#ff6b6b' : (history.type === 'REFUND' ? '#7048e8' : (history.type === 'CANCEL' ? '#f76707' : '#16A87A'))
                     }}>
                       {history.amount > 0 ? `+${history.amount.toLocaleString()}` : history.amount.toLocaleString()} P
                     </td>
@@ -114,32 +115,36 @@ const titleStyle = { fontSize: '1.5rem', fontWeight: '800', color: '#212529', ma
 const subtitleStyle = { fontSize: '0.875rem', color: '#868e96', margin: 0 };
 
 const cardStyle = { backgroundColor: '#fff', borderRadius: '0.75rem', border: '1px solid #e9ecef', boxShadow: '0 0.25rem 0.75rem rgba(0,0,0,0.02)', width: '100%', overflow: 'hidden' };
-const tableScrollContainer = { width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch'};
-const tableStyle = { width: '100%', minWidth: '37.5rem', borderCollapse: 'collapse', textAlign: 'left'};
-const thStyle = { padding: '1rem 1.5rem', backgroundColor: '#f8f9fa', color: '#868e96', fontWeight: '600', fontSize: '0.875rem', borderBottom: '1px solid #f1f3f5', whiteSpace: 'nowrap'};
+const tableScrollContainer = { width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' };
+const tableStyle = { width: '100%', minWidth: '37.5rem', borderCollapse: 'collapse', textAlign: 'left' };
+const thStyle = { padding: '1rem 1.5rem', backgroundColor: '#f8f9fa', color: '#868e96', fontWeight: '600', fontSize: '0.875rem', borderBottom: '1px solid #f1f3f5', whiteSpace: 'nowrap' };
 const trStyle = { borderBottom: '1px solid #f1f3f5', transition: 'background-color 0.2s' };
 const tdStyle = { padding: '1rem 1.5rem', fontSize: '0.875rem', color: '#343a40', verticalAlign: 'middle', whiteSpace: 'nowrap' };
 
 const badgeStyle = (type) => {
   const isEarn = type === 'EARN' || type === '적립';
   const isRefund = type === 'REFUND' || type === '환불';
+  const isCancel = type === 'CANCEL' || type === '회수';
 
-  let backgroundColor = '#fff5f5'; 
+  let backgroundColor = '#fff5f5';
   let color = '#ff6b6b';
-  
+
   if (isEarn) {
-    backgroundColor = '#E6F7F1';   
+    backgroundColor = '#E6F7F1';
     color = '#16A87A';
   } else if (isRefund) {
-    backgroundColor = '#f3f0ff';   
+    backgroundColor = '#f3f0ff';
     color = '#7048e8';
+  } else if (isCancel) {
+    backgroundColor = '#fff9db';   
+    color = '#f76707';
   }
 
   return {
-    padding: '0.375rem 0.75rem', 
-    borderRadius: '1.25rem',     
+    padding: '0.375rem 0.75rem',
+    borderRadius: '1.25rem',
     fontWeight: '600',
-    fontSize: '0.8125rem',         
+    fontSize: '0.8125rem',
     backgroundColor,
     color,
     display: 'inline-block',
