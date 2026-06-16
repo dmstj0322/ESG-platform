@@ -63,6 +63,18 @@ const PostList = () => {
   }, [targetCompanyId, keyword]);
 
   useEffect(() => {
+    const handleBackgroundUpdate = () => {
+      fetchPosts(0, true);
+    };
+
+    window.addEventListener('esgUpdate', handleBackgroundUpdate);
+    
+    return () => {
+      window.removeEventListener('esgUpdate', handleBackgroundUpdate);
+    };
+  }, [fetchPosts]);
+
+  useEffect(() => {
     fetchPosts(0, true);
   }, [targetCompanyId, fetchPosts]);
 
