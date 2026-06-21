@@ -309,10 +309,7 @@ const sanitizeOpinionText = (text, contraCount, lowCount = 0, medCount = 0, allE
   console.log('③ sanitize 적용 후:', cleaned);
   console.groupEnd();
 
-  // allEVerified(전항목 HIGH)이고 삭제된 문장이 있을 때만 올바른 문구 삽입
-  out = (allEVerified && cleaned !== out)
-    ? '환경 지표 전항목의 데이터 검증이 완료되어 높은 데이터 신뢰성을 확보하였습니다. ' + cleaned
-    : cleaned;
+  out = cleaned;
 
   return out
     .replace(/([.!?。])(?=[^\s])/g, '$1 ')  // 마침표 뒤 공백 보장
@@ -3995,26 +3992,8 @@ function buildAnalysisSummary(data) {
   // 모든 E 지표 중 최대 오차율 (HIGH 포함) — avgDiff null 일 때 대표값으로 사용
   const eMaxDiff = eEvs.length === 0 ? null
     : eEvs.reduce((max, ev) => Math.max(max, ev.numericDiffPercent ?? 0), 0);
-  const isAllEFailed = eEvs.length === 0 && eTotal > 0;
-  // 오차율 3단계 해석 레이블 (LOW=0 전제)
-  const eQualityLabel = (diff) =>
-    diff == null || diff <= 5  ? '매우 높은 데이터 일관성을 보였습니다.' :
-    diff <= 15                 ? '전반적으로 양호한 데이터 일관성을 보였습니다.' :
-                                 '일부 지표 간 차이가 확인되었으나 허용 범위 내로 평가되었습니다.';
-  const eSummary = isAllEFailed
-    ? '기업 실측 데이터 추출에 실패하여 업종 평균 벤치마크 기반 추정 평가가 적용되었습니다.'
-    : eFailed >= 3
-    ? `${eFailed}개 항목의 수치 추출에 실패했습니다. 업종 평균 기반 추정치가 부분 적용되었습니다.`
-    : eLow >= 3
-    ? `${eLow}개 지표에서 입력값과 증빙 수치 간 불일치가 감지되어 보수적 평가가 적용되었습니다. 해당 항목의 측정 기준 및 데이터 출처 재확인이 권장됩니다.`
-    : eLow >= 1
-    ? `${eLow}개 지표에서 수치 불일치가 확인되어 추가 검토가 필요합니다.${eHigh + eMed > 0 ? ` 나머지 ${eHigh + eMed}개 지표는 정상 검증되었습니다.` : ''}`
-    : eMed >= 1
-    ? `환경 데이터 검증 결과 LOW 수준의 불일치는 발견되지 않았으며, ${eQualityLabel(eAvgDiff)} (HIGH ${eHigh}건 · MEDIUM ${eMed}건)`
-    : eHigh > 0
-    ? `환경 지표 ${eHigh}건 전항목이 HIGH 수준으로 검증되어 높은 데이터 신뢰성을 확보하였습니다.`
-    : '증빙 수치 검증이 완료되었습니다.';
-  const eTone = isAllEFailed ? 'amber' : eLow >= 2 ? 'red' : eLow === 1 ? 'amber' : eMed >= 1 ? 'amber' : eFailed >= 3 ? 'amber' : 'emerald';
+  const eSummary = '전력·가스·탄소배출량·폐기물·수자원 5개 환경 지표를 기반으로 업종 평균 대비 환경 성과를 분석하였습니다.';
+  const eTone = 'emerald';
 
   // getVerificationStatus 기준 미검출 계산 — blockedIndicators · buildRecommendations 와 동일 기준
   const _completeList = buildCompleteIndicatorList(evs);
@@ -4086,29 +4065,15 @@ function buildAnalysisSummary(data) {
 }
 
 // ── 최종 평가 요약 빌더 ────────────────────────────────────────────────
-// 환경(E) 데이터 검증 결과 영역 전용 — ESG 성과 등급이 아닌 검증 결과(HIGH/MEDIUM/LOW)만 표시
+// 환경(E) 분석 결과 영역 전용 — CSV 기반 업종 평균 비교 환경 성과 분석 결과
 function buildFinalSummary({ finalGrade, confidence, lowCount, mediumCount, avgDiff, evidenceCount, isBenchmarkFallback, isFullBenchmark }) {
-  const low    = lowCount    ?? 0;
-  const medium = mediumCount ?? 0;
-
   if (isFullBenchmark) {
-    return { text: '환경(E) 수치 데이터가 제출되지 않아 체크리스트 기반으로만 평가가 진행되었습니다. PDF 또는 CSV 파일 제출 시 정확도가 향상됩니다.', tone: 'amber' };
+    return { text: '환경(E) CSV 데이터가 제출되지 않아 업종 평균 기반으로만 평가가 진행되었습니다. CSV 파일 제출 시 정확도가 향상됩니다.', tone: 'amber' };
   }
   if (isBenchmarkFallback) {
-    return { text: '환경(E) 실측 데이터 없이 평가가 진행되었습니다. 수치 데이터를 제출하면 정확도가 향상됩니다.', tone: 'amber' };
+    return { text: '환경(E) 실측 데이터 없이 업종 평균 기반 평가가 진행되었습니다. CSV 파일을 제출하면 정확도가 향상됩니다.', tone: 'amber' };
   }
-  // LOW 불일치 기반
-  if (low >= 3)
-    return { text: `환경 지표 ${low}개 항목에서 수치 불일치(LOW)가 감지되었습니다. 증빙 문서의 수치 정합성을 점검하십시오.`, tone: 'red' };
-  if (low >= 1)
-    return { text: `${low}개 항목에서 수치 불일치(LOW)가 감지되었습니다. 해당 항목의 증빙 자료를 재검토하세요.`, tone: 'amber' };
-  // MEDIUM 근사 일치
-  if (medium >= 1)
-    return { text: `${medium}개 항목에서 근사 일치(MEDIUM)가 확인되었습니다. 전반적인 수치 검증은 완료되었습니다.`, tone: 'amber' };
-  // 전항목 HIGH
-  if (avgDiff == null || avgDiff < 0.01)
-    return { text: '모든 환경 지표가 검증되었으며 데이터 일치율이 매우 높습니다.', tone: 'emerald' };
-  return { text: `수치 검증이 완료되었습니다. 평균 오차율 ${fmtDiff(avgDiff)}로 데이터 신뢰도가 확인되었습니다.`, tone: 'emerald' };
+  return { text: '전력·가스·탄소배출량·폐기물·수자원 5개 환경 지표를 업종 평균과 비교하여 환경 성과를 분석하였습니다.', tone: 'emerald' };
 }
 
 // ── Evidence 상세 모달 ─────────────────────────────────────────────────
@@ -5766,7 +5731,7 @@ export default function AnalysisResultPage() {
                   </span>
                 )}
               </div>
-              {/* 최종 평가 요약 — 환경(E) 데이터 검증 결과 */}
+              {/* 최종 평가 요약 — 환경(E) 분석 결과 */}
               {finalSummary && (
                 <div className={`mt-3 px-4 py-2.5 rounded-xl border text-sm leading-relaxed ${
                   finalSummary.tone === 'emerald' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
@@ -5774,7 +5739,7 @@ export default function AnalysisResultPage() {
                   finalSummary.tone === 'red'     ? 'bg-red-50    border-red-200    text-red-700'      :
                                                     'bg-gray-50   border-gray-200   text-gray-700'
                 }`}>
-                  <p className="text-[10px] font-semibold text-gray-400 mb-1">환경(E) 데이터 검증 결과</p>
+                  <p className="text-[10px] font-semibold text-gray-400 mb-1">환경(E) 분석 결과</p>
                   {finalSummary.text}
                   {finalSummary.gradeAdjusted && (
                     <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded border bg-amber-100 border-amber-300 text-amber-700 align-middle">
@@ -6323,10 +6288,10 @@ export default function AnalysisResultPage() {
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">검증 방식 안내</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px] text-gray-600">
               <div className="flex flex-col gap-1">
-                <span className="font-semibold text-sky-700">E (환경) — 환경 성과 및 데이터 검증</span>
+                <span className="font-semibold text-sky-700">E (환경) — 환경 성과 분석</span>
                 <span>업종·규모별 평균 대비 환경 성과 평가 ·
-                      CSV 데이터 기반 수치 검증 ·
-                      전력·가스·탄소·폐기물·수자원 5대 환경 지표 분석</span>
+                      CSV 기반 환경 데이터 분석 ·
+                      전력·가스·탄소·폐기물·수자원 5대 지표 분석</span>
               </div>
               <div className="flex flex-col gap-1">
                 <span className="font-semibold text-purple-700">S/G (사회·지배구조) — 문서 근거 탐지</span>
@@ -6336,93 +6301,6 @@ export default function AnalysisResultPage() {
           </div>
         )}
 
-        {/* ── 입력값 vs 증빙값 비교 테이블 (E 카테고리) ──────── */}
-        {numericRows.length > 0 && activeTab === 'summary' && (
-          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-            <button
-              onClick={() => setShowNumericDetail(v => !v)}
-              className="w-full flex items-center gap-2.5 px-6 py-4 hover:bg-gray-50 transition-colors text-left"
-            >
-              <span className="w-7 h-7 rounded-lg bg-sky-50 flex items-center justify-center shrink-0">
-                <BarChart2 size={14} className="text-sky-500" />
-              </span>
-              <span className="text-sm font-semibold text-gray-700">환경 데이터 검증 상세</span>
-              <span className="text-[10px] text-gray-400 ml-1">입력값과 제출 데이터의 일치 여부를 검증하고, 업종 평균 대비 환경 성과를 종합 평가합니다.<span className="text-gray-300">·</span></span>
-              <span className="ml-auto flex items-center gap-2">
-                <span className="text-[10px] font-semibold text-sky-600 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded">
-                  {numericRows.length}개 항목
-                </span>
-                {showNumericDetail ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
-              </span>
-            </button>
-            {showNumericDetail && <div className="overflow-x-auto border-t border-gray-100">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50">
-                    {['지표명', '입력값', '문서 추출값', '오차율', '판정'].map(h => (
-                      <th key={h} className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {numericRows.map((ev, i) => {
-                    const diff = ev.numericDiffPercent ?? 0;
-                    const diffColor = diff <= 5 ? '#059669' : diff <= 20 ? '#f59e0b' : '#ef4444';
-                    const ms = MATCH_STYLE[ev.numericMatchLevel] ?? MATCH_STYLE.LOW;
-                    return (
-                      <tr key={i} className={`border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${i % 2 === 1 ? 'bg-gray-50/50' : ''}`}
-                        onClick={() => setSelectedEvidence(ev)}>
-                        <td className="px-4 py-2.5">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-mono font-bold text-gray-400 shrink-0">{ev.indicatorCode}</span>
-                            <span className="text-gray-700 font-medium truncate max-w-[140px]">{ev.indicatorTitle ?? '-'}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-2.5 font-mono font-bold text-gray-800 tabular-nums whitespace-nowrap">
-                          {ev.inputValue != null ? Number(ev.inputValue).toLocaleString() : '-'}
-                          {ev.unit && <span className="text-gray-400 font-normal ml-1 text-[10px]">{ev.unit}</span>}
-                        </td>
-                        <td className="px-4 py-2.5 font-mono font-bold text-gray-800 tabular-nums whitespace-nowrap">
-                          {ev.extractedValue != null
-                            ? <>{Number(ev.extractedValue).toLocaleString()}{ev.unit && <span className="text-gray-400 font-normal ml-1 text-[10px]">{ev.unit}</span>}</>
-                            : <span className="text-gray-400 text-[10px] font-normal">데이터 미확인</span>}
-                        </td>
-                        <td className="px-4 py-2.5">
-                          {ev.extractedValue != null ? (
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono font-black tabular-nums text-sm" style={{ color: diffColor }}>
-                                {fmtDiff(diff)}
-                              </span>
-                              <div className="w-12 h-1 bg-gray-200 rounded-full overflow-hidden hidden sm:block">
-                                <div className="h-full rounded-full" style={{ width: `${Math.min(100, (diff / 40) * 100)}%`, background: diffColor }} />
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-[10px] text-gray-400 italic">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-2.5">
-                          {ev.extractedValue != null ? (
-                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${ms.bg} ${ms.border} ${ms.text}`}>
-                              {ms.label}
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-gray-400 border border-gray-200 rounded-full px-2 py-0.5">
-                              데이터 미확인
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>}
-            {showNumericDetail && <div className="px-6 py-2.5 border-t border-gray-100">
-              <p className="text-[10px] text-gray-400">클릭 시 상세 감사 정보를 확인할 수 있습니다. · HIGH ≤5% · MEDIUM ≤20% · LOW &gt;20%</p>
-            </div>}
-          </div>
-        )}
 
         {/* ── Action Center 탭 헤더 ──────────────────────────── */}
         {activeTab === 'action' && isAutoSimulation && (
@@ -6468,16 +6346,11 @@ export default function AnalysisResultPage() {
                   const toneColor = e.tone === 'red' ? '#ef4444' : e.tone === 'amber' ? '#f59e0b' : '#059669';
                   const toneBorder = e.tone === 'red' ? 'border-red-200' : e.tone === 'amber' ? 'border-amber-200' : 'border-emerald-200';
                   const summaryColor = e.tone === 'red' ? 'text-red-600' : e.tone === 'amber' ? 'text-amber-700' : 'text-gray-600';
-                  const repDiff = e.avgDiff ?? e.maxDiff;
-                  const diffStr = fmtDiff(repDiff);
-                  const diffColor = repDiff == null ? '#71717a'
-                    : repDiff <= 5 ? '#059669' : repDiff <= 20 ? '#f59e0b' : '#ef4444';
                   const bullets = [
-                    { label: 'HIGH 검증', value: `${e.high}건`, color: '#059669' },
-                    { label: 'MEDIUM 검증', value: `${e.medium}건`, color: '#f59e0b' },
-                    { label: 'LOW 불일치', value: `${e.low}건`, color: e.low > 0 ? '#ef4444' : '#52525b' },
-                    ...(e.failed > 0 ? [{ label: '증빙 미확인', value: `${e.failed}건`, color: '#71717a' }] : []),
-                    { label: '평균 오차율', value: diffStr, color: diffColor },
+                    { label: '분석 지표 수', value: `${e.total}개`,           color: '#059669' },
+                    { label: '분석 완료',   value: `${e.total - e.failed}개`, color: '#059669' },
+                    { label: '평가 방식',   value: '업종 평균 비교',           color: '#6366f1' },
+                    { label: '데이터 출처', value: 'CSV',                      color: '#38bdf8' },
                   ];
                   return (
                     <div className={`rounded-xl border bg-gray-50 p-4 space-y-3 ${toneBorder}`}>
@@ -7278,14 +7151,11 @@ export default function AnalysisResultPage() {
                 );
               })()}
 
-              {/* 방법론 설명 + 오차율 기준 */}
-              <div className="border-t border-gray-100 pt-3 space-y-1">
+              {/* 방법론 설명 */}
+              <div className="border-t border-gray-100 pt-3">
                 <p className="text-[11px] text-gray-500 leading-relaxed">
-                  E(환경) 항목은 제출된 CSV/PDF 증빙과 입력 수치를 직접 비교 검증합니다.
+                  E(환경) 항목은 CSV 환경 데이터를 업종 평균과 비교하여 환경 성과를 평가합니다.
                   S/G 항목은 근거 적합도 분석 기반으로 평가됩니다.
-                </p>
-                <p className="text-xs text-gray-400">
-                  수치 검증 기준 — HIGH: ≤5% · MEDIUM: ≤20% · LOW: &gt;20% · 평균 오차율은 전체 지표 산술평균 기준
                 </p>
               </div>
             </div>

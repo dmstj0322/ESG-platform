@@ -473,13 +473,23 @@ public class CategoryAnalysisService {
                                 if (numericMatch.isLow())         conf = Math.min(conf, 40);
                                 else if (numericMatch.isMedium()) conf = Math.min(conf, 62);
                             } else {
-                                // 사용자 입력 없음 — 문서에서 수치 발견 → MEDIUM evidence 처리
+                                // 사용자 입력 없음 — CSV 추출값으로 업종 벤치마크 비교 수행
                                 numericMatch = new NumericExtractionService.MatchResult("MEDIUM", 0.0);
-                                score = Math.min(100, 60 + evidenceBonus);
-                                conf  = 55;
+                                Double industryAvg = industryAvgValues.get(numericMetric);
+                                if (industryAvg != null && industryAvg > 0 && extractedVal > 0) {
+                                    double ratio = extractedVal / industryAvg;
+                                    score = EsgScoreConstants.calcBenchmarkScore(ratio);
+                                    anyBenchmarkUsed = true;
+                                    log.info("[BenchmarkScore-CSV] indicator={} metric={} extractedVal={} industryAvg={} ratio={} → score={}",
+                                            indicator.getCode(), numericMetric, extractedVal, industryAvg,
+                                            String.format("%.3f", ratio), score);
+                                } else {
+                                    score = Math.min(100, 60 + evidenceBonus);
+                                    log.info("[BenchmarkScore-CSV] indicator={} metric={} 벤치마크없음 추출값={} → fallback(60+bonus)",
+                                            indicator.getCode(), numericMetric, extractedVal);
+                                }
+                                conf = 55;
                                 mediumMatchCount++;
-                                log.info("[NumericMatch] indicator={} metric={} 사용자입력없음 문서추출값={} → MEDIUM",
-                                        indicator.getCode(), numericMetric, extractedVal);
                             }
 
                             numericMatchedCount++;
