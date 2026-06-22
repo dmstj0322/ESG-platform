@@ -1032,8 +1032,9 @@ const extractSentencePreview = (text, keywords = [], maxChars = 200) => {
 // evidenceText에서 한자/OCR 깨짐도 함께 정규화
 const buildESnippet = (ev) => {
   const title = ev.indicatorTitle ?? E_INDICATORS[ev.indicatorCode] ?? ev.indicatorCode;
-  if (ev.inputValue != null) {
-    const inVal = Number(ev.inputValue).toLocaleString();
+  const displayValue = ev.inputValue ?? ev.extractedValue;
+  if (displayValue != null) {
+    const inVal = Number(displayValue).toLocaleString();
     const unit  = ev.unit ? ` ${ev.unit}` : '';
     return `${title} · CSV 추출값: ${inVal}${unit}`;
   }
@@ -4129,7 +4130,7 @@ function EvidenceDetailModal({ ev, onClose }) {
                     <tr>
                       <td className="px-4 py-2.5 text-gray-500 text-xs font-medium w-28 shrink-0">CSV 추출값</td>
                       <td className="px-4 py-2.5 font-mono font-bold text-gray-800">
-                        {ev.inputValue != null ? Number(ev.inputValue).toLocaleString() : '-'}
+                        {(ev.inputValue ?? ev.extractedValue) != null ? Number(ev.inputValue ?? ev.extractedValue).toLocaleString() : '-'}
                         {ev.unit ? <span className="ml-1 text-gray-400 font-normal text-xs">{ev.unit}</span> : null}
                       </td>
                     </tr>
@@ -4429,7 +4430,7 @@ function AIRetrievalTraceTable({ rows, onSelect }) {
                         <div className="space-y-1.5">
                           {(isECat
                             ? [
-                                { label: 'CSV 추출값', value: ev.inputValue != null ? `${Number(ev.inputValue).toLocaleString()}${ev.unit ? ' ' + ev.unit : ''}` : '—', color: '#374151' },
+                                { label: 'CSV 추출값', value: (ev.inputValue ?? ev.extractedValue) != null ? `${Number(ev.inputValue ?? ev.extractedValue).toLocaleString()}${ev.unit ? ' ' + ev.unit : ''}` : '—', color: '#374151' },
                               ]
                             : [
                                 { label: '근거 적합도', value: simPct != null ? `${simPct}%` : '—', color: simPct != null ? simColor : '#9ca3af' },
@@ -4475,12 +4476,12 @@ function AIRetrievalTraceTable({ rows, onSelect }) {
                             </span>
                           </div>
                         )}
-                        {isECat && ev.inputValue != null && (
+                        {isECat && (ev.inputValue ?? ev.extractedValue) != null && (
                           <div className="mt-2 pt-2 border-t border-gray-100 space-y-1">
                             <div className="flex justify-between text-[10px]">
                               <span className="text-gray-400">CSV 추출값</span>
                               <span className="font-mono font-black text-gray-700">
-                                {Number(ev.inputValue).toLocaleString()}{ev.unit ? ' ' + ev.unit : ''}
+                                {Number(ev.inputValue ?? ev.extractedValue).toLocaleString()}{ev.unit ? ' ' + ev.unit : ''}
                               </span>
                             </div>
                           </div>

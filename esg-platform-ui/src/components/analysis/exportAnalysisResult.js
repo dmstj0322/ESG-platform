@@ -584,7 +584,7 @@ export const exportAnalysisResult = async (data, analysisId, esgPoolCurrent = nu
     setFill(doc, isSevere ? RED : AMBER); doc.rect(14, y, 3, boxH, 'F');
     setF(doc, 8); setC(doc, isSevere ? RED : AMBER);
     doc.text(
-      `수치 검증 결과 ${lowCount}개 항목에서 입력값과 증빙 수치 간 차이가 확인되었습니다.`,
+      `환경(E) ${lowCount}개 항목이 업종 평균 대비 허용 범위를 초과했습니다.`,
       20, y + 8
     );
     if (hasGC) {
@@ -807,7 +807,7 @@ export const exportAnalysisResult = async (data, analysisId, esgPoolCurrent = nu
     const contradictions = completeList.filter(e => getVST(e) === 'CONTRADICTION');
     if (contradictions.length > 0 && ys < 240) {
       setFill(doc, RED); doc.rect(14, ys - 1, 3, 8, 'F');
-      setF(doc, 12); setC(doc, TEXT); doc.text(`수치 불일치 감지 (${contradictions.length}건)`, 20, ys + 5.5);
+      setF(doc, 12); setC(doc, TEXT); doc.text(`불일치 감지 (${contradictions.length}건)`, 20, ys + 5.5);
       ys += 14;
 
       contradictions.slice(0, 6).forEach((ev, i) => {
@@ -819,7 +819,7 @@ export const exportAnalysisResult = async (data, analysisId, esgPoolCurrent = nu
         setF(doc, 7.5); setC(doc, RED);
         doc.text(`${ev.indicatorCode ?? '-'} · ${String(ev.indicatorTitle ?? '-').slice(0, 25)}`, 20, ry + 5);
         setF(doc, 7); setC(doc, [120, 50, 50]);
-        const reason = ev.contradictionReason ?? (ev.numericMatchLevel === 'LOW' ? `수치 불일치 ${(ev.numericDiffPercent ?? 0).toFixed(1)}%` : '증빙 불일치');
+        const reason = ev.contradictionReason ?? (ev.numericMatchLevel === 'LOW' ? `업종 평균 대비 ${(ev.numericDiffPercent ?? 0).toFixed(1)}% 초과` : '증빙 불일치');
         doc.text(String(reason).slice(0, 80), 20, ry + 10);
       });
       ys += Math.min(contradictions.length, 6) * 16 + 6;
@@ -900,7 +900,7 @@ export const exportAnalysisResult = async (data, analysisId, esgPoolCurrent = nu
     const byCode = new Map();
     for (const ev of evs) {
       const code = ev.indicatorCode;
-      if (!code || !(ev.evidenceText || (ev.numericMatchLevel != null && ev.inputValue != null))) continue;
+      if (!code || !(ev.evidenceText || (ev.numericMatchLevel != null && (ev.inputValue ?? ev.extractedValue) != null))) continue;
       // Skip test/mock/dummy evidence from top snippets
       if (isTestEvidence(ev.evidenceText ?? '')) continue;
       const existing = byCode.get(code);
@@ -976,8 +976,10 @@ export const exportAnalysisResult = async (data, analysisId, esgPoolCurrent = nu
           setF(doc, 7.5); setC(doc, [80, 80, 90]);
           doc.text(snipLines.slice(0, 2), 20, yt + 12);
         } else if (ev.numericMatchLevel != null) {
+          const _dispVal = ev.inputValue ?? ev.extractedValue;
+          const _u = ev.unit ? ` ${ev.unit}` : '';
           setF(doc, 7.5); setC(doc, MUTED);
-          doc.text(`입력값: ${ev.inputValue?.toLocaleString() ?? '-'} ${ev.unit ?? ''}   증빙값: ${ev.extractedValue?.toLocaleString() ?? '-'} ${ev.unit ?? ''}   차이: ${(ev.numericDiffPercent ?? 0).toFixed(1)}%`, 20, yt + 12);
+          doc.text(`CSV 추출값: ${_dispVal?.toLocaleString() ?? '-'}${_u}`, 20, yt + 12);
         }
 
         yt += cardH + 3;
@@ -1066,25 +1068,24 @@ export const exportAnalysisResult = async (data, analysisId, esgPoolCurrent = nu
 
       // 진단 근거 문장
       let evidenceStr;
-      if (cat === 'E' && ev.numericMatchLevel != null && ev.inputValue != null) {
+      const _eDispVal = ev.inputValue ?? ev.extractedValue;
+      if (cat === 'E' && ev.numericMatchLevel != null && _eDispVal != null) {
         const u = ev.unit ? ` ${ev.unit}` : '';
-        evidenceStr = ev.extractedValue != null
-          ? `추출값 ${fmtNum(ev.extractedValue)}${u} 확인 (입력값 ${fmtNum(ev.inputValue)}${u}, 차이 ${(ev.numericDiffPercent ?? 0).toFixed(1)}%)`
-          : `입력값 ${fmtNum(ev.inputValue)}${u} 수치 검증됨`;
+        evidenceStr = `CSV 추출값: ${fmtNum(_eDispVal)}${u}`;
       } else {
         evidenceStr = processEvidenceSnippet(ev.evidenceText ?? '') || '—';
       }
 
-      // 신뢰도 — E 카테고리는 numericMatchLevel 기반, S/G는 semantic similarity 기반
+      // 신뢰도 — E 카테고리는 CSV 수치 추출 방식이므로 AI 유사도 미적용, S/G만 semantic similarity 기반
       const sp = toPct(ev.similarity);
-      const relStr = (cat === 'E' && ev.numericMatchLevel != null)
-        ? (ev.numericMatchLevel === 'HIGH' ? '97%' : ev.numericMatchLevel === 'MEDIUM' ? '72%' : '38%')
-        : (sp != null ? `${sp}%` : (ev.numericMatchLevel ? '수치' : '—'));
+      const relStr = cat === 'E'
+        ? '—'
+        : (sp != null ? `${sp}%` : '—');
 
       // 검증 상태
       let vstStr;
-      if      (ev.numericMatchLevel === 'HIGH')                                                     vstStr = '수치 일치';
-      else if (ev.numericMatchLevel === 'MEDIUM')                                                    vstStr = '수치 근사';
+      if      (ev.numericMatchLevel === 'HIGH')                                                     vstStr = '확인됨';
+      else if (ev.numericMatchLevel === 'MEDIUM')                                                    vstStr = '부분 확인';
       else if (ev.numericMatchLevel === 'LOW')                                                       vstStr = '검토 필요';
       else if (ev.verificationStatus === 'VERIFIED' || ev.matchedCluster?.startsWith('EXPLICIT:')) vstStr = '확인됨';
       else if (sp != null && sp >= 75)                                                              vstStr = '확인됨';
@@ -1122,8 +1123,8 @@ export const exportAnalysisResult = async (data, analysisId, esgPoolCurrent = nu
         // 검증 상태 색상
         if (hookData.column.index === 2) {
           const v = String(hookData.cell.raw ?? '');
-          if (v === '확인됨'   || v === '수치 일치') hookData.cell.styles.textColor = EMERALD;
-          if (v === '부분 확인' || v === '수치 근사') hookData.cell.styles.textColor = AMBER;
+          if (v === '확인됨') hookData.cell.styles.textColor = EMERALD;
+          if (v === '부분 확인') hookData.cell.styles.textColor = AMBER;
           if (v === '검토 필요')                     hookData.cell.styles.textColor = RED;
           if (v === '참고 수준' || v === '근거 없음') hookData.cell.styles.textColor = MUTED;
         }
