@@ -1,5 +1,6 @@
 package com.esg.communityservice.controller;
 
+import com.esg.communityservice.dto.EngagementDto;
 import com.esg.communityservice.dto.PostResponseDto;
 import com.esg.communityservice.service.AdminService;
 import com.esg.communityservice.service.PostService;
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -60,5 +62,14 @@ public class AdminController {
 
     adminService.updatePostType(postId, request.get("activityType"));
     return ResponseEntity.ok("타입이 수정되었습니다.");
+  }
+
+  @PreAuthorize("hasRole('ADMIN')")
+  @GetMapping("/engagement")
+  public ResponseEntity<List<EngagementDto>> getEngagementStats(
+    @RequestHeader(value = "X-Company-Id", required = false) Long companyId) {
+
+    List<EngagementDto> response = adminService.getEngagementStats(companyId);
+    return ResponseEntity.ok(response);
   }
 }
