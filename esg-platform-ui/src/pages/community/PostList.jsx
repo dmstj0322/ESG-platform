@@ -68,7 +68,7 @@ const PostList = () => {
     };
 
     window.addEventListener('esgUpdate', handleBackgroundUpdate);
-    
+
     return () => {
       window.removeEventListener('esgUpdate', handleBackgroundUpdate);
     };
@@ -160,17 +160,35 @@ const PostList = () => {
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <div className="search-box" style={{ display: 'flex', gap: '5px' }}>
-            <input
-              type="text"
-              style={{ padding: '8px 12px', borderRadius: '20px', border: '1px solid #ddd', outline: 'none' }}
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="검색어를 입력하세요..."
-            />
-            <button onClick={handleSearch} style={{ cursor: 'pointer', background: 'none', border: 'none', fontWeight: 'bold', color: '#16A87A' }}>검색</button>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+
+          {/* 관리자(시스템 또는 기업 관리자)일 때만 노출되는 대시보드 이동 버튼 */}
+          {(user?.role === 'COMPANY_ADMIN') && (
+            <button
+              onClick={() => navigate('/admin/dashboard')} // 대시보드 라우팅 주소로 변경하세요
+              style={{
+                padding: '8px 16px', borderRadius: '20px', border: 'none',
+                backgroundColor: '#16A87A', color: '#fff', fontWeight: 'bold',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px',
+                boxShadow: '0 2px 4px rgba(22,168,122,0.2)'
+              }}
+            >
+              📊 활동 참여도 통계
+            </button>
+          )}
+
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <div className="search-box" style={{ display: 'flex', gap: '5px' }}>
+              <input
+                type="text"
+                style={{ padding: '8px 12px', borderRadius: '20px', border: '1px solid #ddd', outline: 'none' }}
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                placeholder="검색어를 입력하세요..."
+              />
+              <button onClick={handleSearch} style={{ cursor: 'pointer', background: 'none', border: 'none', fontWeight: 'bold', color: '#16A87A' }}>검색</button>
+            </div>
           </div>
         </div>
       </div>

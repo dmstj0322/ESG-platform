@@ -1,7 +1,11 @@
 package com.esg.communityservice.service;
 
 import com.esg.common.domain.ActivityType;
-import com.esg.communityservice.domain.*;
+import com.esg.communityservice.domain.AIStatus;
+import com.esg.communityservice.domain.AdminStatus;
+import com.esg.communityservice.domain.ImageFile;
+import com.esg.communityservice.domain.Post;
+import com.esg.communityservice.dto.EngagementDto;
 import com.esg.communityservice.event.PostCreatedEvent;
 import com.esg.communityservice.kafka.NotificationProducer;
 import com.esg.communityservice.repository.PostRepository;
@@ -102,5 +106,32 @@ public class AdminService {
     postRepository.save(post);
     badgeService.checkAndUnlockBadge(post.getMemberId(), newType);
     log.info("관리자 타입 수정 완료 및 뱃지 체크: {} -> {}", postId, newType);
+  }
+
+  @Transactional(readOnly = true)
+  public List<EngagementDto> getEngagementStats(Long companyId) {
+    List<Object[]> stats = postRepository.countApprovedPostsAndNicknameByCompanyId(companyId);
+
+    return stats.stream().map(stat -> {
+      Long memberId = (Long) stat[0];
+      String nickname = (String) stat[1]; // 최신 닉네임 사용
+      long activities = (long) stat[2];
+
+      // 1. 티어 등급 부여 (활동 횟수 기준)
+      String tier = "Low";
+      if (activities >= 15) tier = "High";
+      else if (activities >= 5) tier = "Medium";
+
+      // 2. 임의 포인트 계산 (1회당 100포인트로 가정)
+      long points = activities * 100;
+
+      return new EngagementDto(
+        memberId,
+        nickname != null ? nickname : "익명 사원",
+        activities,
+        points,
+        tier
+      );
+    }).toList();
   }
 }

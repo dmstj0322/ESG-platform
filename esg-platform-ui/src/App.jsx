@@ -18,6 +18,7 @@ import PostList from './pages/community/PostList';
 import PostWrite from './pages/community/PostWrite';
 import PostDetail from './pages/community/PostDetail';
 import PostEdit from './pages/community/PostEdit';
+import EngagementDashboard from './pages/community/EngagementDashboard';
 import Login from './pages/user/Login';
 import AdminSingup from './pages/user/AdminSignup';
 import UserSignup from './pages/user/UserSignup';
@@ -93,16 +94,19 @@ function App() {
               <Route path="/admin/products" element={
                 <AdminRoute><ProductAdmin /></AdminRoute>
               } />
+              <Route path="/admin/dashboard" element={
+                <AdminRoute><EngagementDashboard /></AdminRoute>
+              } />
             </Route>
             {/* Pipeline: 독립 full-screen — Layout 없음 */}
             <Route path="/analysis/pipeline/:sessionId" element={
               <AdminRoute><PipelinePage /></AdminRoute>
             } />
             <Route path="/analysis" element={
-                <AdminRoute>
-                  <AnalysisLayout />
-                </AdminRoute>
-              }
+              <AdminRoute>
+                <AnalysisLayout />
+              </AdminRoute>
+            }
             >
               <Route index element={<AnalysisPage />} />
               <Route path="dashboard" element={<DashboardPage />} />
@@ -111,7 +115,7 @@ function App() {
             </Route>
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
-          
+
           <ToastContainer
             containerId="main-toast"
             position="top-center"
