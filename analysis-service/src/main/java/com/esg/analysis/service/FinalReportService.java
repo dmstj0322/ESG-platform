@@ -23,10 +23,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * E/S/G 로컬 결과를 받아 종합 리포트를 생성합니다.
- * OCR·RAG 없이 점수 집계 + GPT 총평만 수행합니다.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -411,51 +407,13 @@ public class FinalReportService {
     }
 
     private String buildEVerificationStats(FinalReportRequest req) {
-        List<FinalReportRequest.EvidenceItem> items = req.getEvidences();
-        if (items == null || items.isEmpty()) {
-            log.info("[E-VERIF-STATS] evidence 없음 → stats 빈 문자열 반환");
-            return "";
-        }
-        // 각 E 지표별 numericMatchLevel / numericDiffPercent 원본값 로그
-        items.stream()
-             .filter(i -> i.getIndicatorCode() != null && i.getIndicatorCode().startsWith("E"))
-             .forEach(i -> log.info("[E-INDICATOR-RAW] code={} numericMatchLevel={} numericDiffPercent={}",
-                     i.getIndicatorCode(), i.getNumericMatchLevel(), i.getNumericDiffPercent()));
-        long highCnt = 0, medCnt = 0, lowCnt = 0;
-        double maxDiff = 0;
-        boolean hasDiff = false;
-        for (FinalReportRequest.EvidenceItem i : items) {
-            if (i.getIndicatorCode() == null || !i.getIndicatorCode().startsWith("E")) continue;
-            if ("HIGH".equals(i.getNumericMatchLevel()))        highCnt++;
-            else if ("MEDIUM".equals(i.getNumericMatchLevel())) medCnt++;
-            else if ("LOW".equals(i.getNumericMatchLevel()))    lowCnt++;
-            if (i.getNumericDiffPercent() != null && i.getNumericDiffPercent() > maxDiff) {
-                maxDiff = i.getNumericDiffPercent();
-                hasDiff = true;
-            }
-        }
-        log.info("[E-VERIF-STATS] highCnt={} medCnt={} lowCnt={} hasDiff={} maxDiff={}",
-                highCnt, medCnt, lowCnt, hasDiff, maxDiff);
-        if (highCnt + medCnt + lowCnt == 0) {
-            log.info("[E-VERIF-STATS] numericMatchLevel 있는 E 지표 없음 → stats 빈 문자열 반환");
-            return "";
-        }
-        StringBuilder sb = new StringBuilder(
-                String.format("HIGH %d건 / MEDIUM %d건 / LOW %d건", highCnt, medCnt, lowCnt));
-        if (lowCnt == 0 && medCnt == 0 && highCnt > 0) {
-            sb.append(" / 전항목 데이터 일치 확인");
-        }
-        // 오차율 수치는 GPT 프롬프트에 포함하지 않음 — 검증 상세 영역에서만 제공
-        String result = sb.toString();
-        log.info("[E-VERIF-STATS] 최종 stats='{}'", result);
-        return result;
+        return "";
     }
 
     private String buildPrompt(int e, int s, int g, int total, String grade, FinalReportRequest req) {
         // ★ 버전 마커 — 이 로그가 보이면 수정된 buildPrompt()가 실행 중
         log.info("[BUILD-PROMPT-VERSION] v2025-FIXED — 하드코딩 예시 제거 버전 실행 중");
         String auditFindings = buildAuditFindings(req);
-        String eVerifStats   = buildEVerificationStats(req);
         return "당신은 ESG 감사 전문가입니다.\n"
                 + "아래 K-ESG 감사 결과를 바탕으로 factual audit summary를 JSON으로 반환하세요.\n\n"
                 + "## 절대 금지 사항\n"
@@ -471,15 +429,14 @@ public class FinalReportService {
                 + "- 예(부분근거): '[지표명] 관련 운영 근거는 탐지되었으나, 정책 수준의 상세 명시는 제한적이었습니다.'\n"
                 + "- 주의: 실측 데이터(TRIR·재해율·KPI 수치 등)가 감사 실측 데이터에 존재하는 지표는 [부분 근거]가 아닌 직접 근거로 서술할 것\n\n"
                 + "## 서술 규칙\n"
-                + "- 환경(E) 점수는 K-ESG 기준 충족도를 의미하며, 수치 검증 결과(HIGH/MEDIUM/LOW)와 별개입니다\n"
+                + "- 환경(E) 점수는 CSV 환경 데이터를 업종 평균과 비교하여 산정한 환경 성과 등급입니다\n"
                 + "- 사회(S)·지배구조(G) 점수는 운영 근거 적합도를 의미합니다\n"
                 + "- S·G 부문에서 '신뢰도 X%'·'신뢰도가 X%' 형태로 숫자를 직접 언급하지 말 것\n"
                 + "- S·G 근거 수준은 아래 '평가 결과'의 [근거 검증 수준] 레이블로만 서술할 것\n"
                 + "- 오차율(%, 수치) 언급 절대 금지 — '최대 오차율', '평균 오차율', '오차율 X%' 등 모든 오차율 수치 사용 금지\n"
-                + "- 환경(E) 검증 결과는 HIGH/MEDIUM/LOW 건수와 신뢰도 수준으로만 서술할 것\n"
-                + "- [수치 검증] 항목에 '전항목 데이터 일치 확인'이 포함되어 있으면:\n"
-                + "  → '환경 지표 전항목의 데이터 검증이 완료되어 높은 데이터 신뢰성을 확보하였습니다.' 계열로 작성\n"
-                + "  → '경미한 차이', '오차율', '불일치' 등 표현 절대 금지\n"
+                + "- 환경(E) 부문은 CSV 환경 데이터를 업종 평균과 비교한 환경 성과 평가 결과입니다\n"
+                + "- 환경(E) 서술은 점수·등급 기반 환경 성과 수준(우수·양호·개선 필요 등)으로 작성할 것\n"
+                + "- '데이터 검증', '높은 데이터 신뢰성', 'HIGH/MEDIUM/LOW 검증', '수치 일치', '오차율' 등 검증 관련 표현 절대 금지\n"
                 + "\n## G(지배구조)·S(사회) 서술 규칙 (반드시 준수)\n"
                 + "- 지배구조(G)·사회(S)는 공시 근거·운영 증빙·정책 이행 여부를 평가하는 영역입니다\n"
                 + "- 사용 금지 표현: '데이터 일치성', '수치 일치', '데이터 정합성', '수치 차이', '일치율'\n"
@@ -488,15 +445,14 @@ public class FinalReportService {
                 + "- G 서술 예시: '지배구조 부문은 X점(Y등급)을 획득하였으며, 운영·공시 근거는 확인되었으나 일부 항목의 검증 신뢰도 개선이 필요합니다.'\n"
                 + "- S 서술 예시: '사회 부문은 X점(Y등급)으로 평가되었으며, 안전·인권·지역사회 관련 운영 근거가 확인되었습니다.'\n\n"
                 + "## 평가 결과\n"
-                + "- 환경(E): " + e + "점 / " + grade(req.getEnvironmentResult()) + "등급 / 신뢰도 " + conf(req.getEnvironmentResult()) + "%"
-                + (eVerifStats.isEmpty() ? "" : " [수치 검증: " + eVerifStats + "]") + "\n"
+                + "- 환경(E): " + e + "점 / " + grade(req.getEnvironmentResult()) + "등급 (CSV 기반 업종 평균 비교)\n"
                 + "- 사회(S): " + s + "점 / " + grade(req.getSocialResult()) + "등급 / " + sgConfLabel(req.getSocialResult(), "S") + "\n"
                 + "- 지배구조(G): " + g + "점 / " + grade(req.getGovernanceResult()) + "등급 / " + sgConfLabel(req.getGovernanceResult(), "G") + "\n"
                 + "- 종합 점수: " + total + "점 / 최종 등급: " + grade + "\n"
                 + auditFindings
                 + "\n## 반환 형식 (JSON)\n"
                 + "{\n"
-                + "  \"eSentence\": \"환경(E) 부문 1문장. HIGH/MEDIUM/LOW 검증 건수와 데이터 신뢰성 수준만 서술. confidence%, 오차율, 데이터 일치성 표현 금지. 사회(S)·지배구조(G) 서술 금지.\",\n"
+                + "  \"eSentence\": \"환경(E) 부문 1문장. CSV 기반 업종 평균 비교를 통한 환경 성과 평가 결과 서술. 점수와 등급 포함. '데이터 검증', '신뢰성', 'HIGH/MEDIUM/LOW', '오차율', '수치 일치' 표현 절대 금지. 사회(S)·지배구조(G) 서술 금지.\",\n"
                 + "  \"riskOpportunity\": \"[리스크] 실제 감사 결과 기반 구체적 리스크(에너지 효율·Scope 배출·공시 의무 등). [기회] 개선 가능 항목.\"\n"
                 + "}\n\n"
                 + "절대 금지: 마케팅 과장 표현, 추상적 조언, GPT 일반 답변 패턴.";

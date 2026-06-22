@@ -64,12 +64,38 @@ const KSIC_BENCHMARK = {
 };
 
 const ENV_FIELDS = [
-  { key: 'electricity', label: '전력 사용량',   unit: 'kWh',  placeholder: '예: 1200000' },
-  { key: 'gas',         label: '가스 사용량',   unit: 'Nm³',  placeholder: '예: 8500'    },
-  { key: 'carbon',      label: '탄소 배출량',   unit: 'tCO₂', placeholder: '예: 5200'    },
-  { key: 'waste',       label: '폐기물 발생량', unit: 'kg',   placeholder: '예: 320000'  },
-  { key: 'water',       label: '수자원 사용량', unit: 'm³',   placeholder: '예: 45000'   },
+  { key: 'electricity', label: '전력 사용량',   unit: 'kWh',  placeholder: 'CSV 업로드 후 자동 입력' },
+  { key: 'gas',         label: '가스 사용량',   unit: 'Nm³',  placeholder: 'CSV 업로드 후 자동 입력' },
+  { key: 'carbon',      label: '탄소 배출량',   unit: 'tCO₂', placeholder: 'CSV 업로드 후 자동 입력' },
+  { key: 'waste',       label: '폐기물 발생량', unit: 'kg',   placeholder: 'CSV 업로드 후 자동 입력' },
+  { key: 'water',       label: '수자원 사용량', unit: 'm³',   placeholder: 'CSV 업로드 후 자동 입력' },
 ];
+
+// CSV 헤더 → ENV_FIELDS key 변환 후 월별 합산 (EnvironmentCsvService 헤더 기준)
+function parseCsvToEnvMetrics(text) {
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (lines.length < 2) return null;
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+  const colMap = {
+    'electricity_kwh': 'electricity',
+    'gas_nm3': 'gas', 'gas_nm³': 'gas',
+    'carbon_tco2': 'carbon',
+    'waste_kg': 'waste',
+    'water_m3': 'water',
+  };
+  const totals = { electricity: 0, gas: 0, carbon: 0, waste: 0, water: 0 };
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(',');
+    headers.forEach((h, idx) => {
+      const key = colMap[h];
+      if (key !== undefined && cols[idx] !== undefined) {
+        const val = parseFloat(cols[idx].trim());
+        if (!isNaN(val) && val >= 0) totals[key] += val;
+      }
+    });
+  }
+  return totals;
+}
 
 // ── 위저드 스텝 정의 ──────────────────────────────────────────────────────
 const WIZARD_STEPS = [
@@ -490,7 +516,7 @@ function IntegratedEsgSummary({ finalSummary, eResult, sResult, gResult }) {
 // generateInsights 제거 — 주요 현황 bullet 섹션 단순화로 미사용
 
 // ── MiniScoreCard ─────────────────────────────────────────────────────────
-function MiniScoreCard({ result, label, color }) {
+function MiniScoreCard({ result, label, color, hideConfidence = false }) {
   const [showEvidence, setShowEvidence] = useState(false);
 
   const gc           = { S: '#059669', A: '#059669', B: '#3b82f6', C: '#f59e0b', D: '#ef4444' }[result.grade] ?? color;
@@ -544,7 +570,7 @@ function MiniScoreCard({ result, label, color }) {
       )}
 
       {/* 핵심 지표 그리드 */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className={`grid gap-3 ${hideConfidence ? 'grid-cols-2' : 'grid-cols-3'}`}>
         {[
           { label: '점수', value: `${result.score}점`, color: gc },
           { label: '등급', value: result.grade,        color: gc },
@@ -555,19 +581,21 @@ function MiniScoreCard({ result, label, color }) {
           </div>
         ))}
         {/* 분석 신뢰도 — % + HIGH/MEDIUM/LOW badge */}
-        <div className="text-center bg-gray-50 rounded-lg py-2.5">
-          <p className="text-[10px] text-gray-400 mb-1">분석 신뢰도</p>
-          <p className="text-[16px] font-bold leading-none" style={{ color: confColor, fontFamily: "'Inter', sans-serif" }}>
-            {result.confidence != null ? `${result.confidence}%` : '—'}
-          </p>
-          {confLabel && (
-            <span className={`inline-block text-[8px] font-bold px-1.5 py-0.5 rounded border mt-1.5 ${
-              result.confidence >= 80 ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
-              result.confidence >= 60 ? 'bg-blue-50 text-blue-600 border-blue-200' :
-                                        'bg-amber-50 text-amber-600 border-amber-200'
-            }`}>{confLabel}</span>
-          )}
-        </div>
+        {!hideConfidence && (
+          <div className="text-center bg-gray-50 rounded-lg py-2.5">
+            <p className="text-[10px] text-gray-400 mb-1">분석 신뢰도</p>
+            <p className="text-[16px] font-bold leading-none" style={{ color: confColor, fontFamily: "'Inter', sans-serif" }}>
+              {result.confidence != null ? `${result.confidence}%` : '—'}
+            </p>
+            {confLabel && (
+              <span className={`inline-block text-[8px] font-bold px-1.5 py-0.5 rounded border mt-1.5 ${
+                result.confidence >= 80 ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
+                result.confidence >= 60 ? 'bg-blue-50 text-blue-600 border-blue-200' :
+                                          'bg-amber-50 text-amber-600 border-amber-200'
+              }`}>{confLabel}</span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 주요 현황 bullet 제거 — 핵심 KPI(점수·등급·분석상태) 중심 구조 */}
@@ -706,7 +734,8 @@ export default function AnalysisPage() {
 
   // ── 입력 state
   const ksic = autoKsic; // KSIC_BENCHMARK 조회용 — companyProfile 변경 시 자동 갱신
-  const [manualEnv, setManualEnv] = useState(() => Object.fromEntries(ENV_FIELDS.map(f => [f.key, ''])));
+  const [csvEnv, setCsvEnv]             = useState(null);
+  const [csvParseError, setCsvParseError] = useState(null);
   const [socialAnswers, setSocialAnswers]         = useState(() => Object.fromEntries(SOCIAL_ITEMS.map(i => [i.key, false])));
   const [governanceAnswers, setGovernanceAnswers] = useState(() => Object.fromEntries(GOV_ITEMS.map(i => [i.key, false])));
 
@@ -799,6 +828,15 @@ export default function AnalysisPage() {
   useEffect(() => {
     console.log('[E-DEBUG] eFile state changed →',
       eFile ? `"${eFile.name}" (${eFile.size} bytes, ${eFile.type})` : 'null (no file)');
+    if (!eFile) { setCsvEnv(null); setCsvParseError(null); return; }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const parsed = parseCsvToEnvMetrics(e.target.result);
+      if (parsed) { setCsvEnv(parsed); setCsvParseError(null); }
+      else { setCsvEnv(null); setCsvParseError('CSV 형식 오류: 헤더(electricity_kwh, gas_nm3 등)를 확인해 주세요.'); }
+    };
+    reader.onerror = () => { setCsvEnv(null); setCsvParseError('CSV 파일 읽기 실패'); };
+    reader.readAsText(eFile, 'UTF-8');
   }, [eFile]);
 
   const addLog = useCallback((tag, msg, type = 'info') => {
@@ -830,8 +868,8 @@ export default function AnalysisPage() {
     const userId = localStorage.getItem('memberId');
     const eMetrics = Object.fromEntries(
       ENV_FIELDS
-        .filter(f => Number(manualEnv[f.key]) > 0)
-        .map(f => [f.key, Number(manualEnv[f.key])])
+        .filter(f => csvEnv && Number(csvEnv[f.key]) > 0)
+        .map(f => [f.key, Number(csvEnv[f.key])])
     );
 
     const fd = new FormData();
@@ -899,7 +937,7 @@ export default function AnalysisPage() {
       clearInterval(interval);
       setELoading(false);
     }
-  }, [addLog, industryLabel, manualEnv, eFile, companyId]);
+  }, [addLog, industryLabel, csvEnv, eFile, companyId]);
 
   const handleSocialAnalysis = useCallback(async () => {
     if (!sFile) return;
@@ -1102,7 +1140,7 @@ export default function AnalysisPage() {
         } catch {}
       }, delay);
     });
-  }, [eResult, sResult, gResult, ecoLinked, userPoints, manualEnv, companyId, companyProfile.ksicCode, navigate]);
+  }, [eResult, sResult, gResult, ecoLinked, userPoints, companyId, companyProfile.ksicCode, navigate]);
 
   const busy       = eLoading || sLoading || gLoading || submitting || finalPipelineActive;
   const isLastStep = wizardStep === WIZARD_STEPS.length - 1;
@@ -1208,18 +1246,23 @@ export default function AnalysisPage() {
                           <input
                             type="number"
                             min="0"
-                            value={manualEnv[f.key]}
-                            onChange={e => setManualEnv(p => ({ ...p, [f.key]: e.target.value }))}
-                            disabled={eCompleted}
+                            value={csvEnv?.[f.key] ?? ''}
+                            readOnly
+                            disabled
                             placeholder={f.placeholder}
-                            className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800
-                              placeholder:text-gray-300 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-colors
-                              disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50
+                            className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800
+                              placeholder:text-gray-300 cursor-not-allowed opacity-60
                               [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
                         </div>
                       ))}
                       <MiniUpload file={eFile} onFile={setEFile} label="환경 데이터 증빙 서류 (CSV, 필수)" csvOnly />
+                      {csvParseError && (
+                        <div className="flex items-start gap-2 mt-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200">
+                          <AlertCircle size={12} className="text-amber-500 shrink-0 mt-0.5" />
+                          <p className="text-[10px] text-amber-700 leading-relaxed">{csvParseError}</p>
+                        </div>
+                      )}
                     </div>
 
                     {/* E 분석 시작 / 결과 */}
@@ -1247,7 +1290,7 @@ export default function AnalysisPage() {
                         </>
                       ) : (
                         <>
-                          <MiniScoreCard result={eResult} label="Environment" color="#059669" />
+                          <MiniScoreCard result={eResult} label="Environment" color="#059669" hideConfidence />
                           <button
                             type="button"
                             onClick={() => { setECompleted(false); setEResult(null); setEValidationError(null); }}

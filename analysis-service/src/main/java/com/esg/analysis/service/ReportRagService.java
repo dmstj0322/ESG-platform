@@ -915,7 +915,7 @@ public class ReportRagService {
     private record AcceptedEntry(MatchData data, String matchedCluster) {}
 
     /** 카테고리별 임계값 적용 — E: 완화(0.50) / S: 표준(0.60) / G: 강화(0.62) / 기타: 기본(0.60) */
-    public List<EvidenceResult> retrieveEvidenceForIndicator(String sessionId, ESGIndicator indicator, int topK, String category) {
+    public List<EvidenceResult>retrieveEvidenceForIndicator(String sessionId, ESGIndicator indicator, int topK, String category) {
         double threshold = "E".equalsIgnoreCase(category) ? EVIDENCE_THRESHOLD_E
                          : "G".equalsIgnoreCase(category) ? EVIDENCE_THRESHOLD_G
                          : "S".equalsIgnoreCase(category) ? EVIDENCE_THRESHOLD_S
