@@ -616,16 +616,10 @@ const generateIndicatorCommentary = (ev) => {
   const pageNote = page ? ` (${page})` : '';
 
   if (catChar === 'E') {
-    if (vstKey === 'VERIFIED') {
-      return `제출된 수치(${inVal}${unit ? ' ' + unit : ''})와 문서 증빙값이 ±${diff}% 이내로 일치합니다. 계량 데이터의 신뢰도가 높아 정확한 수치로 확인되었습니다.`;
+    if (inVal != null) {
+      return `CSV 추출값: ${inVal}${unit ? ' ' + unit : ''} — 업로드된 CSV 파일에서 자동 추출된 수치입니다.`;
     }
-    if (vstKey === 'WEAK') {
-      return `제출 수치(${inVal})와 문서 추출값(${exVal}) 간 ${diff}% 차이가 발생했습니다. 측정 기준 또는 단위 환산 오류 가능성이 있으므로 재확인이 권장됩니다.`;
-    }
-    if (vstKey === 'CONTRADICTION') {
-      return `수치 불일치가 ${diff}% 이상 감지되었습니다. 제출값(${inVal})과 문서 내 추출값(${exVal})이 유의미하게 다릅니다. 데이터 출처와 측정 연도를 재검토해 주세요.`;
-    }
-    return '해당 지표에 대한 수치 데이터를 문서에서 추출하지 못했습니다. 항목을 명시적으로 기재하거나 별도 증빙 자료를 첨부해 주세요.';
+    return '해당 지표의 수치 데이터를 CSV에서 추출하지 못했습니다. CSV 파일에 해당 항목이 포함되어 있는지 확인해 주세요.';
   }
 
   // S/G 카테고리 — semantic evidence 기반 판정 (직접 수치 검증 아님)
@@ -1038,22 +1032,16 @@ const extractSentencePreview = (text, keywords = [], maxChars = 200) => {
 // evidenceText에서 한자/OCR 깨짐도 함께 정규화
 const buildESnippet = (ev) => {
   const title = ev.indicatorTitle ?? E_INDICATORS[ev.indicatorCode] ?? ev.indicatorCode;
-  if (ev.inputValue != null || ev.extractedValue != null) {
-    const inVal = ev.inputValue  != null ? Number(ev.inputValue).toLocaleString()  : '—';
-    const exVal = ev.extractedValue != null ? Number(ev.extractedValue).toLocaleString() : '—';
+  if (ev.inputValue != null) {
+    const inVal = Number(ev.inputValue).toLocaleString();
     const unit  = ev.unit ? ` ${ev.unit}` : '';
-    const diff  = (ev.numericDiffPercent ?? 0).toFixed(1);
-    const lvl   = ev.numericMatchLevel === 'HIGH'   ? 'HIGH (일치)'
-                : ev.numericMatchLevel === 'MEDIUM' ? 'MEDIUM (근사)'
-                : ev.numericMatchLevel === 'LOW'    ? 'LOW (불일치)'
-                : '처리 완료';
-    return `${title} · 입력값: ${inVal}${unit} · 증빙값: ${exVal}${unit} · 차이율: ${diff}% · 판정: ${lvl}`;
+    return `${title} · CSV 추출값: ${inVal}${unit}`;
   }
   // evidenceText가 이미 자연어인 경우 (raw CSV key 패턴 아닌 경우)
   if (ev.evidenceText && !ev.evidenceText.includes('electricity_kwh') && !ev.evidenceText.includes('| month |') && !ev.evidenceText.includes('gas_mj')) {
     return extractSentencePreview(ev.evidenceText, [], 150) ?? ev.evidenceText.slice(0, 150) + '…';
   }
-  return `${title} · 수치 데이터 검증됨`;
+  return `${title} · CSV 데이터 추출 완료`;
 };
 
 // 전체 K-ESG 지표 코드 → 표시명 (E + S + G)
@@ -4113,7 +4101,7 @@ function EvidenceDetailModal({ ev, onClose }) {
             <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${
               isECategory ? 'bg-sky-50 border-sky-200 text-sky-700' : 'bg-gray-100 border-gray-200 text-gray-500'
             }`}>
-              {isECategory ? '수치 검증' : '근거 적합도 분석'}
+              {isECategory ? 'CSV 분석' : '근거 적합도 분석'}
             </span>
           </div>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors">
@@ -4128,135 +4116,31 @@ function EvidenceDetailModal({ ev, onClose }) {
             <p className="text-base font-bold text-gray-900">{ev.indicatorTitle ?? '-'}</p>
           </div>
 
-          {/* ── E 카테고리: Numeric 검증 상세 ── */}
+          {/* ── E 카테고리: CSV 추출값 표시 ── */}
           {isNumeric && (
             <div className="space-y-3">
               <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100 pb-1.5">
-                수치 검증 상세
+                CSV 추출값 확인
               </p>
 
-              {/* 판정 배지 */}
-              {matchStyle && (
-                <div className="flex items-center gap-2">
-                  <span className={`text-sm font-black px-3 py-1 rounded-full border ${matchStyle.bg} ${matchStyle.border} ${matchStyle.text}`}>
-                    {matchStyle.label}
-                  </span>
-                  {ev.numericMatchLevel === 'HIGH' && (
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700">
-                      ✓ 검증 완료
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* 감사표 */}
               <div className="bg-gray-50 border border-gray-200 rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
                   <tbody>
-                    <tr className="border-b border-gray-100">
-                      <td className="px-4 py-2.5 text-gray-500 text-xs font-medium w-28 shrink-0">입력값</td>
+                    <tr>
+                      <td className="px-4 py-2.5 text-gray-500 text-xs font-medium w-28 shrink-0">CSV 추출값</td>
                       <td className="px-4 py-2.5 font-mono font-bold text-gray-800">
                         {ev.inputValue != null ? Number(ev.inputValue).toLocaleString() : '-'}
                         {ev.unit ? <span className="ml-1 text-gray-400 font-normal text-xs">{ev.unit}</span> : null}
-                      </td>
-                    </tr>
-                    <tr className="border-b border-gray-100">
-                      <td className="px-4 py-2.5 text-gray-500 text-xs font-medium w-28 shrink-0">증빙값</td>
-                      <td className="px-4 py-2.5 font-mono font-bold text-gray-800">
-                        {ev.extractedValue != null ? Number(ev.extractedValue).toLocaleString() : '-'}
-                        {ev.unit ? <span className="ml-1 text-gray-400 font-normal text-xs">{ev.unit}</span> : null}
-                      </td>
-                    </tr>
-                    <tr className="border-b border-gray-100">
-                      <td className="px-4 py-2.5 text-gray-500 text-xs font-medium">차이율</td>
-                      <td className="px-4 py-2.5">
-                        <div className="flex items-center gap-3">
-                          <span className="font-mono font-black text-base tabular-nums" style={{ color: diffBarCol }}>
-                            {fmtDiff(diffPct)}
-                          </span>
-                          <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden max-w-[120px]">
-                            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${diffBarW}%`, background: diffBarCol }} />
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-2.5 text-gray-500 text-xs font-medium">판정</td>
-                      <td className="px-4 py-2.5">
-                        <span className={`text-xs font-black px-2.5 py-0.5 rounded-lg border ${
-                          diffPct <= 5  ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
-                          diffPct <= 20 ? 'bg-amber-50 border-amber-200 text-amber-700' :
-                                          'bg-red-50 border-red-200 text-red-700'
-                        }`}>
-                          {diffPct <= 5 ? 'HIGH — 일치' : diffPct <= 20 ? 'MEDIUM — 근사 일치' : 'LOW — 불일치'}
-                        </span>
-                        <span className="ml-2 text-[9px] text-gray-400">HIGH≤5% / MED≤20% / LOW&gt;20%</span>
                       </td>
                     </tr>
                   </tbody>
                 </table>
               </div>
 
-              {/* Numeric Diff Visualization */}
-              {ev.inputValue != null && (
-                (() => {
-                  const inp  = Number(ev.inputValue)  || 0;
-                  const extr = Number(ev.extractedValue ?? ev.inputValue) || 0;
-                  const maxV = Math.max(Math.abs(inp), Math.abs(extr), 1);
-                  const inpPct  = Math.round((Math.abs(inp)  / maxV) * 100);
-                  const extrPct = Math.round((Math.abs(extr) / maxV) * 100);
-                  const diffPctDisplay = isFinite(ev.numericDiffPercent ?? 0) ? (ev.numericDiffPercent ?? 0) : 0;
-                  const barColor = diffPctDisplay <= 5 ? '#059669' : diffPctDisplay <= 20 ? '#f59e0b' : '#ef4444';
-                  const fmtV = (v) => {
-                    const abs = Math.abs(v);
-                    if (abs >= 1_000_000) return `${(v/1_000_000).toFixed(2)}M`;
-                    if (abs >= 1_000)     return `${(v/1_000).toFixed(1)}K`;
-                    return v.toLocaleString();
-                  };
-                  return (
-                    <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 space-y-2">
-                      <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">수치 차이 시각화</p>
-                      {/* input bar */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-[9px] text-gray-500 w-12 shrink-0 text-right">입력값</span>
-                        <div className="flex-1 h-2.5 bg-gray-200 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full bg-gray-400 transition-all duration-700" style={{ width: `${inpPct}%` }} />
-                        </div>
-                        <span className="text-[10px] font-mono font-bold text-gray-700 tabular-nums w-16 shrink-0">{fmtV(inp)}</span>
-                      </div>
-                      {/* extracted bar */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-[9px] text-gray-500 w-12 shrink-0 text-right">추출값</span>
-                        <div className="flex-1 h-2.5 bg-gray-200 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full transition-all duration-700" style={{ width: `${extrPct}%`, background: barColor }} />
-                        </div>
-                        <span className="text-[10px] font-mono font-bold tabular-nums w-16 shrink-0" style={{ color: barColor }}>
-                          {ev.extractedValue != null ? fmtV(extr) : '—'}
-                        </span>
-                      </div>
-                      {/* diff label */}
-                      <div className="flex items-center justify-end gap-2 pt-1">
-                        <span className="text-[9px] text-gray-500 font-mono">diff</span>
-                        <span className="text-sm font-black font-mono tabular-nums" style={{ color: barColor }}>
-                          {diffPctDisplay > 0 ? '+' : ''}{diffPctDisplay.toFixed(1)}%
-                        </span>
-                        {ev.extractedValue != null && (
-                          <span className="text-[9px] text-gray-400 font-mono">
-                            ({fmtV(Math.abs(extr - inp))}{ev.unit ? ` ${ev.unit}` : ''})
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })()
-              )}
-
-              {/* 검증 방식 설명 */}
               <div className="bg-sky-50 border border-sky-100 rounded-xl px-4 py-3">
-                <p className="text-[10px] font-bold text-sky-600 uppercase tracking-wider mb-1">검증 방법</p>
+                <p className="text-[10px] font-bold text-sky-600 uppercase tracking-wider mb-1">분석 방법</p>
                 <p className="text-xs text-gray-500 leading-relaxed">
-                  CSV/PDF 문서에서 해당 지표의 수치를 추출하여 입력값과 직접 비교합니다.
-                  정규식 및 단위 정규화를 적용하며, 추출 실패 시 마크다운 전체 텍스트에서 재시도합니다.
+                  업로드된 CSV 파일에서 해당 지표의 수치를 자동 추출하여 업종 평균과 비교한 후 점수를 산출합니다.
                 </p>
               </div>
             </div>
@@ -4391,11 +4275,14 @@ function AIRetrievalTraceTable({ rows, onSelect }) {
 
   if (!rows.length) return null;
 
+  // E 지표만 있는 탭(E 탭)이면 신뢰도 컬럼 자체를 제거
+  const allE = rows.every(r => r.indicatorCode?.[0] === 'E');
+
   return (
     <div className="data-table rounded-xl overflow-hidden">
       {/* Table header — desktop only */}
-      <div className="hidden sm:grid sm:grid-cols-[148px_1fr_70px_96px] bg-gray-50 border-b border-gray-200 px-4 py-3 gap-3 items-center">
-        {['지표', '검색 근거', '신뢰도', '검증 상태'].map(h => (
+      <div className={`hidden sm:grid ${allE ? 'sm:grid-cols-[148px_1fr_96px]' : 'sm:grid-cols-[148px_1fr_70px_96px]'} bg-gray-50 border-b border-gray-200 px-4 py-3 gap-3 items-center`}>
+        {(allE ? ['지표', '검색 근거', '검증 상태'] : ['지표', '검색 근거', '신뢰도', '검증 상태']).map(h => (
           <span key={h} className="text-[9px] font-black text-gray-500 uppercase tracking-wider">{h}</span>
         ))}
       </div>
@@ -4434,7 +4321,7 @@ function AIRetrievalTraceTable({ rows, onSelect }) {
                 onClick={() => setExpandedCode(isOpen ? null : (ev.indicatorCode ?? idx))}
               >
                 {/* Desktop */}
-                <div className="hidden sm:grid sm:grid-cols-[148px_1fr_70px_96px] px-4 py-3 gap-3 items-center">
+                <div className={`hidden sm:grid ${allE ? 'sm:grid-cols-[148px_1fr_96px]' : 'sm:grid-cols-[148px_1fr_70px_96px]'} px-4 py-3 gap-3 items-center`}>
                   {/* Indicator */}
                   <div className="flex flex-col gap-0.5 min-w-0">
                     <span className="text-[10px] font-black font-mono leading-none" style={{ color: catColor }}>
@@ -4453,23 +4340,25 @@ function AIRetrievalTraceTable({ rows, onSelect }) {
                         : <span className="text-[10px] text-gray-400 italic">— 근거 문서 확인됨</span>
                     }
                   </div>
-                  {/* Similarity / Numeric confidence */}
-                  <div className="flex flex-col items-start gap-0.5">
-                    {displayPct != null ? (
-                      <>
-                        <span className="text-xs font-black font-mono tabular-nums leading-none" style={{ color: displayColor }}>
-                          {displayPct}%
-                        </span>
-                        <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden mt-0.5">
-                          <div className="h-full rounded-full" style={{ width: `${displayPct}%`, background: displayColor }} />
-                        </div>
-                      </>
-                    ) : isECat ? (
-                      <span className="text-[9px] text-sky-500 font-bold">수치</span>
-                    ) : (
-                      <span className="text-[9px] text-gray-300">—</span>
-                    )}
-                  </div>
+                  {/* 신뢰도 — allE(E 탭)이면 컬럼 자체 제거, 혼재 탭이면 E 행은 — 표시 */}
+                  {!allE && (
+                    <div className="flex flex-col items-start gap-0.5">
+                      {isECat ? (
+                        <span className="text-[9px] text-gray-300">—</span>
+                      ) : displayPct != null ? (
+                        <>
+                          <span className="text-xs font-black font-mono tabular-nums leading-none" style={{ color: displayColor }}>
+                            {displayPct}%
+                          </span>
+                          <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden mt-0.5">
+                            <div className="h-full rounded-full" style={{ width: `${displayPct}%`, background: displayColor }} />
+                          </div>
+                        </>
+                      ) : (
+                        <span className="text-[9px] text-gray-300">—</span>
+                      )}
+                    </div>
+                  )}
                   {/* Status */}
                   <div>
                     <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border whitespace-nowrap inline-flex items-center gap-0.5 ${vst.bg} ${vst.border} ${vst.text}`}>
@@ -4496,7 +4385,7 @@ function AIRetrievalTraceTable({ rows, onSelect }) {
                         : null
                     }
                   </div>
-                  {displayPct != null && (
+                  {!isECat && displayPct != null && (
                     <span className="text-xs font-black font-mono shrink-0" style={{ color: displayColor }}>{displayPct}%</span>
                   )}
                 </div>
@@ -4538,14 +4427,15 @@ function AIRetrievalTraceTable({ rows, onSelect }) {
                       <div className="bg-white border border-gray-200 rounded-lg p-3">
                         <p className="text-[8px] font-black text-gray-400 uppercase tracking-wider mb-2">AI 검색 지표</p>
                         <div className="space-y-1.5">
-                          {[
-                            isECat
-                              ? { label: '수치 검증 신뢰도', value: eConfPct != null ? `${eConfPct}%` : '—', color: eConfColor ?? '#9ca3af' }
-                              : { label: '근거 적합도',      value: simPct   != null ? `${simPct}%`   : '—', color: simPct   != null ? simColor : '#9ca3af' },
-                            isECat
-                              ? { label: '차이율',           value: ev.numericDiffPercent != null ? `${Number(ev.numericDiffPercent).toFixed(1)}%` : '—', color: (ev.numericDiffPercent ?? 0) <= 5 ? '#059669' : '#f59e0b' }
-                              : { label: '최종 점수',        value: toPct(ev.finalScore)  != null ? `${toPct(ev.finalScore)}%` : '—', color: '#6366f1' },
-                          ].map(item => (
+                          {(isECat
+                            ? [
+                                { label: 'CSV 추출값', value: ev.inputValue != null ? `${Number(ev.inputValue).toLocaleString()}${ev.unit ? ' ' + ev.unit : ''}` : '—', color: '#374151' },
+                              ]
+                            : [
+                                { label: '근거 적합도', value: simPct != null ? `${simPct}%` : '—', color: simPct != null ? simColor : '#9ca3af' },
+                                { label: '최종 점수',   value: toPct(ev.finalScore) != null ? `${toPct(ev.finalScore)}%` : '—', color: '#6366f1' },
+                              ]
+                          ).map(item => (
                             <div key={item.label} className="flex items-center justify-between text-[10px]">
                               <span className="text-gray-400">{item.label}</span>
                               <span className="font-black font-mono" style={{ color: item.color }}>{item.value}</span>
@@ -4561,7 +4451,7 @@ function AIRetrievalTraceTable({ rows, onSelect }) {
                           <span className={`text-[9px] font-black px-2 py-0.5 rounded border ${vst.bg} ${vst.border} ${vst.text}`}>
                             {vst.icon} {vst.label}
                           </span>
-                          {ev.confidenceLevel && (() => {
+                          {!isECat && ev.confidenceLevel && (() => {
                             // VERIFIED + LOW 모순 방지: VERIFIED 상태에서 LOW badge 숨김
                             // (백엔드에서 이미 MEDIUM으로 보정하나, 이중 방어)
                             const effConf = (vstKey === 'VERIFIED' && ev.confidenceLevel === 'LOW')
@@ -4587,19 +4477,15 @@ function AIRetrievalTraceTable({ rows, onSelect }) {
                         )}
                         {isECat && ev.inputValue != null && (
                           <div className="mt-2 pt-2 border-t border-gray-100 space-y-1">
-                            {[
-                              { lbl: '입력값', val: `${Number(ev.inputValue).toLocaleString()} ${ev.unit ?? ''}`, color: '#374151' },
-                              ev.extractedValue != null && { lbl: '증빙값', val: `${Number(ev.extractedValue).toLocaleString()} ${ev.unit ?? ''}`, color: MATCH_STYLE[ev.numericMatchLevel]?.color ?? '#374151' },
-                              ev.numericDiffPercent != null && { lbl: '차이율', val: fmtDiff(ev.numericDiffPercent), color: ev.numericDiffPercent <= 5 ? '#059669' : ev.numericDiffPercent <= 20 ? '#f59e0b' : '#ef4444' },
-                            ].filter(Boolean).map(item => (
-                              <div key={item.lbl} className="flex justify-between text-[10px]">
-                                <span className="text-gray-400">{item.lbl}</span>
-                                <span className="font-mono font-black" style={{ color: item.color }}>{item.val}</span>
-                              </div>
-                            ))}
+                            <div className="flex justify-between text-[10px]">
+                              <span className="text-gray-400">CSV 추출값</span>
+                              <span className="font-mono font-black text-gray-700">
+                                {Number(ev.inputValue).toLocaleString()}{ev.unit ? ' ' + ev.unit : ''}
+                              </span>
+                            </div>
                           </div>
                         )}
-                        {ev.contradictionReason && (
+                        {!isECat && ev.contradictionReason && (
                           <div className="mt-1.5 pt-1.5 border-t border-gray-100">
                             <p className="text-[9px] text-red-500 leading-relaxed">{ev.contradictionReason}</p>
                           </div>
@@ -6896,7 +6782,7 @@ export default function AnalysisResultPage() {
                   공공 산업 통계 기반 추정
                 </span>
               </div>
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {benchMetrics.map((metric, idx) => {
                   const hasCompany  = metric.company != null;
                   const displayUnit = metric.unit ?? '';
@@ -6910,7 +6796,7 @@ export default function AnalysisResultPage() {
                   const chartData   = [{ name: metric.name, company: hasCompany ? companyVal : null, industryAvg: industryVal, unit: displayUnit }];
 
                   return (
-                    <div key={idx} className="p-4 rounded-xl bg-gray-50 border border-gray-200 hover:border-gray-300 transition-colors">
+                    <div key={idx} className="p-4 rounded-xl bg-gray-50 border border-gray-200 hover:border-gray-300 transition-colors flex flex-col h-full">
                       {/* 헤더 */}
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-semibold text-gray-800">{metric.name}</span>
@@ -7017,6 +6903,18 @@ export default function AnalysisResultPage() {
                     </div>
                   );
                 })}
+                {/* ── 6번째 그리드 항목: 리스크 & 기회 분석 ── */}
+                <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 hover:border-amber-300 transition-colors flex flex-col h-full">
+                  <div className="flex items-center gap-2 mb-3 pb-2 border-b border-amber-100">
+                    <AlertTriangle size={13} className="text-amber-600 shrink-0" />
+                    <span className="text-sm font-semibold text-gray-800">리스크 &amp; 기회 분석</span>
+                  </div>
+                  <div
+                    className="text-[12px] text-gray-600 leading-relaxed flex-1"
+                    style={{ lineHeight: '1.8' }}
+                    dangerouslySetInnerHTML={{ __html: renderMd(buildIndustryRiskOpportunity(benchMetrics, d)) }}
+                  />
+                </div>
               </div>
 
             </>
@@ -7420,16 +7318,7 @@ export default function AnalysisResultPage() {
         {/* 섹션 앵커 (hash scroll 대상) */}
         <div id="section-ai-report" />
 
-        {/* ── Risk & Opportunity — Industry Position 탭 통합 ── */}
-        {activeTab === 'industry' && (
-          <SectionCard title="업계 대비 리스크 & 기회 분석" icon={AlertTriangle} iconColor="#f59e0b">
-            <div
-              className="text-sm text-gray-600 leading-relaxed"
-              style={{ lineHeight: '1.9' }}
-              dangerouslySetInnerHTML={{ __html: renderMd(buildIndustryRiskOpportunity(benchMetrics, d)) }}
-            />
-          </SectionCard>
-        )}
+        {/* ── Risk & Opportunity — 환경 지표 그리드 내 6번째 항목으로 통합됨 ── */}
 
         {false && (<>
         {/* ── Audit Execution Timeline ─────────────────────── */}
