@@ -1,11 +1,19 @@
 package com.esg.analysis.service;
 
+import com.esg.analysis.dto.AnalysisResultCache;
 import com.esg.analysis.dto.CategoryAnalysisResponse;
 import com.esg.analysis.dto.EvidenceResult;
+import com.esg.analysis.service.domain.AnalysisReport;
+import com.esg.analysis.service.domain.ESGEvidenceMatch;
 import com.esg.analysis.service.domain.ESGIndicator;
+import com.esg.analysis.service.repository.AnalysisReportRepository;
+import com.esg.analysis.service.repository.ESGEvidenceMatchRepository;
 import com.esg.analysis.service.repository.ESGIndicatorRepository;
+import com.esg.analysis.util.FileHashUtil;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -13,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -58,6 +67,19 @@ public class CategoryAnalysisService {
     private final NumericExtractionService     numericExtractionService;
     private final EnvironmentBenchmarkService  environmentBenchmarkService;
     private final SimpMessagingTemplate        messagingTemplate;
+    private final AnalysisReportRepository     analysisReportRepository;
+    private final ESGEvidenceMatchRepository   evidenceMatchRepository;
+    private final ObjectMapper                 objectMapper;
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    // ── [DEMO] 시연 전용 상수 ───────────────────────────────────────────────────
+    // 1) 서버 기동 후 PDF 한 번 업로드 → "[DEMO-HASH-LOG] fileHash=..." 로그에서 해시 복사
+    // 2) 발표 전 정상 분석 1회 실행 → 생성된 analysisId 를 DEMO_REPORT_ID 에 입력
+    // 3) 발표 후 DEMO_REPORT_ID = 0L 으로 되돌리면 데모 모드 비활성화
+    private static final String   DEMO_PDF_HASH  = "9dba336b5955b608fa9ffa28ccdfb8dac51a96e7039eeac875bec527cda01fc1";
+    private static final Long     DEMO_REPORT_ID = 272L;
+    private static final String   DEMO_REDIS_KEY = "demo:session:";
+    private static final Duration DEMO_TTL       = Duration.ofMinutes(30);
 
     /**
      * @param category         "E" / "S" / "G"
@@ -108,6 +130,19 @@ public class CategoryAnalysisService {
         if (file == null || file.isEmpty()) {
             log.info("[CATEGORY-SKIPPED] category={} reason=NO_FILE → checklist-only", category);
             return buildChecklistOnlyResult(checklistScore, totalItems, checkedCount);
+        }
+
+        // ── [DEMO 시연 단축경로] ─────────────────────────────────────────────────
+        // PDF 해시가 DEMO_PDF_HASH 와 일치하면 OCR·임베딩·ChromaDB·GPT 전부 생략
+        // DEMO_REPORT_ID = 0L 이면 비활성화 → 일반 분석 수행
+        if (DEMO_REPORT_ID > 0) {
+            String fileHash = FileHashUtil.calculateChecksum(file);
+            log.info("[DEMO-HASH-LOG] category={} companyId={} fileHash={}", category, companyId, fileHash);
+            if (DEMO_PDF_HASH.equals(fileHash)) {
+                log.info("[DEMO-SHORTCUT] 시연 PDF 감지 → DEMO_REPORT_ID={} 즉시 반환 category={}",
+                        DEMO_REPORT_ID, category);
+                return buildDemoCategory(category, companyId);
+            }
         }
 
         // ── RAG 분석 경로 ───────────────────────────────────────────────────
@@ -1727,5 +1762,104 @@ public class CategoryAnalysisService {
                 || t.contains("사망 발생") || t.contains("부상자 발생") || t.contains("산업재해 발생")
                 || t.contains("안전사고 발생") || t.contains("명 사망") || t.contains("명 부상")
                 || t.contains("환경오염 발생") || t.contains("화재 발생") || t.contains("누출 발생");
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // [DEMO] 시연 전용 메서드 — 발표 후 이 블록 전체 제거 가능
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /**
+     * DEMO_REPORT_ID 에 저장된 분석 결과를 CategoryAnalysisResponse 로 재구성하여 즉시 반환.
+     * OCR·ChromaDB·GPT 를 전혀 호출하지 않는다.
+     */
+    private CategoryAnalysisResponse buildDemoCategory(String category, Long companyId) {
+        // 1. WS 진행 이벤트 전송 — 파이프라인 UI 가 정상 단계로 표시되도록
+        sendWs(companyId, "OCR_PROCESSING:"  + category);
+        sendWs(companyId, "VECTOR_INDEXING:" + category);
+        sendWs(companyId, "VALIDATION:"      + category);
+        sendWs(companyId, "SCORING:"         + category);
+
+        // 2. 고정 리포트 로드
+        AnalysisReport demoReport = analysisReportRepository.findById(DEMO_REPORT_ID)
+                .orElseThrow(() -> new IllegalStateException(
+                        "[DEMO] DEMO_REPORT_ID=" + DEMO_REPORT_ID
+                        + " 이(가) DB에 없습니다. 발표 전 정상 분석을 1회 수행하세요."));
+
+        // 3. reportContent(JSON) → AnalysisResultCache 파싱
+        AnalysisResultCache cache;
+        try {
+            cache = objectMapper.readValue(demoReport.getReportContent(), AnalysisResultCache.class);
+        } catch (Exception e) {
+            throw new IllegalStateException("[DEMO] DEMO_REPORT_ID 리포트 파싱 실패", e);
+        }
+
+        // 4. 카테고리별 점수·등급 추출
+        int score;
+        String grade;
+        switch (category.toUpperCase()) {
+            case "E" -> { score = cache.getEScore() != null ? cache.getEScore() : 0;
+                          grade = findSectionGrade(cache, "Environment"); }
+            case "S" -> { score = cache.getSScore() != null ? cache.getSScore() : 0;
+                          grade = findSectionGrade(cache, "Social"); }
+            case "G" -> { score = cache.getGScore() != null ? cache.getGScore() : 0;
+                          grade = findSectionGrade(cache, "Governance"); }
+            default  -> throw new IllegalArgumentException("알 수 없는 카테고리: " + category);
+        }
+        int confidence = cache.getOverallConfidence() != null ? cache.getOverallConfidence() : 70;
+
+        // 5. 저장된 Evidence 복원 (해당 카테고리 prefix 필터)
+        List<ESGEvidenceMatch> allMatches = evidenceMatchRepository.findByAnalysisId(DEMO_REPORT_ID);
+        String prefix = category.toUpperCase() + "-";
+        List<CategoryAnalysisResponse.EvidenceItem> evidences = allMatches.stream()
+                .filter(m -> m.getIndicatorCode() != null && m.getIndicatorCode().startsWith(prefix))
+                .map(m -> CategoryAnalysisResponse.EvidenceItem.builder()
+                        .indicatorCode(m.getIndicatorCode())
+                        .evidenceText(m.getEvidenceText())
+                        .similarity(m.getSimilarity())
+                        .finalScore(m.getFinalScore())
+                        .confidenceLevel(m.getConfidenceLevel() != null
+                                ? m.getConfidenceLevel().name() : "MEDIUM")
+                        .retrievalRank(m.getRetrievalRank())
+                        .pageNumber(m.getPageNumber() != null && m.getPageNumber() > 0
+                                ? m.getPageNumber() : null)
+                        .sourceFile(m.getSourceFile())
+                        .numericMatchLevel(m.getNumericMatchLevel())
+                        .numericDiffPercent(m.getNumericDiffPercent())
+                        .inputValue(m.getInputValue())
+                        .extractedValue(m.getExtractedValue())
+                        .unit(m.getUnit())
+                        .build())
+                .collect(Collectors.toList());
+
+        // 6. FinalReportService 에서 GPT 를 생략하도록 Redis 플래그 설정
+        try {
+            redisTemplate.opsForValue().set(
+                    DEMO_REDIS_KEY + companyId,
+                    String.valueOf(DEMO_REPORT_ID),
+                    DEMO_TTL);
+            log.info("[DEMO-SESSION] Redis 플래그 설정 companyId={} DEMO_REPORT_ID={}", companyId, DEMO_REPORT_ID);
+        } catch (Exception e) {
+            log.warn("[DEMO-SESSION] Redis 설정 실패 — FinalReportService 에서 GPT 가 실행됩니다: {}", e.getMessage());
+        }
+
+        log.info("[DEMO-SHORTCUT] 반환 완료 category={} score={} grade={} conf={} evidences={}",
+                category, score, grade, confidence, evidences.size());
+        return CategoryAnalysisResponse.builder()
+                .score(score)
+                .grade(grade)
+                .confidence(confidence)
+                .evidenceCount(evidences.size())
+                .ragBased(true)
+                .evidences(evidences.isEmpty() ? null : evidences)
+                .build();
+    }
+
+    private String findSectionGrade(AnalysisResultCache cache, String categoryName) {
+        if (cache.getSections() == null) return "B";
+        return cache.getSections().stream()
+                .filter(s -> categoryName.equals(s.getCategory()))
+                .map(AnalysisResultCache.SectionDto::getGrade)
+                .findFirst()
+                .orElse("B");
     }
 }
