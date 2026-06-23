@@ -35,6 +35,7 @@ public class FinalReportService {
     private final ObjectMapper                objectMapper;
     private final TransactionTemplate         transactionTemplate;
     private final PointServiceClient          pointServiceClient;
+    private final org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate;
 
     // WS ready 이후 실행을 위해 요청 데이터를 단기 메모리 캐싱 (createSession → startSession 사이)
     private final ConcurrentHashMap<Long, FinalReportRequest> pendingRequests = new ConcurrentHashMap<>();
@@ -150,12 +151,8 @@ public class FinalReportService {
             else if (lowCount >= 1) conf = Math.min(conf, 40);
 
             send(companyId, "GPT_SUMMARY");
-            // autoSim 경로 확인 — false이면 buildPrompt() 사용, true이면 callGptSimulation() 사용
-            log.info("[GPT-PATH-SELECT] autoSim={} → {}",
-                    autoSim, autoSim ? "callGptSimulation (buildPrompt 미사용)" : "callGpt → buildPrompt");
-            GptOpinion opinion = autoSim
-                    ? callGptSimulation(eScore, adjS, gScore, total, grade, req)
-                    : callGptWithMismatch(eScore, adjS, gScore, total, grade, req, lowCount);
+            GptOpinion opinion = resolveOpinionForDemo(
+                    companyId, eScore, adjS, gScore, total, grade, req, lowCount, autoSim);
 
             send(companyId, "MERGING_SCORE");
             Thread.sleep(400);
@@ -660,5 +657,67 @@ public class FinalReportService {
         s.setRecommendation("K-ESG 가이드라인에 따라 " + name + " 분야 지속 개선을 권고합니다.");
         s.setSubIndicators(List.of());
         return s;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // [DEMO] 시연 전용 메서드 — 발표 후 이 블록 전체 제거 가능
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Redis 플래그가 있으면 GPT 를 생략하고 DEMO_REPORT_ID 의 저장된 총평을 재사용.
+     * 플래그 없으면 일반 경로(GPT 호출).
+     */
+    private GptOpinion resolveOpinionForDemo(Long companyId, int e, int s, int g, int total,
+                                              String grade, FinalReportRequest req,
+                                              int lowCount, boolean autoSim) {
+        try {
+            Object demoFlag = redisTemplate.opsForValue().get("demo:session:" + companyId);
+            if (demoFlag != null) {
+                Long srcId = Long.parseLong(demoFlag.toString());
+                log.info("[DEMO-SHORTCUT] GPT 생략 → 고정 리포트({}) 총평 재사용 companyId={}", srcId, companyId);
+                try { redisTemplate.delete("demo:session:" + companyId); } catch (Exception ignored) {}
+                return loadStoredOpinion(srcId, grade, e, s, g);
+            }
+        } catch (Exception ex) {
+            log.warn("[DEMO] Redis 확인 실패 → 일반 GPT 진행: {}", ex.getMessage());
+        }
+        // 일반 경로
+        log.info("[GPT-PATH-SELECT] autoSim={} → {}",
+                autoSim, autoSim ? "callGptSimulation" : "callGpt");
+        return autoSim
+                ? callGptSimulation(e, s, g, total, grade, req)
+                : callGptWithMismatch(e, s, g, total, grade, req, lowCount);
+    }
+
+    /**
+     * DEMO_REPORT_ID 리포트에서 overallOpinion / riskOpportunity 를 꺼내 반환.
+     * 파싱 실패 시 GPT 없이 템플릿 총평으로 fallback.
+     */
+    private GptOpinion loadStoredOpinion(Long srcId, String grade, int e, int s, int g) {
+        try {
+            AnalysisReport report = analysisReportRepository.findById(srcId).orElse(null);
+            if (report != null && report.getReportContent() != null
+                    && report.getReportContent().startsWith("{")) {
+                AnalysisResultCache stored = objectMapper.readValue(
+                        report.getReportContent(), AnalysisResultCache.class);
+                String opinion = stored.getOverallOpinion();
+                String risk    = stored.getRiskOpportunity();
+                if (opinion != null && !opinion.isBlank()) {
+                    log.info("[DEMO] 저장된 총평 재사용 성공 srcId={}", srcId);
+                    return new GptOpinion(opinion,
+                            risk != null && !risk.isBlank() ? risk : buildRisk(grade, e, s, g));
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("[DEMO] 저장된 총평 로드 실패 srcId={}: {}", srcId, ex.getMessage());
+        }
+        // fallback: 최소 템플릿 (GPT 없이)
+        log.warn("[DEMO] 저장된 총평 없음 → 기본 템플릿 적용 srcId={}", srcId);
+        int total = e + s + g;
+        return new GptOpinion(
+                String.format("K-ESG 종합 점수 %d점(%s등급)으로 평가되었습니다. "
+                        + "환경(E) %d점, 사회(S) %d점, 지배구조(G) %d점입니다.",
+                        total, grade, e, s, g),
+                buildRisk(grade, e, s, g));
     }
 }
